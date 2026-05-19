@@ -39,11 +39,16 @@ class MakeModuleRequest extends Command
  
         namespace App\Modules\\{$module}\Presentation\Http\Requests;
  
-        use Illuminate\Foundation\Http\FormRequest;
+        use App\Modules\Core\Presentation\Http\Requests\BaseFormRequest;
         use App\Modules\\{$module}\Application\DTOs\\{$name}DTO;
  
-        class {$name} extends FormRequest
+        class {$name} extends BaseFormRequest
         {
+            protected function translationNamespace(): string
+            {
+                return strtolower('{$module}');
+            }
+ 
             public function authorize(): bool
             {
                 return true;
@@ -60,12 +65,6 @@ class MakeModuleRequest extends Command
             {
                 return {$name}DTO::fromArray(\$this->validated());
             }
-            public function messages(): array
-            {
-                return [
-                    //
-                ];
-            }   
         }
         PHP;
  

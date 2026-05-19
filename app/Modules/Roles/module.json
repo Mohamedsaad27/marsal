@@ -1,0 +1,9 @@
+{
+    "name": "Roles",
+    "alias": "Roles",
+    "description": "Roles and permissions management",
+    "priority": 1,
+    "providers": [
+        "App\\Modules\\Roles\\Infrastructure\\Providers\\RolesServiceProvider"
+    ]
+}

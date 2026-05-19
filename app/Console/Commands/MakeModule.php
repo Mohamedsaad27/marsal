@@ -221,6 +221,9 @@ class MakeModule extends Command
             'attributes' => [
                 //
             ],
+            'messages' => [
+                //
+            ],
         ];
         PHP;
 

@@ -1,0 +1,82 @@
+<?php
+
+namespace Tests\Feature\Auth;
+
+use App\Modules\Roles\Infrastructure\Database\Seeders\RolesAndPermissionsSeeder;
+use App\Modules\Users\Infrastructure\Database\Seeders\SuperAdminSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+class AuthJwtTest extends TestCase
+{
+    use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(SuperAdminSeeder::class);
+    }
+
+    public function test_login_with_email_returns_jwt(): void
+    {
+        $response = $this->postJson('/api/v1/auth/login', [
+            'login' => env('SUPER_ADMIN_EMAIL', 'admin@shipops.local'),
+            'password' => env('SUPER_ADMIN_PASSWORD', 'password'),
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('isSuccess', true)
+            ->assertJsonStructure([
+                'data' => ['access_token', 'token_type', 'expires_in', 'user' => ['user_id', 'roles', 'permissions']],
+            ]);
+    }
+
+    public function test_login_with_phone_returns_jwt(): void
+    {
+        $response = $this->postJson('/api/v1/auth/login', [
+            'login' => env('SUPER_ADMIN_PHONE', '01000000000'),
+            'password' => env('SUPER_ADMIN_PASSWORD', 'password'),
+        ]);
+
+        $response->assertOk()->assertJsonPath('isSuccess', true);
+    }
+
+    public function test_login_fails_with_wrong_password(): void
+    {
+        $response = $this->postJson('/api/v1/auth/login', [
+            'login' => env('SUPER_ADMIN_EMAIL', 'admin@shipops.local'),
+            'password' => 'wrong-password',
+        ]);
+
+        $response->assertUnauthorized();
+    }
+
+    public function test_me_returns_authenticated_user(): void
+    {
+        $token = $this->loginAsSuperAdmin();
+
+        $response = $this->withHeader('Authorization', "Bearer {$token}")
+            ->getJson('/api/v1/auth/me');
+
+        $response->assertOk()
+            ->assertJsonPath('data.account_type', 'super_admin')
+            ->assertJsonPath('data.roles.0', 'super_admin');
+    }
+
+    public function test_register_route_does_not_exist(): void
+    {
+        $this->postJson('/api/v1/auth/register', [])->assertNotFound();
+    }
+
+    protected function loginAsSuperAdmin(): string
+    {
+        $response = $this->postJson('/api/v1/auth/login', [
+            'login' => env('SUPER_ADMIN_EMAIL', 'admin@shipops.local'),
+            'password' => env('SUPER_ADMIN_PASSWORD', 'password'),
+        ]);
+
+        return $response->json('data.access_token');
+    }
+}

@@ -1,0 +1,417 @@
+{
+  "info": {
+    "_postman_id": "marsal-api",
+    "name": "Marsal API",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions.\n\n**Setup:**\n1. Set `base_url` (e.g. `http://marsal.test` or `http://localhost:8000`).\n2. Run **Auth → Login** — saves `access_token` automatically.\n3. Admin routes use Bearer auth from collection variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "access_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Core",
+      "item": [
+        {
+          "name": "Health Check",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/core/health",
+              "host": ["{{base_url}}"],
+              "path": ["core", "health"]
+            },
+            "description": "Core module health check (no auth)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "JWT authentication — login, logout, refresh, profile. No registration endpoint.",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data && json.data.access_token) {",
+                  "        pm.collectionVariables.set('access_token', json.data.access_token);",
+                  "        pm.test('Token saved to collection variable', function () {",
+                  "            pm.expect(pm.collectionVariables.get('access_token')).to.not.be.empty;",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"superadmin@marsal.com\",\n  \"password\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Authenticate with email **or** phone in `login` field. Returns JWT `access_token` and user with roles/permissions."
+          }
+        },
+        {
+          "name": "Me",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Current user profile: account_type, roles[], permissions[], optional shipping_company / delivery_agent."
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "description": "Issue a new JWT from a valid token (within refresh TTL)."
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Invalidate current JWT (blacklist)."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Roles",
+      "description": "Dynamic RBAC — super-admin can create roles and sync permissions. Requires `roles.*` permissions (super_admin bypasses all).",
+      "item": [
+        {
+          "name": "List Roles",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/roles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "roles"]
+            },
+            "description": "Permission: `roles.view`"
+          }
+        },
+        {
+          "name": "Create Role",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"finance_manager\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/roles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "roles"]
+            },
+            "description": "Permission: `roles.create`"
+          }
+        },
+        {
+          "name": "Update Role",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"finance_manager_updated\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/roles/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "roles", ":id"],
+              "variable": [
+                { "key": "id", "value": "1", "description": "Role ID" }
+              ]
+            },
+            "description": "Permission: `roles.update`"
+          }
+        },
+        {
+          "name": "Delete Role",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/roles/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "roles", ":id"],
+              "variable": [
+                { "key": "id", "value": "1", "description": "Role ID" }
+              ]
+            },
+            "description": "Permission: `roles.delete`"
+          }
+        },
+        {
+          "name": "Sync Role Permissions",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"permissions\": [\n    \"users.view\",\n    \"users.create\",\n    \"orders.view\"\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/roles/:id/permissions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "roles", ":id", "permissions"],
+              "variable": [
+                { "key": "id", "value": "1", "description": "Role ID" }
+              ]
+            },
+            "description": "Replace all permissions on a role. Permission: `roles.update`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Permissions",
+      "description": "Manage permission definitions (guard: api).",
+      "item": [
+        {
+          "name": "List Permissions",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/permissions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "permissions"]
+            },
+            "description": "Permission: `permissions.view`"
+          }
+        },
+        {
+          "name": "Create Permission",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"finance.reports.view\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/permissions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "permissions"]
+            },
+            "description": "Permission: `permissions.create`"
+          }
+        },
+        {
+          "name": "Update Permission",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"finance.reports.export\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/permissions/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "permissions", ":id"],
+              "variable": [
+                { "key": "id", "value": "1", "description": "Permission ID" }
+              ]
+            },
+            "description": "Permission: `permissions.update`"
+          }
+        },
+        {
+          "name": "Delete Permission",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/permissions/:id",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "permissions", ":id"],
+              "variable": [
+                { "key": "id", "value": "1", "description": "Permission ID" }
+              ]
+            },
+            "description": "Permission: `permissions.delete`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Users",
+      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.",
+      "item": [
+        {
+          "name": "Create User (Generic)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass123\",\n  \"account_type\": \"super_admin\",\n  \"roles\": [\"super_admin\"],\n  \"profile\": {}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users"]
+            },
+            "description": "Permission: `users.create`\n\n`account_type`: `super_admin` | `shipping_company` | `delivery_agent`\n\n`roles`: array of existing role names (required)."
+          }
+        },
+        {
+          "name": "Create Shipping Company",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Acme Logistics\",\n  \"email\": \"ops@acme.com\",\n  \"phone\": \"01011111111\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"shipping_company\"],\n  \"profile\": {\n    \"company_name\": \"Acme Logistics\",\n    \"commercial_reg\": \"CR-123456\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/shipping-companies",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "shipping-companies"]
+            },
+            "description": "Permission: `shipping_companies.create`\n\nCreates `users` + `shipping_companies` row. Default role `shipping_company` if `roles` omitted."
+          }
+        },
+        {
+          "name": "Create Delivery Agent",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Agent One\",\n  \"email\": \"agent1@marsal.com\",\n  \"phone\": \"01022222222\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"national_id\": \"29001011234567\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"ABC 1234\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/delivery-agents",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "delivery-agents"]
+            },
+            "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` row. `vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\nCan assign custom roles e.g. `[\"field_lead\"]` if role exists."
+          }
+        },
+        {
+          "name": "Create Delivery Agent (Custom Role)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Field Lead Agent\",\n  \"email\": \"lead@marsal.com\",\n  \"phone\": \"01055556666\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"field_lead\"],\n  \"profile\": {}\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/delivery-agents",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "delivery-agents"]
+            },
+            "description": "Create agent with a custom role — create the role first via **Admin → Roles → Create Role**, then sync permissions."
+          }
+        }
+      ]
+    }
+  ]
+}

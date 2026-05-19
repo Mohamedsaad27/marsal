@@ -11,6 +11,8 @@ use Illuminate\Validation\ValidationException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Symfony\Component\HttpKernel\Exception\MethodNotAllowedHttpException;
 use Symfony\Component\HttpKernel\Exception\UnauthorizedHttpException;
+use Spatie\Permission\Exceptions\UnauthorizedException;
+use App\Modules\Users\Application\Exceptions\UnauthorizedUserException;
 use InvalidArgumentException;
 use Throwable;
 
@@ -54,9 +56,14 @@ class Handler extends ExceptionHandler
     public function handleApiException($request, Throwable $e)
     {
         if ($e instanceof ValidationException) {
+            $errors = $e->errors();
+            $firstMessage = collect($errors)->flatten()->first();
+
             return ApiResponse::error(
-                __('core::messages.validation_failed'),
-                $e->errors(),
+                is_string($firstMessage) && $firstMessage !== ''
+                    ? $firstMessage
+                    : __('core::messages.validation_failed'),
+                $errors,
                 422
             );
         }
@@ -64,6 +71,13 @@ class Handler extends ExceptionHandler
         if ($e instanceof AuthenticationException) {
             return ApiResponse::error(
                 __('core::messages.unauthenticated'),
+                null,
+                401
+            );
+        }
+        if ($e instanceof UnauthorizedException) {
+            return ApiResponse::error(
+                (new UnauthorizedUserException())->getMessage(),
                 null,
                 401
             );

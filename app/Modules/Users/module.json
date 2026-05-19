@@ -1,0 +1,9 @@
+{
+    "name": "Users",
+    "alias": "Users",
+    "description": "User management module",
+    "priority": 1,
+    "providers": [
+        "App\\Modules\\Users\\Infrastructure\\Providers\\UsersServiceProvider"
+    ]
+}
