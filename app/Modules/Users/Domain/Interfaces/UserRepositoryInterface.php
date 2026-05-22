@@ -17,4 +17,8 @@ interface UserRepositoryInterface
     public function findByLogin(string $login): ?User;
 
     public function updateLastLogin(User $user): void;
+
+    public function updatePassword(User $user, string $plainPassword): void;
+
+    public function updateWelcomeWhatsAppUrl(User $user, string $url): void;
 }

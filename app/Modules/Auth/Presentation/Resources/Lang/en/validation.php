@@ -4,6 +4,10 @@ return [
     'attributes' => [
         'identifier' => 'email or phone number',
         'password' => 'password',
+        'password_confirmation' => 'password confirmation',
+        'current_password' => 'current password',
+        'email' => 'email',
+        'otp' => 'verification code',
     ],
 
     'messages' => [

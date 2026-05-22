@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — derived from Spatie `roles[]` plus profile tables (`staff_members`, `shipping_companies`, `delivery_agents`).\n\n**Setup:**\n1. Set `base_url` (e.g. `http://marsal.test` or `http://localhost:8000`).\n2. Run **Auth → Login** — saves `access_token` automatically.\n3. Admin routes use Bearer auth from collection variable.",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — derived from Spatie `roles[]` plus profile tables (`staff_members`, `shipping_companies`, `delivery_agents`).\n\n**Setup:**\n1. Set `base_url` (e.g. `http://marsal.test` or `http://localhost:8000`).\n2. Run **Auth → Login** — saves `access_token` automatically.\n3. Admin routes use Bearer auth from collection variable.\n\n**Email (SMTP):** Configure `MAIL_*` in `.env`. New users receive a **welcome email** with login URL and credentials. Password reset uses a **6-digit OTP** sent by email.\n\n**Password rules:** min 8 chars, upper + lower + number + symbol; must differ from current password and email.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -21,6 +21,18 @@
       "value": "",
       "type": "string",
       "description": "UUID of a supervisor delivery agent (supervisor_agent_id IS NULL on that row). Set after creating a supervisor agent."
+    },
+    {
+      "key": "reset_email",
+      "value": "staff@marsal.com",
+      "type": "string",
+      "description": "Email used for forgot/reset password flow."
+    },
+    {
+      "key": "reset_otp",
+      "value": "",
+      "type": "string",
+      "description": "6-digit OTP from password reset email. Paste after Forgot Password."
     }
   ],
   "auth": {
@@ -57,7 +69,7 @@
     },
     {
       "name": "Auth",
-      "description": "JWT authentication — login, logout, refresh, profile. No registration endpoint.",
+      "description": "JWT authentication — login, logout, refresh, profile, password reset (OTP email), change password. No public registration.\n\n**Reset flow:** Forgot Password → check email for 6-digit OTP → Reset Password → Login with new password.",
       "item": [
         {
           "name": "Login",
@@ -96,7 +108,69 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "login"]
             },
-            "description": "Authenticate with email **or** phone in `identifier` field. Returns JWT `access_token` and user (`account_type`, `roles[]`, `permissions[]`, optional `staff_member` / `shipping_company` / `delivery_agent`)."
+            "description": "Authenticate with email **or** phone in `identifier` field. Returns JWT `access_token` and user (`account_type`, `roles[]`, optional `staff_member` / `shipping_company` / `delivery_agent`)."
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{reset_email}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "forgot-password"]
+            },
+            "description": "Request a password-reset OTP by email. **No auth required.**\n\nAlways returns success (no email enumeration). If the account exists and is active, a 6-digit code is emailed (expires in 15 min, default).\n\nRate limits: 60s between requests per email; max 5 requests/hour.\n\nRequires SMTP (`MAIL_MAILER=smtp`) and queue worker if jobs are queued."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{reset_email}}\",\n  \"otp\": \"{{reset_otp}}\",\n  \"password\": \"NewSecure@99\",\n  \"password_confirmation\": \"NewSecure@99\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "reset-password"]
+            },
+            "description": "Reset password using email + OTP from **Forgot Password** email. **No auth required.**\n\n`otp`: exactly 6 digits.\n\n`password`: min 8, mixed case, number, symbol; cannot match email or previous password.\n\nMax 5 wrong OTP attempts per code. After success, log in with the new password."
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_password\": \"Admin@123\",\n  \"password\": \"NewSecure@88\",\n  \"password_confirmation\": \"NewSecure@88\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "change-password"]
+            },
+            "description": "Change password for the **authenticated** user. Requires Bearer token.\n\n`current_password` must match the active password.\n\n`password` must meet strength rules and differ from current password and email."
           }
         },
         {
@@ -111,7 +185,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "me"]
             },
-            "description": "Current user profile: `account_type` (from roles/profiles), `roles[]`, `permissions[]`, optional `staff_member`, `shipping_company`, `delivery_agent` (includes `supervisor_agent_id`, `is_supervisor`)."
+            "description": "Current user profile: `account_type` (from roles/profiles), `roles[]`, optional `staff_member`, `shipping_company`, `delivery_agent` (includes `supervisor_agent_id`, `is_supervisor`)."
           }
         },
         {
@@ -148,7 +222,7 @@
     },
     {
       "name": "Admin — Roles",
-      "description": "Dynamic RBAC — super-admin can create roles and sync permissions. Requires `roles.*` permissions (super_admin bypasses all).",
+      "description": "Dynamic RBAC — super-admin can create roles and sync permissions. List roles returns permissions with `label_ar`, `label_en`, `group`, `group_label_ar` (from `PermissionEnum` + lang files). Requires `roles.view` / `roles.manage` (super_admin bypasses all).",
       "item": [
         {
           "name": "List Roles",
@@ -162,7 +236,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "roles"]
             },
-            "description": "Permission: `roles.view`"
+            "description": "Permission: `roles.view`\n\nEach role includes `permissions[]` objects: `id`, `name`, `label_ar`, `label_en`, `group`, `group_label_ar`."
           }
         },
         {
@@ -182,7 +256,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "roles"]
             },
-            "description": "Permission: `roles.create`"
+            "description": "Permission: `roles.manage`"
           }
         },
         {
@@ -205,7 +279,7 @@
                 { "key": "id", "value": "1", "description": "Role ID" }
               ]
             },
-            "description": "Permission: `roles.update`"
+            "description": "Permission: `roles.manage`"
           }
         },
         {
@@ -223,7 +297,7 @@
                 { "key": "id", "value": "1", "description": "Role ID" }
               ]
             },
-            "description": "Permission: `roles.delete`"
+            "description": "Permission: `roles.manage`"
           }
         },
         {
@@ -246,14 +320,14 @@
                 { "key": "id", "value": "1", "description": "Role ID" }
               ]
             },
-            "description": "Replace all permissions on a role. Permission: `roles.update`"
+            "description": "Replace all permissions on a role. Permission: `roles.manage`. Use permission `name` strings (e.g. `orders.view`)."
           }
         }
       ]
     },
     {
       "name": "Admin — Permissions",
-      "description": "Manage permission definitions (guard: api).",
+      "description": "Manage permission definitions (guard: api). Responses include Arabic/English labels when the permission exists in `PermissionEnum`.",
       "item": [
         {
           "name": "List Permissions",
@@ -267,7 +341,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "permissions"]
             },
-            "description": "Permission: `permissions.view`"
+            "description": "Permission: `roles.view`"
           }
         },
         {
@@ -287,7 +361,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "permissions"]
             },
-            "description": "Permission: `permissions.create`"
+            "description": "Permission: `roles.manage`"
           }
         },
         {
@@ -310,7 +384,7 @@
                 { "key": "id", "value": "1", "description": "Permission ID" }
               ]
             },
-            "description": "Permission: `permissions.update`"
+            "description": "Permission: `roles.manage`"
           }
         },
         {
@@ -328,14 +402,14 @@
                 { "key": "id", "value": "1", "description": "Permission ID" }
               ]
             },
-            "description": "Permission: `permissions.delete`"
+            "description": "Permission: `roles.manage`"
           }
         }
       ]
     },
     {
       "name": "Admin — Users",
-      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.",
+      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.",
       "item": [
         {
           "name": "Create User (Generic)",
@@ -347,14 +421,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"System Admin\",\n  \"email\": \"admin2@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass123\",\n  \"account_type\": \"super_admin\",\n  \"roles\": [\"super_admin\"],\n  \"profile\": {}\n}"
+              "raw": "{\n  \"name\": \"System Admin\",\n  \"email\": \"admin2@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"account_type\": \"super_admin\",\n  \"roles\": [\"super_admin\"],\n  \"profile\": {}\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "users"]
             },
-            "description": "Permission: `users.create`\n\n`account_type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` (drives which profile row is created — not stored on `users`).\n\n- `super_admin` → role only (full access via `super_admin` role)\n- `staff_member` → creates `staff_members` (`profile.department`, `profile.job_title`, `profile.notes`)\n- `shipping_company` → creates `shipping_companies`\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional)\n\n`roles`: array of existing role names (required)."
+            "description": "Permission: `users.create`\n\nSends **welcome email** + returns **`welcome_whatsapp_url`** (wa.me link for admin to click and send).\n\n`account_type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` (drives which profile row is created — not stored on `users`).\n\n- `super_admin` → role only (full access via `super_admin` role)\n- `staff_member` → creates `staff_members` (`profile.department`, `profile.job_title`, `profile.notes`)\n- `shipping_company` → creates `shipping_companies`\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional)\n\n`roles`: array of existing role names (required).\n\n`password`: min 8, upper + lower + number + symbol."
           }
         },
         {
@@ -367,14 +441,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"operations\",\n    \"job_title\": \"Operations Manager\",\n    \"notes\": \"Internal staff account\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"operations\",\n    \"job_title\": \"Operations Manager\",\n    \"notes\": \"Internal staff account\"\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff-members",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "staff-members"]
             },
-            "description": "Permission: `staff_members.create`\n\nCreates `users` + `staff_members` row. Default role `staff_member` if `roles` omitted. Response `account_type`: `staff_member`."
+            "description": "Permission: `users.create`\n\nCreates `users` + `staff_members` row. Sends welcome email. Default role `staff_member` if `roles` omitted. Response `account_type`: `staff_member`."
           }
         },
         {
@@ -387,14 +461,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Acme Logistics\",\n  \"email\": \"ops@acme.com\",\n  \"phone\": \"01011111111\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"shipping_company\"],\n  \"profile\": {\n    \"company_name\": \"Acme Logistics\",\n    \"commercial_reg\": \"CR-123456\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Acme Logistics\",\n  \"email\": \"ops@acme.com\",\n  \"phone\": \"01011111111\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"shipping_company\"],\n  \"profile\": {\n    \"company_name\": \"Acme Logistics\",\n    \"commercial_reg\": \"CR-123456\"\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/shipping-companies",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "shipping-companies"]
             },
-            "description": "Permission: `shipping_companies.create`\n\nCreates `users` + `shipping_companies` row. Default role `shipping_company` if `roles` omitted."
+            "description": "Permission: `shipping_companies.create`\n\nCreates `users` + `shipping_companies` row. Sends welcome email. Default role `shipping_company` if `roles` omitted."
           }
         },
         {
@@ -427,14 +501,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Supervisor Agent\",\n  \"email\": \"supervisor@marsal.com\",\n  \"phone\": \"01022222222\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"national_id\": \"29001011234567\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"ABC 1234\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Supervisor Agent\",\n  \"email\": \"supervisor@marsal.com\",\n  \"phone\": \"01022222222\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"national_id\": \"29001011234567\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"ABC 1234\"\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "delivery-agents"]
             },
-            "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` row. Omit `profile.supervisor_agent_id` to create a **supervisor** (`is_supervisor: true`). Save `delivery_agent_id` from the response into collection variable `supervisor_agent_id` for subordinate requests.\n\n`vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\nCan assign custom roles e.g. `[\"field_lead\"]` if role exists."
+            "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` row. Sends welcome email. Omit `profile.supervisor_agent_id` to create a **supervisor** (`is_supervisor: true`). Save `delivery_agent_id` from the response into collection variable `supervisor_agent_id` for subordinate requests.\n\n`vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\nCan assign custom roles e.g. `[\"field_lead\"]` if role exists."
           }
         },
         {
@@ -447,7 +521,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Agent One\",\n  \"email\": \"agent1@marsal.com\",\n  \"phone\": \"01033335555\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\",\n    \"national_id\": \"29001019876543\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"XYZ 5678\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Agent One\",\n  \"email\": \"agent1@marsal.com\",\n  \"phone\": \"01033335555\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\",\n    \"national_id\": \"29001019876543\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"XYZ 5678\"\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
@@ -467,7 +541,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Field Lead Agent\",\n  \"email\": \"lead@marsal.com\",\n  \"phone\": \"01055556666\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"field_lead\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Field Lead Agent\",\n  \"email\": \"lead@marsal.com\",\n  \"phone\": \"01055556666\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"field_lead\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\"\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",

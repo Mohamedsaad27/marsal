@@ -40,4 +40,14 @@ class UserRepository implements UserRepositoryInterface
     {
         $user->update(['last_login_at' => now()]);
     }
+
+    public function updatePassword(User $user, string $plainPassword): void
+    {
+        $user->update(['password' => $plainPassword]);
+    }
+
+    public function updateWelcomeWhatsAppUrl(User $user, string $url): void
+    {
+        $user->update(['welcome_whatsapp_url' => $url]);
+    }
 }

@@ -313,7 +313,9 @@ Every `TINYINT` coded column has its map in the `COMMENT` and a corresponding La
 ### Routes
 
 ```
-/api/v1/auth/...           → Login, logout, token refresh (no auth needed)
+/api/v1/auth/login         → Login (public)
+/api/v1/auth/forgot-password, /reset-password → OTP email reset (public)
+/api/v1/auth/me, /logout, /refresh, /change-password → JWT required
 /api/v1/admin/...          → Super admin routes
 /api/v1/company/...        → Shipping company routes
 /api/v1/agent/...          → Delivery agent mobile routes

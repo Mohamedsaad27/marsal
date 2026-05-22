@@ -11,10 +11,15 @@ use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
 use App\Modules\Auth\Application\Exceptions\RoleNotFoundException;
+use App\Modules\Auth\Application\UseCases\SendWelcomeEmailUseCase;
+use App\Modules\Auth\Application\UseCases\SendWelcomeMessageOnWhatsAppUseCase;
+
 class CreateUserUseCase
 {
     public function __construct(
         private readonly UserRepositoryInterface $userRepository,
+        private readonly SendWelcomeEmailUseCase $sendWelcomeEmailUseCase,
+        private readonly SendWelcomeMessageOnWhatsAppUseCase $sendWelcomeMessageOnWhatsAppUseCase,
     ) {}
 
     public function execute(CreateUserDTO $dto): User
@@ -64,7 +69,12 @@ class CreateUserUseCase
                 ]);
             }
 
-            return $user->load(['shippingCompany', 'deliveryAgent', 'staffMember']);
+            $user = $user->load(['shippingCompany', 'deliveryAgent', 'staffMember']);
+
+            $this->sendWelcomeEmailUseCase->execute($user, $dto->password);
+            $this->sendWelcomeMessageOnWhatsAppUseCase->execute($user, $dto->password);
+
+            return $user->fresh()->load(['shippingCompany', 'deliveryAgent', 'staffMember']);
         });
     }
 

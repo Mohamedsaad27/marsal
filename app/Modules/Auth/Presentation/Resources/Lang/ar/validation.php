@@ -4,6 +4,10 @@ return [
     'attributes' => [
         'identifier' => 'البريد الإلكتروني أو رقم الهاتف',
         'password' => 'كلمة المرور',
+        'password_confirmation' => 'تأكيد كلمة المرور',
+        'current_password' => 'كلمة المرور الحالية',
+        'email' => 'البريد الإلكتروني',
+        'otp' => 'رمز التحقق',
     ],
 
     'messages' => [

@@ -16,6 +16,8 @@ class AuthServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->loadMigrationsFrom(__DIR__ . '/../Database/Migrations');
         $this->loadTranslationsFrom(__DIR__ . '/../../Presentation/Resources/Lang', 'auth');
+        $this->loadViewsFrom(__DIR__ . '/../../Presentation/Resources/views', 'auth');
     }
 }
