@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions.\n\n**Setup:**\n1. Set `base_url` (e.g. `http://marsal.test` or `http://localhost:8000`).\n2. Run **Auth → Login** — saves `access_token` automatically.\n3. Admin routes use Bearer auth from collection variable.",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — derived from Spatie `roles[]` plus profile tables (`staff_members`, `shipping_companies`, `delivery_agents`).\n\n**Setup:**\n1. Set `base_url` (e.g. `http://marsal.test` or `http://localhost:8000`).\n2. Run **Auth → Login** — saves `access_token` automatically.\n3. Admin routes use Bearer auth from collection variable.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -15,6 +15,12 @@
       "key": "access_token",
       "value": "",
       "type": "string"
+    },
+    {
+      "key": "supervisor_agent_id",
+      "value": "",
+      "type": "string",
+      "description": "UUID of a supervisor delivery agent (supervisor_agent_id IS NULL on that row). Set after creating a supervisor agent."
     }
   ],
   "auth": {
@@ -90,7 +96,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "login"]
             },
-            "description": "Authenticate with email **or** phone in `login` field. Returns JWT `access_token` and user with roles/permissions."
+            "description": "Authenticate with email **or** phone in `identifier` field. Returns JWT `access_token` and user (`account_type`, `roles[]`, `permissions[]`, optional `staff_member` / `shipping_company` / `delivery_agent`)."
           }
         },
         {
@@ -105,7 +111,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "me"]
             },
-            "description": "Current user profile: account_type, roles[], permissions[], optional shipping_company / delivery_agent."
+            "description": "Current user profile: `account_type` (from roles/profiles), `roles[]`, `permissions[]`, optional `staff_member`, `shipping_company`, `delivery_agent` (includes `supervisor_agent_id`, `is_supervisor`)."
           }
         },
         {
@@ -341,14 +347,34 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass123\",\n  \"account_type\": \"super_admin\",\n  \"roles\": [\"super_admin\"],\n  \"profile\": {}\n}"
+              "raw": "{\n  \"name\": \"System Admin\",\n  \"email\": \"admin2@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass123\",\n  \"account_type\": \"super_admin\",\n  \"roles\": [\"super_admin\"],\n  \"profile\": {}\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "users"]
             },
-            "description": "Permission: `users.create`\n\n`account_type`: `super_admin` | `shipping_company` | `delivery_agent`\n\n`roles`: array of existing role names (required)."
+            "description": "Permission: `users.create`\n\n`account_type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` (drives which profile row is created — not stored on `users`).\n\n- `super_admin` → role only (full access via `super_admin` role)\n- `staff_member` → creates `staff_members` (`profile.department`, `profile.job_title`, `profile.notes`)\n- `shipping_company` → creates `shipping_companies`\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional)\n\n`roles`: array of existing role names (required)."
+          }
+        },
+        {
+          "name": "Create Staff Member",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"operations\",\n    \"job_title\": \"Operations Manager\",\n    \"notes\": \"Internal staff account\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/staff-members",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "staff-members"]
+            },
+            "description": "Permission: `staff_members.create`\n\nCreates `users` + `staff_members` row. Default role `staff_member` if `roles` omitted. Response `account_type`: `staff_member`."
           }
         },
         {
@@ -373,6 +399,26 @@
         },
         {
           "name": "Create Delivery Agent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    const agentId = json.data?.delivery_agent?.delivery_agent_id;",
+                  "    if (agentId) {",
+                  "        pm.collectionVariables.set('supervisor_agent_id', agentId);",
+                  "        pm.test('supervisor_agent_id saved', function () {",
+                  "            pm.expect(pm.collectionVariables.get('supervisor_agent_id')).to.eql(agentId);",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -381,14 +427,34 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Agent One\",\n  \"email\": \"agent1@marsal.com\",\n  \"phone\": \"01022222222\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"national_id\": \"29001011234567\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"ABC 1234\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Supervisor Agent\",\n  \"email\": \"supervisor@marsal.com\",\n  \"phone\": \"01022222222\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"national_id\": \"29001011234567\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"ABC 1234\"\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "delivery-agents"]
             },
-            "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` row. `vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\nCan assign custom roles e.g. `[\"field_lead\"]` if role exists."
+            "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` row. Omit `profile.supervisor_agent_id` to create a **supervisor** (`is_supervisor: true`). Save `delivery_agent_id` from the response into collection variable `supervisor_agent_id` for subordinate requests.\n\n`vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\nCan assign custom roles e.g. `[\"field_lead\"]` if role exists."
+          }
+        },
+        {
+          "name": "Create Delivery Agent (Subordinate)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Agent One\",\n  \"email\": \"agent1@marsal.com\",\n  \"phone\": \"01033335555\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\",\n    \"national_id\": \"29001019876543\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"XYZ 5678\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/delivery-agents",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "delivery-agents"]
+            },
+            "description": "Creates a subordinate agent linked to a supervisor. Set collection variable `supervisor_agent_id` to the supervisor's `delivery_agent_id` (from **Create Delivery Agent** response). Response includes `delivery_agent.supervisor_agent_id` and `is_supervisor: false`."
           }
         },
         {
@@ -401,14 +467,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Field Lead Agent\",\n  \"email\": \"lead@marsal.com\",\n  \"phone\": \"01055556666\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"field_lead\"],\n  \"profile\": {}\n}"
+              "raw": "{\n  \"name\": \"Field Lead Agent\",\n  \"email\": \"lead@marsal.com\",\n  \"phone\": \"01055556666\",\n  \"password\": \"TempPass123\",\n  \"roles\": [\"field_lead\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\"\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "delivery-agents"]
             },
-            "description": "Create agent with a custom role — create the role first via **Admin → Roles → Create Role**, then sync permissions."
+            "description": "Create agent with a custom role — create the role first via **Admin → Roles → Create Role**, then sync permissions. Optional `profile.supervisor_agent_id` links to a supervisor."
           }
         }
       ]

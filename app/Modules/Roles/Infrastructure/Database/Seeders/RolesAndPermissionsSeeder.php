@@ -21,6 +21,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'users.view', 'users.create', 'users.update', 'users.delete',
             'shipping_companies.view', 'shipping_companies.create', 'shipping_companies.update', 'shipping_companies.delete',
             'delivery_agents.view', 'delivery_agents.create', 'delivery_agents.update', 'delivery_agents.delete',
+            'staff_members.view', 'staff_members.create', 'staff_members.update', 'staff_members.delete',
             'orders.view', 'orders.create', 'orders.update', 'orders.assign',
         ];
 
@@ -41,6 +42,15 @@ class RolesAndPermissionsSeeder extends Seeder
         $agent->syncPermissions([
             'orders.view', 'orders.update',
             'delivery_agents.view',
+        ]);
+
+        $staffMember = Role::query()->firstOrCreate(['name' => 'staff_member', 'guard_name' => $guard]);
+        $staffMember->syncPermissions([
+            'users.view',
+            'shipping_companies.view',
+            'delivery_agents.view',
+            'staff_members.view',
+            'orders.view', 'orders.create', 'orders.update', 'orders.assign',
         ]);
     }
 }

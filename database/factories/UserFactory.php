@@ -2,7 +2,6 @@
 
 namespace Database\Factories;
 
-use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -23,7 +22,6 @@ class UserFactory extends Factory
             'email' => fake()->unique()->safeEmail(),
             'phone' => fake()->unique()->numerify('010########'),
             'password' => static::$password ??= Hash::make('password'),
-            'user_type' => AccountTypeEnum::SuperAdmin,
             'is_active' => true,
         ];
     }

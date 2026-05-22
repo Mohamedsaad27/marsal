@@ -6,6 +6,7 @@ use App\Modules\Users\Application\DTOs\CreateUserDTO;
 use App\Modules\Users\Domain\Interfaces\UserRepositoryInterface;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
+use App\Modules\Users\Infrastructure\Database\Models\StaffMember;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Role;
@@ -26,11 +27,19 @@ class CreateUserUseCase
                 'email' => $dto->email,
                 'phone' => $dto->phone,
                 'password' => $dto->password,
-                'user_type' => $dto->accountType,
                 'is_active' => true,
             ]);
 
             $user->syncRoles($dto->roles);
+
+            if ($dto->accountType->requiresStaffMemberProfile()) {
+                StaffMember::query()->create([
+                    'user_id' => $user->user_id,
+                    'department' => $dto->profile['department'] ?? null,
+                    'job_title' => $dto->profile['job_title'] ?? null,
+                    'notes' => $dto->profile['notes'] ?? null,
+                ]);
+            }
 
             if ($dto->accountType->requiresShippingCompanyProfile()) {
                 ShippingCompany::query()->create([
@@ -46,6 +55,7 @@ class CreateUserUseCase
             if ($dto->accountType->requiresDeliveryAgentProfile()) {
                 DeliveryAgent::query()->create([
                     'user_id' => $user->user_id,
+                    'supervisor_agent_id' => $dto->profile['supervisor_agent_id'] ?? null,
                     'national_id' => $dto->profile['national_id'] ?? null,
                     'vehicle_type' => $dto->profile['vehicle_type'] ?? null,
                     'vehicle_plate_number' => $dto->profile['vehicle_plate_number'] ?? null,
@@ -54,7 +64,7 @@ class CreateUserUseCase
                 ]);
             }
 
-            return $user->load(['shippingCompany', 'deliveryAgent']);
+            return $user->load(['shippingCompany', 'deliveryAgent', 'staffMember']);
         });
     }
 

@@ -1,4 +1,4 @@
-# ShipOps — Claude AI Rules (Master File)
+# Mersal — Claude AI Rules (Master File)
 
 > **Read this file completely before starting any task.**
 > Marsal is a B2B logistics and delivery management system built on Laravel + Flutter.
@@ -11,7 +11,7 @@
 
 | Key | Value |
 |-----|-------|
-| Product | ShipOps |
+| Product | Mersal |
 | Market | Egyptian B2B logistics market |
 | Backend | Laravel 13 — REST API |
 | FrontEnd Dashboard Admin | React |
@@ -1064,4 +1064,4 @@ class RefusalTimerExpiredJob implements ShouldQueue
 
 ---
 
-*Last updated: May 2026 — ShipOps v1.0 — Egyptian B2B Logistics Platform*
+*Last updated: May 2026 — Mersal v1.0 — Egyptian B2B Logistics Platform*

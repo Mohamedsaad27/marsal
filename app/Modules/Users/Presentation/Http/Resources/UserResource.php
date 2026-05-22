@@ -16,15 +16,22 @@ class UserResource extends JsonResource
             'name' => $this->name,
             'email' => $this->email,
             'phone' => $this->phone,
-            'account_type' => $this->user_type?->code(),
+            'account_type' => $this->resolveAccountType()?->code(),
             'is_active' => $this->is_active,
             'roles' => $this->getRoleNames(),
             'shipping_company' => $this->whenLoaded('shippingCompany', fn () => [
                 'shipping_company_id' => $this->shippingCompany?->shipping_company_id,
                 'company_name' => $this->shippingCompany?->company_name,
             ]),
+            'staff_member' => $this->whenLoaded('staffMember', fn () => [
+                'staff_member_id' => $this->staffMember?->staff_member_id,
+                'department' => $this->staffMember?->department,
+                'job_title' => $this->staffMember?->job_title,
+            ]),
             'delivery_agent' => $this->whenLoaded('deliveryAgent', fn () => [
                 'delivery_agent_id' => $this->deliveryAgent?->delivery_agent_id,
+                'supervisor_agent_id' => $this->deliveryAgent?->supervisor_agent_id,
+                'is_supervisor' => $this->deliveryAgent?->isSupervisor(),
                 'national_id' => $this->deliveryAgent?->national_id,
             ]),
             'last_login_at' => $this->last_login_at?->toIso8601String(),

@@ -26,7 +26,7 @@ class LoginUseCase
 
         $this->userRepository->updateLastLogin($user);
 
-        $user->load(['shippingCompany', 'deliveryAgent']);
+        $user->load(['shippingCompany', 'deliveryAgent', 'staffMember']);
 
         return [
             'access_token' => $token,

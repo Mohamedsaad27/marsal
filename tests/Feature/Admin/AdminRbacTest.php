@@ -22,8 +22,8 @@ class AdminRbacTest extends TestCase
         $this->seed(SuperAdminSeeder::class);
 
         $login = $this->postJson('/api/v1/auth/login', [
-            'login' => env('SUPER_ADMIN_EMAIL', 'admin@shipops.local'),
-            'password' => env('SUPER_ADMIN_PASSWORD', 'password'),
+            'identifier' => env('SUPER_ADMIN_EMAIL', 'superadmin@marsal.com'),
+            'password' => env('SUPER_ADMIN_PASSWORD', 'Admin@123'),
         ]);
 
         $this->token = $login->json('data.access_token');
@@ -60,6 +60,26 @@ class AdminRbacTest extends TestCase
         $response->assertCreated()
             ->assertJsonPath('data.account_type', 'shipping_company')
             ->assertJsonPath('data.roles.0', 'shipping_company');
+    }
+
+    public function test_super_admin_can_create_staff_member(): void
+    {
+        $response = $this->auth()->postJson('/api/v1/admin/staff-members', [
+            'name' => 'Ops Staff',
+            'email' => 'staff@marsal.com',
+            'phone' => '01044444444',
+            'password' => 'password123',
+            'roles' => ['staff_member'],
+            'profile' => [
+                'department' => 'operations',
+                'job_title' => 'Operations Coordinator',
+            ],
+        ]);
+
+        $response->assertCreated()
+            ->assertJsonPath('data.account_type', 'staff_member')
+            ->assertJsonPath('data.roles.0', 'staff_member')
+            ->assertJsonPath('data.staff_member.department', 'operations');
     }
 
     public function test_super_admin_can_create_delivery_agent_with_custom_role(): void

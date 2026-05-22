@@ -22,8 +22,8 @@ class AuthJwtTest extends TestCase
     public function test_login_with_email_returns_jwt(): void
     {
         $response = $this->postJson('/api/v1/auth/login', [
-            'login' => env('SUPER_ADMIN_EMAIL', 'admin@shipops.local'),
-            'password' => env('SUPER_ADMIN_PASSWORD', 'password'),
+            'identifier' => env('SUPER_ADMIN_EMAIL', 'superadmin@marsal.com'),
+            'password' => env('SUPER_ADMIN_PASSWORD', 'Admin@123'),
         ]);
 
         $response->assertOk()
@@ -36,8 +36,8 @@ class AuthJwtTest extends TestCase
     public function test_login_with_phone_returns_jwt(): void
     {
         $response = $this->postJson('/api/v1/auth/login', [
-            'login' => env('SUPER_ADMIN_PHONE', '01000000000'),
-            'password' => env('SUPER_ADMIN_PASSWORD', 'password'),
+            'identifier' => env('SUPER_ADMIN_PHONE', '01098001021'),
+            'password' => env('SUPER_ADMIN_PASSWORD', 'Admin@123'),
         ]);
 
         $response->assertOk()->assertJsonPath('isSuccess', true);
@@ -73,8 +73,8 @@ class AuthJwtTest extends TestCase
     protected function loginAsSuperAdmin(): string
     {
         $response = $this->postJson('/api/v1/auth/login', [
-            'login' => env('SUPER_ADMIN_EMAIL', 'admin@shipops.local'),
-            'password' => env('SUPER_ADMIN_PASSWORD', 'password'),
+            'identifier' => env('SUPER_ADMIN_EMAIL', 'superadmin@marsal.com'),
+            'password' => env('SUPER_ADMIN_PASSWORD', 'Admin@123'),
         ]);
 
         return $response->json('data.access_token');

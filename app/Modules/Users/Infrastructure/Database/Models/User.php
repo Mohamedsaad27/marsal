@@ -33,7 +33,6 @@ class User extends Authenticatable implements JWTSubject
         'name',
         'email',
         'password',
-        'user_type',
         'phone',
         'avatar',
         'gender',
@@ -55,8 +54,40 @@ class User extends Authenticatable implements JWTSubject
             'last_login_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
-            'user_type' => AccountTypeEnum::class,
         ];
+    }
+
+    public function resolveAccountType(): ?AccountTypeEnum
+    {
+        if ($this->hasRole('super_admin')) {
+            return AccountTypeEnum::SuperAdmin;
+        }
+
+        if ($this->hasRole('staff_member')) {
+            return AccountTypeEnum::StaffMember;
+        }
+
+        if ($this->hasRole('shipping_company')) {
+            return AccountTypeEnum::ShippingCompany;
+        }
+
+        if ($this->hasRole('delivery_agent')) {
+            return AccountTypeEnum::DeliveryAgent;
+        }
+
+        if ($this->relationLoaded('staffMember') ? $this->staffMember : $this->staffMember()->exists()) {
+            return AccountTypeEnum::StaffMember;
+        }
+
+        if ($this->relationLoaded('shippingCompany') ? $this->shippingCompany : $this->shippingCompany()->exists()) {
+            return AccountTypeEnum::ShippingCompany;
+        }
+
+        if ($this->relationLoaded('deliveryAgent') ? $this->deliveryAgent : $this->deliveryAgent()->exists()) {
+            return AccountTypeEnum::DeliveryAgent;
+        }
+
+        return null;
     }
 
     public function getJWTIdentifier(): mixed
@@ -67,7 +98,7 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims(): array
     {
         return [
-            'account_type' => $this->user_type?->code(),
+            'account_type' => $this->resolveAccountType()?->code(),
             'roles' => $this->getRoleNames()->values()->all(),
             'permissions' => $this->getAllPermissions()->pluck('name')->values()->all(),
         ];
@@ -81,6 +112,11 @@ class User extends Authenticatable implements JWTSubject
     public function deliveryAgent(): HasOne
     {
         return $this->hasOne(DeliveryAgent::class, 'user_id', 'user_id');
+    }
+
+    public function staffMember(): HasOne
+    {
+        return $this->hasOne(StaffMember::class, 'user_id', 'user_id');
     }
 
     protected function getDefaultGuardName(): string

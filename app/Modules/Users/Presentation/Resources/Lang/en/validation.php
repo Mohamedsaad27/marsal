@@ -38,7 +38,7 @@ return [
 
         'account_type.required' => 'Account type is required.',
         'account_type.string' => 'Account type is invalid.',
-        'account_type.in' => 'Account type must be super admin, shipping company, or delivery agent.',
+        'account_type.in' => 'Account type must be super admin, staff member, shipping company, or delivery agent.',
 
         'roles.required' => 'At least one role is required.',
         'roles.array' => 'Roles must be sent as a list.',
