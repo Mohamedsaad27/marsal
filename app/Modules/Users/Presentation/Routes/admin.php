@@ -16,5 +16,5 @@ Route::prefix('api/v1/admin')
             ->middleware('permission:delivery_agents.create');
 
         Route::post('staff-members', [AdminUserController::class, 'storeStaffMember'])
-            ->middleware('permission:staff_members.create');
+            ->middleware('permission:users.create');
     });

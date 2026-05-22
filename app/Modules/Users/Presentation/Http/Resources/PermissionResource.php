@@ -1,13 +1,11 @@
 <?php
 
-namespace App\Modules\Roles\Presentation\Http\Resources;
+namespace App\Modules\Users\Presentation\Http\Resources;
 
 use App\Modules\Users\Domain\Enums\PermissionEnum;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
-use Spatie\Permission\Models\Permission;
 
-/** @mixin Permission */
 class PermissionResource extends JsonResource
 {
     public function toArray(Request $request): array
@@ -21,8 +19,6 @@ class PermissionResource extends JsonResource
             'label_en' => $enum?->labelEn() ?? $this->name,
             'group' => $enum?->group() ?? explode('.', $this->name)[0],
             'group_label_ar' => $enum?->groupLabelAr() ?? null,
-            'guard_name' => $this->guard_name,
-            'created_at' => $this->created_at?->toIso8601String(),
         ];
     }
 }

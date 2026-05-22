@@ -2,55 +2,37 @@
 
 namespace App\Modules\Roles\Infrastructure\Database\Seeders;
 
+use App\Modules\Users\Domain\Enums\PermissionEnum;
+use App\Modules\Users\Infrastructure\Database\Seeders\PermissionSeeder;
 use Illuminate\Database\Seeder;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
 {
     public function run(): void
     {
-        app()[PermissionRegistrar::class]->forgetCachedPermissions();
+        $this->call(PermissionSeeder::class);
 
         $guard = 'api';
 
-        $permissions = [
-            'roles.view', 'roles.create', 'roles.update', 'roles.delete',
-            'permissions.view', 'permissions.create', 'permissions.update', 'permissions.delete',
-            'users.view', 'users.create', 'users.update', 'users.delete',
-            'shipping_companies.view', 'shipping_companies.create', 'shipping_companies.update', 'shipping_companies.delete',
-            'delivery_agents.view', 'delivery_agents.create', 'delivery_agents.update', 'delivery_agents.delete',
-            'staff_members.view', 'staff_members.create', 'staff_members.update', 'staff_members.delete',
-            'orders.view', 'orders.create', 'orders.update', 'orders.assign',
-        ];
-
-        foreach ($permissions as $name) {
+        foreach (['staff_members.view', 'staff_members.create', 'staff_members.update', 'staff_members.delete'] as $name) {
             Permission::query()->firstOrCreate(['name' => $name, 'guard_name' => $guard]);
         }
 
-        $superAdmin = Role::query()->firstOrCreate(['name' => 'super_admin', 'guard_name' => $guard]);
-        $superAdmin->syncPermissions(Permission::query()->where('guard_name', $guard)->pluck('name'));
-
-        $company = Role::query()->firstOrCreate(['name' => 'shipping_company', 'guard_name' => $guard]);
-        $company->syncPermissions([
-            'orders.view', 'orders.create', 'orders.update',
-            'shipping_companies.view',
-        ]);
-
-        $agent = Role::query()->firstOrCreate(['name' => 'delivery_agent', 'guard_name' => $guard]);
-        $agent->syncPermissions([
-            'orders.view', 'orders.update',
-            'delivery_agents.view',
-        ]);
-
         $staffMember = Role::query()->firstOrCreate(['name' => 'staff_member', 'guard_name' => $guard]);
         $staffMember->syncPermissions([
-            'users.view',
-            'shipping_companies.view',
-            'delivery_agents.view',
+            PermissionEnum::UsersView->value,
+            PermissionEnum::ShippingCompaniesView->value,
+            PermissionEnum::DeliveryAgentsView->value,
             'staff_members.view',
-            'orders.view', 'orders.create', 'orders.update', 'orders.assign',
+            PermissionEnum::OrdersView->value,
+            PermissionEnum::OrdersCreate->value,
+            PermissionEnum::OrdersUpdate->value,
+            PermissionEnum::OrdersAssign->value,
         ]);
+
+        $superAdmin = Role::query()->where('name', 'super_admin')->where('guard_name', $guard)->first();
+        $superAdmin?->givePermissionTo(['staff_members.view', 'staff_members.create', 'staff_members.update', 'staff_members.delete']);
     }
 }
