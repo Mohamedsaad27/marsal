@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — derived from Spatie `roles[]` plus profile tables (`staff_members`, `shipping_companies`, `delivery_agents`).\n\n**Setup:**\n1. Set `base_url` (e.g. `http://marsal.test` or `http://localhost:8000`).\n2. Run **Auth → Login** — saves `access_token` automatically.\n3. Admin routes use Bearer auth from collection variable.\n\n**Email (SMTP):** Configure `MAIL_*` in `.env`. New users receive a **welcome email** with login URL and credentials. Password reset uses a **6-digit OTP** sent by email.\n\n**Password rules:** min 8 chars, upper + lower + number + symbol; must differ from current password and email.",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Locations (governorates & cities).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — derived from Spatie `roles[]` plus profile tables (`staff_members`, `shipping_companies`, `delivery_agents`).\n\n**Setup:**\n1. Set `base_url` (e.g. `http://marsal.test` or `http://localhost:8000`).\n2. Run **Auth → Login** — saves `access_token` automatically.\n3. Admin routes use Bearer auth from collection variable.\n4. Run `php artisan db:seed --class=App\\\\Modules\\\\Locations\\\\Infrastructure\\\\Database\\\\Seeders\\\\EgyptLocationsSeeder` for Egypt location data (27 governorates, ~396 cities).\n\n**Email (SMTP):** Configure `MAIL_*` in `.env`. New users receive a **welcome email** with login URL and credentials. Password reset uses a **6-digit OTP** sent by email.\n\n**Password rules:** min 8 chars, upper + lower + number + symbol; must differ from current password and email.\n\n**Locations:** Permissions `governorates.view` (read) and `governorates.manage` (CRUD). Reference lists: `GET /api/v1/locations/governorates` and `GET /api/v1/locations/governorates/{governorateId}/cities` — paginated, with `per_page`, `search`, `is_active` (use `is_active=true` for dropdowns). Admin CRUD: `/api/v1/admin/governorates` and `/api/v1/admin/cities`. All list endpoints return `data.items` + pagination meta in `data`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -33,6 +33,18 @@
       "value": "",
       "type": "string",
       "description": "6-digit OTP from password reset email. Paste after Forgot Password."
+    },
+    {
+      "key": "governorate_id",
+      "value": "",
+      "type": "string",
+      "description": "UUID of a governorate. Auto-set from Locations — Reference or Admin — Governorates list/create responses."
+    },
+    {
+      "key": "city_id",
+      "value": "",
+      "type": "string",
+      "description": "UUID of a city. Auto-set from Locations — Reference, Admin — Cities, or Create City responses."
     }
   ],
   "auth": {
@@ -310,7 +322,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"permissions\": [\n    \"users.view\",\n    \"users.create\",\n    \"orders.view\"\n  ]\n}"
+              "raw": "{\n  \"permissions\": [\n    \"users.view\",\n    \"users.create\",\n    \"orders.view\",\n    \"governorates.view\",\n    \"governorates.manage\"\n  ]\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/roles/:id/permissions",
@@ -403,6 +415,382 @@
               ]
             },
             "description": "Permission: `roles.manage`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Locations — Reference",
+      "description": "Read-only paginated location lists for order/address forms and mobile dropdowns.\n\nPermission: `governorates.view` (super_admin bypasses). Bearer auth required.\n\nQuery: `per_page`, `search`, `is_active` (e.g. `is_active=true` for dropdowns).\n\nResponse: `{ \"isSuccess\": true, \"data\": { \"items\": [...], \"current_page\", \"total\", ... } }`.",
+      "item": [
+        {
+          "name": "List Governorates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.governorate_id) {",
+                  "        pm.collectionVariables.set('governorate_id', items[0].governorate_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/locations/governorates?per_page=15&search=&is_active=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "locations", "governorates"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
+                { "key": "is_active", "value": "true", "description": "true | false (omit for all)" }
+              ]
+            },
+            "description": "Permission: `governorates.view`\n\n**Query:** `per_page` (default 15), `search` (name_ar / name_en / code), `is_active` (boolean; omit = all).\n\n**Response `data`:** `items[]` (`governorate_id`, `name_ar`, `name_en`, `code`, `is_active`, `cities_count`), `current_page`, `last_page`, `per_page`, `total`, `has_more`.\n\nSaves first `governorate_id` from `data.items`."
+          }
+        },
+        {
+          "name": "List Cities by Governorate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.city_id) {",
+                  "        pm.collectionVariables.set('city_id', items[0].city_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/locations/governorates/{{governorate_id}}/cities?per_page=15&search=&is_active=true",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "locations", "governorates", "{{governorate_id}}", "cities"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
+                { "key": "is_active", "value": "true", "description": "true | false (omit for all)" }
+              ]
+            },
+            "description": "Permission: `governorates.view`\n\n**Path:** `governorateId` = `{{governorate_id}}`.\n\n**Query:** same as List Governorates (`per_page`, `search`, `is_active`).\n\n**Response `data.items[]`:** `city_id`, `governorate_id`, `name_ar`, `name_en`, `code`, `is_active`, optional nested `governorate`.\n\nSaves first `city_id` from `data.items`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Governorates",
+      "description": "CRUD for Egyptian governorates (UUID `governorate_id`). Seeded via `EgyptLocationsSeeder` (Tech-Labs dataset).\n\nPermissions: `governorates.view` (GET), `governorates.manage` (POST/PUT/DELETE).\n\nPaginated list returns `data.items` plus `data.current_page`, `data.total`, etc.\n\n**Delete rules:** Cannot delete a governorate that still has cities (409). Cannot delete if referenced by orders/addresses/agent zones.",
+      "item": [
+        {
+          "name": "List Governorates",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.governorate_id) {",
+                  "        pm.collectionVariables.set('governorate_id', items[0].governorate_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/governorates?per_page=15&search=&is_active=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "governorates"],
+              "query": [
+                { "key": "per_page", "value": "15", "description": "Items per page (default 15)" },
+                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
+                { "key": "is_active", "value": "", "description": "true or false (omit for all)" }
+              ]
+            },
+            "description": "Permission: `governorates.view`\n\nSame pagination/filters as **Locations — Reference → List Governorates**. Includes `cities_count` per row."
+          }
+        },
+        {
+          "name": "Get Governorate",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/governorates/{{governorate_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "governorates", "{{governorate_id}}"]
+            },
+            "description": "Permission: `governorates.view`"
+          }
+        },
+        {
+          "name": "Create Governorate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data?.governorate_id) {",
+                  "        pm.collectionVariables.set('governorate_id', json.data.governorate_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name_ar\": \"محافظة تجريبية\",\n  \"name_en\": \"Test Governorate\",\n  \"code\": \"test-governorate\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/governorates",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "governorates"]
+            },
+            "description": "Permission: `governorates.manage`\n\n`code` is optional — auto-generated slug from `name_en` if omitted. `code` must match `^[a-z0-9-]+$` and be unique."
+          }
+        },
+        {
+          "name": "Update Governorate",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name_ar\": \"محافظة محدثة\",\n  \"name_en\": \"Test Governorate Updated\",\n  \"code\": \"test-governorate\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/governorates/{{governorate_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "governorates", "{{governorate_id}}"]
+            },
+            "description": "Permission: `governorates.manage`\n\n`is_active` is required on update."
+          }
+        },
+        {
+          "name": "Delete Governorate",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/governorates/{{governorate_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "governorates", "{{governorate_id}}"]
+            },
+            "description": "Permission: `governorates.manage`\n\nSoft delete + sets `is_active` false. **409** if governorate has cities or is linked to orders/addresses/zones."
+          }
+        },
+        {
+          "name": "List Cities in Governorate",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.city_id) {",
+                  "        pm.collectionVariables.set('city_id', items[0].city_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/governorates/{{governorate_id}}/cities?per_page=15&search=&is_active=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "governorates", "{{governorate_id}}", "cities"],
+              "query": [
+                { "key": "per_page", "value": "15" },
+                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
+                { "key": "is_active", "value": "", "description": "true | false (omit for all)" }
+              ]
+            },
+            "description": "Permission: `governorates.view`\n\nPaginated cities for one governorate. Same query params as **Locations — Reference → List Cities by Governorate**."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Cities",
+      "description": "CRUD for cities (UUID `city_id`, FK `governorate_id`). `code` is required on create/update and globally unique.\n\nPermissions: `governorates.view` (GET), `governorates.manage` (POST/PUT/DELETE).\n\n**Delete rules:** **409** if city is referenced by `order_addresses`, `shipping_company_addresses`, or `agent_zones`.",
+      "item": [
+        {
+          "name": "List Cities",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.city_id) {",
+                  "        pm.collectionVariables.set('city_id', items[0].city_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/cities?governorate_id={{governorate_id}}&per_page=15&search=&is_active=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "cities"],
+              "query": [
+                { "key": "governorate_id", "value": "{{governorate_id}}", "description": "Optional filter by governorate UUID" },
+                { "key": "per_page", "value": "15" },
+                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
+                { "key": "is_active", "value": "", "description": "true | false (omit for all)" }
+              ]
+            },
+            "description": "Permission: `governorates.view`\n\nGlobal city list with optional `governorate_id`, `search`, `is_active`, `per_page`. Returns `data.items` + pagination meta."
+          }
+        },
+        {
+          "name": "Get City",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/cities/{{city_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "cities", "{{city_id}}"]
+            },
+            "description": "Permission: `governorates.view`\n\nIncludes nested `governorate` when loaded."
+          }
+        },
+        {
+          "name": "Create City",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data?.city_id) {",
+                  "        pm.collectionVariables.set('city_id', json.data.city_id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"governorate_id\": \"{{governorate_id}}\",\n  \"name_ar\": \"مدينة تجريبية\",\n  \"name_en\": \"Test City\",\n  \"code\": \"test-governorate-test-city\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/cities",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "cities"]
+            },
+            "description": "Permission: `governorates.manage`\n\n`governorate_id` must exist and be active. `code` optional on create (auto: `{gov-code}-{slug}`)."
+          }
+        },
+        {
+          "name": "Update City",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"governorate_id\": \"{{governorate_id}}\",\n  \"name_ar\": \"مدينة محدثة\",\n  \"name_en\": \"Test City Updated\",\n  \"code\": \"test-governorate-test-city\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/cities/{{city_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "cities", "{{city_id}}"]
+            },
+            "description": "Permission: `governorates.manage`\n\n`code` is required on update."
+          }
+        },
+        {
+          "name": "Delete City",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/cities/{{city_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "cities", "{{city_id}}"]
+            },
+            "description": "Permission: `governorates.manage`\n\nSoft delete. **409** if city is in use."
           }
         }
       ]
