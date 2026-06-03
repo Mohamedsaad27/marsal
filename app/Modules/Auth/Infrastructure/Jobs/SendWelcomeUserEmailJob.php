@@ -40,6 +40,8 @@ class SendWelcomeUserEmailJob implements ShouldQueue
             email: $user->email,
             phone: $user->phone,
             plainPassword: $this->plainPassword,
+            roles: $user->getRoleNames()->all(),
+            isActive: (bool) $user->is_active,
         ));
     }
 }

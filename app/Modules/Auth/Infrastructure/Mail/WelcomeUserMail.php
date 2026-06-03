@@ -15,6 +15,8 @@ class WelcomeUserMail extends Mailable
         public readonly string $email,
         public readonly string $phone,
         public readonly string $plainPassword,
+        public readonly array $roles = [],
+        public readonly bool $isActive = true,
     ) {}
 
     public function envelope(): Envelope
@@ -33,6 +35,8 @@ class WelcomeUserMail extends Mailable
                 'email' => $this->email,
                 'phone' => $this->phone,
                 'plainPassword' => $this->plainPassword,
+                'roles' => $this->roles,
+                'isActive' => $this->isActive,
                 'loginUrl' => MailBranding::loginUrl(),
                 'logoUrl' => MailBranding::logoUrl(),
                 'appName' => MailBranding::appName(),
