@@ -3,6 +3,7 @@
 namespace App\Modules\Locations\Infrastructure\Persistence;
 
 use App\Modules\Locations\Domain\Interfaces\GovernorateRepositoryInterface;
+use App\Modules\Locations\Infrastructure\Database\Models\City;
 use App\Modules\Locations\Infrastructure\Database\Models\Governorate;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -52,6 +53,15 @@ class GovernorateRepository implements GovernorateRepositoryInterface
         return $governorate->fresh()->loadCount('cities');
     }
 
+    public function toggleStatus(Governorate $governorate): Governorate
+    {
+        $governorate->update([
+            'is_active' => ! $governorate->is_active,
+        ]);
+
+        return $governorate->fresh()->loadCount('cities');
+    }
+
     public function delete(Governorate $governorate): void
     {
         $governorate->update(['is_active' => false]);
@@ -92,6 +102,15 @@ class GovernorateRepository implements GovernorateRepositoryInterface
         }
 
         return $query->exists();
+    }
+
+    public function listKpis(): array
+    {
+        return [
+            'total_governorates' => Governorate::query()->count(),
+            'total_active' => Governorate::query()->where('is_active', true)->count(),
+            'total_covered_cities' => City::query()->distinct('city_id')->count('city_id'),
+        ];
     }
 
     private function tableExists(string $table): bool

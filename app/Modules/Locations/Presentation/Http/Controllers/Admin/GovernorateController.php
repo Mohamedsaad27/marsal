@@ -8,8 +8,10 @@ use App\Modules\Locations\Application\DTOs\UpdateGovernorateDTO;
 use App\Modules\Locations\Application\UseCases\CreateGovernorateUseCase;
 use App\Modules\Locations\Application\UseCases\DeleteGovernorateUseCase;
 use App\Modules\Locations\Application\UseCases\GetGovernorateUseCase;
+use App\Modules\Locations\Application\UseCases\GetGovernoratesKpisUseCase;
 use App\Modules\Locations\Application\UseCases\ListCitiesUseCase;
 use App\Modules\Locations\Application\UseCases\ListGovernoratesUseCase;
+use App\Modules\Locations\Application\UseCases\ToggleGovernorateStatusUseCase;
 use App\Modules\Locations\Application\UseCases\UpdateGovernorateUseCase;
 use App\Modules\Locations\Presentation\Http\Controllers\Concerns\PaginatesResources;
 use App\Modules\Locations\Presentation\Http\Controllers\Concerns\ParsesLocationListFilters;
@@ -30,8 +32,10 @@ class GovernorateController extends Controller
     public function __construct(
         private readonly ListGovernoratesUseCase $listGovernoratesUseCase,
         private readonly GetGovernorateUseCase $getGovernorateUseCase,
+        private readonly GetGovernoratesKpisUseCase $getGovernoratesKpisUseCase,
         private readonly CreateGovernorateUseCase $createGovernorateUseCase,
         private readonly UpdateGovernorateUseCase $updateGovernorateUseCase,
+        private readonly ToggleGovernorateStatusUseCase $toggleGovernorateStatusUseCase,
         private readonly DeleteGovernorateUseCase $deleteGovernorateUseCase,
         private readonly ListCitiesUseCase $listCitiesUseCase,
     ) {}
@@ -43,7 +47,11 @@ class GovernorateController extends Controller
             (int) $request->integer('per_page', 15),
         );
 
-        return $this->paginatedSuccess($paginator, GovernorateResource::class);
+        return $this->paginatedSuccess(
+            $paginator,
+            GovernorateResource::class,
+            ['kpis' => $this->getGovernoratesKpisUseCase->execute()],
+        );
     }
 
     public function show(string $governorateId): JsonResponse
@@ -76,6 +84,16 @@ class GovernorateController extends Controller
         return $this->success(
             new GovernorateResource($governorate),
             __('locations::messages.governorate_updated'),
+        );
+    }
+
+    public function toggleStatus(string $governorateId): JsonResponse
+    {
+        $governorate = $this->toggleGovernorateStatusUseCase->execute($governorateId);
+
+        return $this->success(
+            new GovernorateResource($governorate),
+            __('locations::messages.governorate_status_toggled'),
         );
     }
 

@@ -15,6 +15,8 @@ interface GovernorateRepositoryInterface
 
     public function update(Governorate $governorate, array $data): Governorate;
 
+    public function toggleStatus(Governorate $governorate): Governorate;
+
     public function delete(Governorate $governorate): void;
 
     public function hasActiveCities(string $governorateId): bool;
@@ -22,4 +24,9 @@ interface GovernorateRepositoryInterface
     public function isGovernorateReferenced(string $governorateId): bool;
 
     public function codeExists(string $code, ?string $exceptGovernorateId = null): bool;
+
+    /**
+     * @return array{total_governorates:int,total_active:int,total_covered_cities:int}
+     */
+    public function listKpis(): array;
 }

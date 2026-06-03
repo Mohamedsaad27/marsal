@@ -9,10 +9,11 @@ use Illuminate\Http\Resources\Json\JsonResource;
 
 trait PaginatesResources
 {
-    protected function paginatedSuccess(LengthAwarePaginator $paginator, string $resourceClass): JsonResponse
+    protected function paginatedSuccess(LengthAwarePaginator $paginator, string $resourceClass, array $additionalData = []): JsonResponse
     {
         /** @var JsonResource $resourceClass */
         return $this->success(array_merge(
+            $additionalData,
             ['items' => $resourceClass::collection($paginator->items())],
             PaginationMeta::getMeta($paginator),
         ));

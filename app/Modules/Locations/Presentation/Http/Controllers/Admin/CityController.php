@@ -7,8 +7,10 @@ use App\Modules\Locations\Application\DTOs\CreateCityDTO;
 use App\Modules\Locations\Application\DTOs\UpdateCityDTO;
 use App\Modules\Locations\Application\UseCases\CreateCityUseCase;
 use App\Modules\Locations\Application\UseCases\DeleteCityUseCase;
+use App\Modules\Locations\Application\UseCases\GetCitiesKpisUseCase;
 use App\Modules\Locations\Application\UseCases\GetCityUseCase;
 use App\Modules\Locations\Application\UseCases\ListCitiesUseCase;
+use App\Modules\Locations\Application\UseCases\ToggleCityStatusUseCase;
 use App\Modules\Locations\Application\UseCases\UpdateCityUseCase;
 use App\Modules\Locations\Presentation\Http\Controllers\Concerns\PaginatesResources;
 use App\Modules\Locations\Presentation\Http\Controllers\Concerns\ParsesLocationListFilters;
@@ -27,9 +29,11 @@ class CityController extends Controller
 
     public function __construct(
         private readonly ListCitiesUseCase $listCitiesUseCase,
+        private readonly GetCitiesKpisUseCase $getCitiesKpisUseCase,
         private readonly GetCityUseCase $getCityUseCase,
         private readonly CreateCityUseCase $createCityUseCase,
         private readonly UpdateCityUseCase $updateCityUseCase,
+        private readonly ToggleCityStatusUseCase $toggleCityStatusUseCase,
         private readonly DeleteCityUseCase $deleteCityUseCase,
     ) {}
 
@@ -40,7 +44,11 @@ class CityController extends Controller
             (int) $request->integer('per_page', 15),
         );
 
-        return $this->paginatedSuccess($paginator, CityResource::class);
+        return $this->paginatedSuccess(
+            $paginator,
+            CityResource::class,
+            ['kpis' => $this->getCitiesKpisUseCase->execute()],
+        );
     }
 
     public function show(string $cityId): JsonResponse
@@ -73,6 +81,16 @@ class CityController extends Controller
         return $this->success(
             new CityResource($city),
             __('locations::messages.city_updated'),
+        );
+    }
+
+    public function toggleStatus(string $cityId): JsonResponse
+    {
+        $city = $this->toggleCityStatusUseCase->execute($cityId);
+
+        return $this->success(
+            new CityResource($city),
+            __('locations::messages.city_status_toggled'),
         );
     }
 

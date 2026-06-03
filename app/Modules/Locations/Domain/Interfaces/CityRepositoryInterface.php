@@ -15,9 +15,16 @@ interface CityRepositoryInterface
 
     public function update(City $city, array $data): City;
 
+    public function toggleStatus(City $city): City;
+
     public function delete(City $city): void;
 
     public function isCityReferenced(string $cityId): bool;
 
     public function codeExists(string $code, ?string $exceptCityId = null): bool;
+
+    /**
+     * @return array{total_cities:int,total_active:int,total_covered_governorates:int}
+     */
+    public function listKpis(): array;
 }
