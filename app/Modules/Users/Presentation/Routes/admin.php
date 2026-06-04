@@ -17,4 +17,8 @@ Route::prefix('api/v1/admin')
 
         Route::post('staff-members', [AdminUserController::class, 'storeStaffMember'])
             ->middleware('permission:users.create');
+
+        Route::put('users/{userId}/change-password', [AdminUserController::class, 'changePassword'])
+            ->middleware('permission:users.change_password')
+            ->name('admin.users.changePassword');
     });

@@ -6,6 +6,7 @@ return [
         'email' => 'البريد الإلكتروني',
         'phone' => 'رقم الهاتف',
         'password' => 'كلمة المرور',
+        'password_confirmation' => 'تأكيد كلمة المرور',
         'account_type' => 'نوع الحساب',
         'roles' => 'الأدوار',
         'roles.*' => 'الدور',
@@ -35,6 +36,10 @@ return [
         'password.required' => 'كلمة المرور مطلوبة.',
         'password.string' => 'يجب أن تكون كلمة المرور نصاً.',
         'password.min' => 'كلمة المرور يجب أن تكون 8 أحرف على الأقل.',
+        'password.confirmed' => 'تأكيد كلمة المرور غير متطابق.',
+
+        'password_confirmation.required' => 'تأكيد كلمة المرور مطلوب.',
+        'password_confirmation.string' => 'يجب أن يكون تأكيد كلمة المرور نصاً.',
 
         'account_type.required' => 'نوع الحساب مطلوب.',
         'account_type.string' => 'نوع الحساب غير صالح.',

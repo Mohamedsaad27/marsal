@@ -45,6 +45,7 @@ return [
     'users.update' => 'Edit User',
     'users.delete' => 'Delete User',
     'users.toggle' => 'Activate / Deactivate User',
+    'users.change_password' => 'Change User Password',
 
     'roles.view' => 'View Roles',
     'roles.manage' => 'Manage Roles & Permissions',

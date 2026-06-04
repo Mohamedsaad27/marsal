@@ -3,8 +3,11 @@
 namespace App\Modules\Users\Presentation\Http\Controllers;
 
 use App\Modules\Core\Infrastructure\Traits\ApiResponseTrait;
+use App\Modules\Users\Application\DTOs\AdminChangeUserPasswordDTO;
 use App\Modules\Users\Application\DTOs\CreateUserDTO;
+use App\Modules\Users\Application\UseCases\AdminChangeUserPasswordUseCase;
 use App\Modules\Users\Application\UseCases\CreateUserUseCase;
+use App\Modules\Users\Presentation\Http\Requests\AdminChangeUserPasswordRequest;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Presentation\Http\Requests\CreateUserRequest;
 use App\Modules\Users\Presentation\Http\Requests\StoreDeliveryAgentRequest;
@@ -20,6 +23,7 @@ class AdminUserController extends Controller
 
     public function __construct(
         private readonly CreateUserUseCase $createUserUseCase,
+        private readonly AdminChangeUserPasswordUseCase $adminChangeUserPasswordUseCase,
     ) {}
 
     public function store(CreateUserRequest $request): JsonResponse
@@ -78,5 +82,13 @@ class AdminUserController extends Controller
         $user = $this->createUserUseCase->execute($dto);
 
         return $this->success(new UserResource($user), __('users::messages.staff_created'), 201);
+    }
+
+    public function changePassword(AdminChangeUserPasswordRequest $request, string $userId): JsonResponse
+    {
+        $dto = AdminChangeUserPasswordDTO::fromArray($userId, $request->validated());
+        $this->adminChangeUserPasswordUseCase->execute($dto);
+
+        return $this->success(null, __('users::messages.password_changed_successfully'));
     }
 }

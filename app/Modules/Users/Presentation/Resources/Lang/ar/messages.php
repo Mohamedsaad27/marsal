@@ -7,4 +7,6 @@ return [
     'staff_created' => 'تم إنشاء حساب الموظف الإداري بنجاح',
     'role_not_found' => 'الدور غير موجود',
     'unauthorized' => 'غير مصرح لك بتنفيذ هذه العملية',
+    'user_not_found' => 'المستخدم غير موجود.',
+    'password_changed_successfully' => 'تم تغيير كلمة المرور بنجاح.',
 ];

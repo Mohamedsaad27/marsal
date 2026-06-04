@@ -45,6 +45,7 @@ return [
     'users.update' => 'تعديل مستخدم',
     'users.delete' => 'حذف مستخدم',
     'users.toggle' => 'تفعيل / تعطيل مستخدم',
+    'users.change_password' => 'تغيير كلمة المرور للمستخدم',
 
     'roles.view' => 'عرض الأدوار',
     'roles.manage' => 'إدارة الأدوار والصلاحيات',

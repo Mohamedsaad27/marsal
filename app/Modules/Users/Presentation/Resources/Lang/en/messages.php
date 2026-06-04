@@ -7,4 +7,6 @@ return [
     'staff_created' => 'Staff member account created successfully',
     'role_not_found' => 'Role not found',
     'unauthorized' => 'You are not authorized to perform this action',
+    'user_not_found' => 'User not found.',
+    'password_changed_successfully' => 'Password changed successfully.',
 ];

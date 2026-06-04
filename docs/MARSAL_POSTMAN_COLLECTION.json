@@ -45,6 +45,12 @@
       "value": "",
       "type": "string",
       "description": "UUID of a city. Auto-set from Locations — Reference, Admin — Cities, or Create City responses."
+    },
+    {
+      "key": "user_id",
+      "value": "",
+      "type": "string",
+      "description": "UUID of a user (`user_id`). Auto-set from Admin — Users create responses, or paste from dashboard."
     }
   ],
   "auth": {
@@ -827,10 +833,29 @@
     },
     {
       "name": "Admin — Users",
-      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.",
+      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
       "item": [
         {
           "name": "Create User (Generic)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data?.user_id) {",
+                  "        pm.collectionVariables.set('user_id', json.data.user_id);",
+                  "        pm.test('user_id saved', function () {",
+                  "            pm.expect(pm.collectionVariables.get('user_id')).to.eql(json.data.user_id);",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
           "request": {
             "method": "POST",
             "header": [
@@ -967,6 +992,26 @@
               "path": ["api", "v1", "admin", "delivery-agents"]
             },
             "description": "Create agent with a custom role — create the role first via **Admin → Roles → Create Role**, then sync permissions. Optional `profile.supervisor_agent_id` links to a supervisor."
+          }
+        },
+        {
+          "name": "Change User Password (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"password\": \"NewSecure@123\",\n  \"password_confirmation\": \"NewSecure@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/change-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", "{{user_id}}", "change-password"]
+            },
+            "description": "Permission: `users.change_password`\n\nForce-reset any user's password from the admin dashboard — **no OTP or email flow**. Works for all account types (`super_admin`, `staff_member`, `shipping_company`, `delivery_agent`).\n\n**Path:** `userId` = target user's UUID (`{{user_id}}`). Set via **Create User** responses or paste manually.\n\n**Body:**\n- `password` — required, min 8 characters\n- `password_confirmation` — must match `password`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"Password changed successfully.\", \"data\": null }`\n\n**Errors:**\n- **401** — missing/invalid JWT or missing permission\n- **404** — user not found or soft-deleted\n- **422** — validation (password too short, confirmation mismatch)"
           }
         }
       ]

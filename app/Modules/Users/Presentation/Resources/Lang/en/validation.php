@@ -6,6 +6,7 @@ return [
         'email' => 'email address',
         'phone' => 'phone number',
         'password' => 'password',
+        'password_confirmation' => 'password confirmation',
         'account_type' => 'account type',
         'roles' => 'roles',
         'roles.*' => 'role',
@@ -35,6 +36,10 @@ return [
         'password.required' => 'Password is required.',
         'password.string' => 'Password must be text.',
         'password.min' => 'Password must be at least 8 characters.',
+        'password.confirmed' => 'Password confirmation does not match.',
+
+        'password_confirmation.required' => 'Password confirmation is required.',
+        'password_confirmation.string' => 'Password confirmation must be text.',
 
         'account_type.required' => 'Account type is required.',
         'account_type.string' => 'Account type is invalid.',
