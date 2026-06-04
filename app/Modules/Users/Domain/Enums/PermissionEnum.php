@@ -49,6 +49,7 @@ enum PermissionEnum: string
     case UsersDelete = 'users.delete';
     case UsersToggle = 'users.toggle';
     case UsersChangePassword = 'users.change_password';
+    case UsersImport = 'users.import';
 
     case RolesView = 'roles.view';
     case RolesManage = 'roles.manage';

@@ -24,21 +24,9 @@ class UserResource extends JsonResource
             'account_type' => $this->resolveAccountType()?->code(),
             'is_active' => $this->is_active,
             'roles' => $this->getRoleNames(),
-            'shipping_company' => $this->whenLoaded('shippingCompany', fn () => [
-                'shipping_company_id' => $this->shippingCompany?->shipping_company_id,
-                'company_name' => $this->shippingCompany?->company_name,
-            ]),
-            'staff_member' => $this->whenLoaded('staffMember', fn () => [
-                'staff_member_id' => $this->staffMember?->staff_member_id,
-                'department' => $this->staffMember?->department,
-                'job_title' => $this->staffMember?->job_title,
-            ]),
-            'delivery_agent' => $this->whenLoaded('deliveryAgent', fn () => [
-                'delivery_agent_id' => $this->deliveryAgent?->delivery_agent_id,
-                'supervisor_agent_id' => $this->deliveryAgent?->supervisor_agent_id,
-                'is_supervisor' => $this->deliveryAgent?->isSupervisor(),
-                'national_id' => $this->deliveryAgent?->national_id,
-            ]),
+            'shipping_company' => ShippingCompanyResource::make($this->whenLoaded('shippingCompany')),
+            'staff_member' => StaffMemberResource::make($this->whenLoaded('staffMember')),
+            'delivery_agent' => DeliveryAgentResource::make($this->whenLoaded('deliveryAgent')),
             'last_login_at' => $this->last_login_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

@@ -833,8 +833,138 @@
     },
     {
       "name": "Admin — Users",
-      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
+      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET` list (`users.view`), `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
       "item": [
+        {
+          "name": "List Users",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.id) {",
+                  "        pm.collectionVariables.set('user_id', items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users?per_page=15&page=1&search=&role=&is_active=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users"],
+              "query": [
+                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
+                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
+                { "key": "search", "value": "", "description": "LIKE match on name, email, phone" },
+                { "key": "role", "value": "", "description": "super_admin | staff_member | shipping_company | delivery_agent (omit for all)" },
+                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" }
+              ]
+            },
+            "description": "Permission: `users.view`\n\nPaginated users list for the admin dashboard (`/admin/users`).\n\n**Query:** `search`, `role`, `is_active` (0|1), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `id`, `name`, `email`, `phone`, `gender`, `avatar`, `is_active`, `last_login_at`, `created_at`, `role` (`name`, `label`), `linked_profile` (`type`, `id`, `label`)\n- `counts` — `total`, `super_admin`, `staff_member`, `shipping_company`, `delivery_agent` (global totals, not filtered)\n- `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`\n\n**422:** invalid `role` or `is_active`.\n\nSaves first `items[].id` to `{{user_id}}`."
+          }
+        },
+        {
+          "name": "Download Users Import Template",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users/import/template",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", "import", "template"]
+            },
+            "description": "Permission: `users.import`\n\nDownloads `users_import_template.xlsx` with column headers: `name`, `email`, `phone`, `gender`, `role`, `company_name` and two example rows (delivery agent + shipping company).\n\n**Roles allowed in file:** `delivery_agent`, `shipping_company` only (`super_admin` rows are rejected).\n\n**Row limit:** 500 data rows per upload.\n\nUse **Import Users from Excel** to upload the filled file."
+          }
+        },
+        {
+          "name": "Import Users from Excel",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "xlsx, xls, or csv — max 5 MB, max 500 data rows"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users/import",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", "import"]
+            },
+            "description": "Permission: `users.import`\n\nBulk-creates users from Excel/CSV. Each valid row creates `users` + Spatie role + linked profile (`delivery_agents` or `shipping_companies`). Passwords are auto-generated (12 chars) and returned once in the response — not emailed.\n\n**Multipart:** `file` (required)\n\n**Columns (row 1 = headers):** `name`, `email`, `phone`, `gender` (optional: `ذكر` / `أنثى`), `role` (`delivery_agent` | `shipping_company`), `company_name` (required when role = `shipping_company`)\n\n**Success (200)** — full or partial import:\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"...\",\n  \"data\": {\n    \"summary\": { \"total_rows\": 3, \"imported_count\": 2, \"failed_count\": 1 },\n    \"imported\": [\n      { \"row\": 2, \"name\": \"...\", \"email\": \"...\", \"generated_password\": \"...\" }\n    ],\n    \"errors\": [\n      { \"row\": 4, \"email\": \"dup@example.com\", \"errors\": [\"The email has already been taken.\"] }\n    ]\n  }\n}\n```\n\n**422:** invalid/missing file, unreadable file, or file validation failed.\n\n**401/403:** missing JWT or `users.import` permission."
+          }
+        },
+        {
+          "name": "Update User",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@marsal.com\",\n  \"phone\": \"01099998888\",\n  \"gender\": \"ذكر\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"finance\",\n    \"job_title\": \"Finance Lead\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", "{{user_id}}"]
+            },
+            "description": "Permission: `users.update`\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Body (all optional):** `name`, `email`, `phone`, `gender`, `avatar`, `roles[]`, `profile` (fields depend on linked account: staff `department`/`job_title`/`notes`, company `company_name`/`commercial_reg`/`logo_url`, agent `national_id`/`vehicle_type`/`vehicle_plate_number`/`supervisor_agent_id`).\n\n**403:** removing `super_admin` from the last active super admin.\n\n**404:** user not found or soft-deleted.\n\n**422:** validation (duplicate email/phone, invalid role)."
+          }
+        },
+        {
+          "name": "Toggle User Status",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/toggle-status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", "{{user_id}}", "toggle-status"]
+            },
+            "description": "Permission: `users.toggle`\n\nFlips `users.is_active` (active ↔ inactive).\n\n**403:** cannot deactivate yourself; cannot deactivate the last active `super_admin`.\n\n**404:** user not found.\n\n**Success (200):** `data` includes updated user row (`UserListResource` shape) with new `is_active`."
+          }
+        },
+        {
+          "name": "Delete User",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "users", "{{user_id}}"]
+            },
+            "description": "Permission: `users.delete`\n\nSoft-deletes the user and linked profile (`staff_members`, `shipping_companies`, or `delivery_agents`).\n\n**403:** cannot delete yourself; cannot delete the last active `super_admin`.\n\n**409:** deletion blocked — agent/company has subordinates, non-terminal orders, open settlements (draft/approved), unsettled collections, or non-zero balance.\n\n**404:** user not found."
+          }
+        },
         {
           "name": "Create User (Generic)",
           "event": [

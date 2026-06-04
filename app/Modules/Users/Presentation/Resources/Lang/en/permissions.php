@@ -46,6 +46,7 @@ return [
     'users.delete' => 'Delete User',
     'users.toggle' => 'Activate / Deactivate User',
     'users.change_password' => 'Change User Password',
+    'users.import' => 'Import Users from Excel',
 
     'roles.view' => 'View Roles',
     'roles.manage' => 'Manage Roles & Permissions',

@@ -46,6 +46,7 @@ return [
     'users.delete' => 'حذف مستخدم',
     'users.toggle' => 'تفعيل / تعطيل مستخدم',
     'users.change_password' => 'تغيير كلمة المرور للمستخدم',
+    'users.import' => 'استيراد المستخدمين من Excel',
 
     'roles.view' => 'عرض الأدوار',
     'roles.manage' => 'إدارة الأدوار والصلاحيات',

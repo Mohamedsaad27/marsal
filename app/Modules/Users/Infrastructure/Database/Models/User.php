@@ -3,9 +3,11 @@
 namespace App\Modules\Users\Infrastructure\Database\Models;
 
 use App\Modules\Core\Infrastructure\Traits\HasUuid;
+use App\Modules\Locations\Infrastructure\Database\Models\Address;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -128,5 +130,10 @@ class User extends Authenticatable implements JWTSubject
     protected static function newFactory(): UserFactory
     {
         return UserFactory::new();
+    }
+
+    public function addresses(): HasMany
+    {
+        return $this->hasMany(Address::class, 'user_id', 'user_id');
     }
 }
