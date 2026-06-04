@@ -14,6 +14,11 @@ class AddressResource extends JsonResource
         return [
             'address_id' => $this->address_id,
             'city_id' => $this->city_id,
+            'city' => $this->whenLoaded('city', fn () => [
+                'id' => $this->city?->city_id,
+                'name_ar' => $this->city?->name_ar,
+                'name_en' => $this->city?->name_en,
+            ]),
             'address_line' => $this->address_line,
             'landmark' => $this->landmark,
             'street' => $this->street,

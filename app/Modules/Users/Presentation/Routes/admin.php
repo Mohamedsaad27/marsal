@@ -10,6 +10,18 @@ Route::prefix('api/v1/admin')
             ->middleware('permission:users.view')
             ->name('admin.users.index');
 
+        Route::get('staff-members', [AdminUserController::class, 'indexStaffMembers'])
+            ->middleware('permission:users.view')
+            ->name('admin.staff-members.index');
+
+        Route::get('shipping-companies', [AdminUserController::class, 'indexShippingCompanies'])
+            ->middleware('permission:shipping_companies.view')
+            ->name('admin.shipping-companies.index');
+
+        Route::get('delivery-agents', [AdminUserController::class, 'indexDeliveryAgents'])
+            ->middleware('permission:delivery_agents.view')
+            ->name('admin.delivery-agents.index');
+
         Route::get('users/import/template', [AdminUserController::class, 'importTemplate'])
             ->middleware('permission:users.import')
             ->name('admin.users.importTemplate');

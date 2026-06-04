@@ -8,6 +8,9 @@ readonly class GetUsersDTO
         public ?string $search = null,
         public ?string $role = null,
         public ?int $isActive = null,
+        public ?string $department = null,
+        public ?string $cityId = null,
+        public ?int $commissionType = null,
         public int $perPage = 15,
         public int $page = 1,
     ) {}
@@ -18,8 +21,25 @@ readonly class GetUsersDTO
             search: $data['search'] ?? null,
             role: $data['role'] ?? null,
             isActive: isset($data['is_active']) ? (int) $data['is_active'] : null,
+            department: $data['department'] ?? null,
+            cityId: $data['city_id'] ?? null,
+            commissionType: isset($data['commission_type']) ? (int) $data['commission_type'] : null,
             perPage: (int) ($data['per_page'] ?? 15),
             page: (int) ($data['page'] ?? 1),
+        );
+    }
+
+    public function withRole(string $role): self
+    {
+        return new self(
+            search: $this->search,
+            role: $role,
+            isActive: $this->isActive,
+            department: $this->department,
+            cityId: $this->cityId,
+            commissionType: $this->commissionType,
+            perPage: $this->perPage,
+            page: $this->page,
         );
     }
 }

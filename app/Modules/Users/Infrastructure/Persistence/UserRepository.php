@@ -98,15 +98,18 @@ class UserRepository implements UserRepositoryInterface
 
     public function getUsers(GetUsersDTO $dto): LengthAwarePaginator
     {
-        $query = User::query()
-            ->with(['roles', 'deliveryAgent', 'shippingCompany', 'staffMember', 'addresses']);
+        $query = User::query()->with($this->eagerLoadsForRole($dto->role));
 
         if ($dto->search) {
             $term = '%'.$dto->search.'%';
-            $query->where(function ($q) use ($term) {
+            $query->where(function ($q) use ($term, $dto) {
                 $q->where('name', 'LIKE', $term)
                     ->orWhere('email', 'LIKE', $term)
                     ->orWhere('phone', 'LIKE', $term);
+
+                if ($dto->role === 'shipping_company') {
+                    $q->orWhereHas('shippingCompany', fn ($sq) => $sq->where('company_name', 'LIKE', $term));
+                }
             });
         }
 
@@ -118,9 +121,32 @@ class UserRepository implements UserRepositoryInterface
             $query->where('is_active', $dto->isActive);
         }
 
+        if ($dto->department !== null) {
+            $query->whereHas('staffMember', fn ($q) => $q->where('department', $dto->department));
+        }
+
+        if ($dto->cityId !== null) {
+            $query->whereHas('addresses', fn ($q) => $q->where('city_id', $dto->cityId));
+        }
+
+        if ($dto->commissionType !== null) {
+            $query->whereHas('deliveryAgent', fn ($q) => $q->where('commission_type', $dto->commissionType));
+        }
+
         return $query
             ->orderByDesc('created_at')
             ->paginate($dto->perPage, ['*'], 'page', $dto->page);
+    }
+
+    /** @return list<string> */
+    private function eagerLoadsForRole(?string $role): array
+    {
+        return match ($role) {
+            'staff_member' => ['roles', 'staffMember'],
+            'shipping_company' => ['roles', 'shippingCompany', 'addresses.city'],
+            'delivery_agent' => ['roles', 'deliveryAgent.supervisor.user'],
+            default => ['roles', 'deliveryAgent', 'shippingCompany', 'staffMember', 'addresses'],
+        };
     }
 
     public function getUserCounts(): array
@@ -149,6 +175,17 @@ class UserRepository implements UserRepositoryInterface
             'staff_member' => (int) ($counts->staff_member ?? 0),
             'shipping_company' => (int) ($counts->shipping_company ?? 0),
             'delivery_agent' => (int) ($counts->delivery_agent ?? 0),
+        ];
+    }
+
+    public function getUserCountsForRole(string $role): array
+    {
+        $base = User::query()->whereHas('roles', fn ($q) => $q->where('name', $role));
+
+        return [
+            'total' => (clone $base)->count(),
+            'active' => (clone $base)->where('is_active', true)->count(),
+            'inactive' => (clone $base)->where('is_active', false)->count(),
         ];
     }
 

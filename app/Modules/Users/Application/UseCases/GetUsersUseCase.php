@@ -15,7 +15,9 @@ class GetUsersUseCase
     {
         return [
             'users' => $this->repository->getUsers($dto),
-            'counts' => $this->repository->getUserCounts(),
+            'counts' => $dto->role !== null
+                ? $this->repository->getUserCountsForRole($dto->role)
+                : $this->repository->getUserCounts(),
         ];
     }
 }

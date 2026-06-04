@@ -21,6 +21,9 @@ use App\Modules\Users\Infrastructure\Excel\UsersImportTemplateExport;
 use App\Modules\Users\Presentation\Http\Requests\AdminChangeUserPasswordRequest;
 use App\Modules\Users\Presentation\Http\Requests\CreateUserRequest;
 use App\Modules\Users\Presentation\Http\Requests\GetUsersRequest;
+use App\Modules\Users\Presentation\Http\Requests\ListDeliveryAgentsRequest;
+use App\Modules\Users\Presentation\Http\Requests\ListShippingCompaniesRequest;
+use App\Modules\Users\Presentation\Http\Requests\ListStaffMembersRequest;
 use App\Modules\Users\Presentation\Http\Requests\ImportUsersRequest;
 use App\Modules\Users\Presentation\Http\Requests\StoreDeliveryAgentRequest;
 use App\Modules\Users\Presentation\Http\Requests\StoreShippingCompanyRequest;
@@ -51,13 +54,44 @@ class AdminUserController extends Controller
     public function index(GetUsersRequest $request): JsonResponse
     {
         $result = $this->getUsersUseCase->execute(GetUsersDTO::fromArray($request->validated()));
+
+        return $this->listUsersResponse($result, __('users::messages.fetched_successfully'));
+    }
+
+    public function indexStaffMembers(ListStaffMembersRequest $request): JsonResponse
+    {
+        $dto = GetUsersDTO::fromArray($request->validated())->withRole('staff_member');
+        $result = $this->getUsersUseCase->execute($dto);
+
+        return $this->listUsersResponse($result, __('users::messages.staff_members_fetched'));
+    }
+
+    public function indexShippingCompanies(ListShippingCompaniesRequest $request): JsonResponse
+    {
+        $dto = GetUsersDTO::fromArray($request->validated())->withRole('shipping_company');
+        $result = $this->getUsersUseCase->execute($dto);
+
+        return $this->listUsersResponse($result, __('users::messages.shipping_companies_fetched'));
+    }
+
+    public function indexDeliveryAgents(ListDeliveryAgentsRequest $request): JsonResponse
+    {
+        $dto = GetUsersDTO::fromArray($request->validated())->withRole('delivery_agent');
+        $result = $this->getUsersUseCase->execute($dto);
+
+        return $this->listUsersResponse($result, __('users::messages.delivery_agents_fetched'));
+    }
+
+    /** @param array{users: \Illuminate\Contracts\Pagination\LengthAwarePaginator, counts: array<string, int>} $result */
+    private function listUsersResponse(array $result, string $message): JsonResponse
+    {
         $paginator = $result['users'];
 
         return $this->success(array_merge(
             ['counts' => $result['counts']],
             ['items' => UserListResource::collection($paginator->items())],
             PaginationMeta::getMeta($paginator),
-        ), __('users::messages.fetched_successfully'));
+        ), $message);
     }
 
     public function store(CreateUserRequest $request): JsonResponse

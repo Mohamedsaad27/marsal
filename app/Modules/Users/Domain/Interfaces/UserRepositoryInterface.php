@@ -35,6 +35,9 @@ interface UserRepositoryInterface
     /** @return array{total: int, super_admin: int, staff_member: int, shipping_company: int, delivery_agent: int} */
     public function getUserCounts(): array;
 
+    /** @return array{total: int, active: int, inactive: int} */
+    public function getUserCountsForRole(string $role): array;
+
     public function update(User $user, array $attributes): User;
 
     public function toggleActive(User $user): User;

@@ -833,7 +833,7 @@
     },
     {
       "name": "Admin — Users",
-      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET` list (`users.view`), `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
+      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET /users` — all roles (`users.view`); dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters. `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
       "item": [
         {
           "name": "List Users",
@@ -871,7 +871,7 @@
                 { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" }
               ]
             },
-            "description": "Permission: `users.view`\n\nPaginated users list for the admin dashboard (`/admin/users`).\n\n**Query:** `search`, `role`, `is_active` (0|1), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `id`, `name`, `email`, `phone`, `gender`, `avatar`, `is_active`, `last_login_at`, `created_at`, `role` (`name`, `label`), `linked_profile` (`type`, `id`, `label`)\n- `counts` — `total`, `super_admin`, `staff_member`, `shipping_company`, `delivery_agent` (global totals, not filtered)\n- `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`\n\n**422:** invalid `role` or `is_active`.\n\nSaves first `items[].id` to `{{user_id}}`."
+            "description": "Permission: `users.view`\n\nPaginated users list for the admin dashboard (`/admin/users`).\n\n**Query:** `search`, `role`, `is_active` (0|1), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource`: `id`, `name`, `email`, `phone`, `gender`, `avatar`, `is_active`, `last_login_at`, `created_at`, `role` (`name`, `label`), `staff_member`, `shipping_company`, `delivery_agent`, `addresses`\n- `counts` — `total`, `super_admin`, `staff_member`, `shipping_company`, `delivery_agent` (global totals, not filtered)\n- `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`\n\n**422:** invalid `role` or `is_active`.\n\nSaves first `items[].id` to `{{user_id}}`."
           }
         },
         {
@@ -1005,6 +1005,45 @@
           }
         },
         {
+          "name": "List Staff Members",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.id) {",
+                  "        pm.collectionVariables.set('user_id', items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/staff-members?per_page=15&page=1&search=&is_active=&department=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "staff-members"],
+              "query": [
+                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
+                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
+                { "key": "search", "value": "", "description": "LIKE match on name, email, phone" },
+                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" },
+                { "key": "department", "value": "", "description": "Exact match on staff_members.department (e.g. operations, finance)" }
+              ]
+            },
+            "description": "Permission: `users.view`\n\nPaginated list for the **Staff Members** admin page. Only users with role `staff_member`.\n\n**Query:** `search`, `is_active` (0|1), `department`, `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `staff_member` (`id`, `department`, `job_title`, `notes`)\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or `department` length.\n\nSaves first `items[].id` to `{{user_id}}`."
+          }
+        },
+        {
           "name": "Create Staff Member",
           "request": {
             "method": "POST",
@@ -1022,6 +1061,45 @@
               "path": ["api", "v1", "admin", "staff-members"]
             },
             "description": "Permission: `users.create`\n\nCreates `users` + `staff_members` row. Sends welcome email. Default role `staff_member` if `roles` omitted. Response `account_type`: `staff_member`."
+          }
+        },
+        {
+          "name": "List Shipping Companies",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.id) {",
+                  "        pm.collectionVariables.set('user_id', items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/shipping-companies?per_page=15&page=1&search=&is_active=&city_id={{city_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "shipping-companies"],
+              "query": [
+                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
+                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
+                { "key": "search", "value": "", "description": "LIKE match on name, email, phone, or company_name" },
+                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" },
+                { "key": "city_id", "value": "{{city_id}}", "description": "UUID — users with at least one address in this city (from Locations)" }
+              ]
+            },
+            "description": "Permission: `shipping_companies.view`\n\nPaginated list for the **Shipping Companies** admin page. Only users with role `shipping_company`.\n\n**Query:** `search`, `is_active` (0|1), `city_id` (UUID, `exists:cities`), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `shipping_company` (`id`, `company_name`, `commission`, `balance`, …) and `addresses[]` (each may include nested `city`: `id`, `name_ar`, `name_en`)\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active`, unknown `city_id`.\n\nSaves first `items[].id` to `{{user_id}}`. Set `{{city_id}}` from **Admin — Cities** or **Locations — Reference**."
           }
         },
         {
@@ -1045,6 +1123,49 @@
           }
         },
         {
+          "name": "List Delivery Agents",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.id) {",
+                  "        pm.collectionVariables.set('user_id', items[0].id);",
+                  "    }",
+                  "    const agentId = items[0]?.delivery_agent?.id;",
+                  "    if (agentId) {",
+                  "        pm.collectionVariables.set('supervisor_agent_id', agentId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/delivery-agents?per_page=15&page=1&search=&is_active=&commission_type=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "delivery-agents"],
+              "query": [
+                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
+                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
+                { "key": "search", "value": "", "description": "LIKE match on name, email, phone" },
+                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" },
+                { "key": "commission_type", "value": "", "description": "1 = percentage, 2 = fixed amount (delivery_agents.commission_type)" }
+              ]
+            },
+            "description": "Permission: `delivery_agents.view`\n\nPaginated list for the **Delivery Agents** admin page. Only users with role `delivery_agent`.\n\n**Query:** `search`, `is_active` (0|1), `commission_type` (1|2), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `delivery_agent` (`id`, `supervisor_agent_id`, `is_supervisor`, `vehicle`, `commission` with `type.code`/`type.label`, `balance`, `is_available`, `supervisor` when loaded)\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or `commission_type`.\n\nSaves first `items[].id` to `{{user_id}}` and first `delivery_agent.id` to `{{supervisor_agent_id}}` when present."
+          }
+        },
+        {
           "name": "Create Delivery Agent",
           "event": [
             {
@@ -1053,7 +1174,10 @@
                 "exec": [
                   "if (pm.response.code === 201) {",
                   "    const json = pm.response.json();",
-                  "    const agentId = json.data?.delivery_agent?.delivery_agent_id;",
+                  "    if (json.data?.user_id) {",
+                  "        pm.collectionVariables.set('user_id', json.data.user_id);",
+                  "    }",
+                  "    const agentId = json.data?.delivery_agent?.id;",
                   "    if (agentId) {",
                   "        pm.collectionVariables.set('supervisor_agent_id', agentId);",
                   "        pm.test('supervisor_agent_id saved', function () {",
