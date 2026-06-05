@@ -142,9 +142,9 @@ class UserRepository implements UserRepositoryInterface
     private function eagerLoadsForRole(?string $role): array
     {
         return match ($role) {
-            'staff_member' => ['roles', 'staffMember'],
+            'staff_member' => ['roles', 'staffMember', 'addresses'],
             'shipping_company' => ['roles', 'shippingCompany', 'addresses.city'],
-            'delivery_agent' => ['roles', 'deliveryAgent.supervisor.user'],
+            'delivery_agent' => ['roles', 'deliveryAgent.supervisor.user', 'addresses'],
             default => ['roles', 'deliveryAgent', 'shippingCompany', 'staffMember', 'addresses'],
         };
     }
