@@ -112,6 +112,7 @@ class AdminUserController extends Controller
             accountType: AccountTypeEnum::ShippingCompany,
             roles: $request->input('roles', ['shipping_company']),
             profile: $request->input('profile', []),
+            address: $request->input('address', []),
         );
 
         $user = $this->createUserUseCase->execute($dto);
@@ -129,6 +130,7 @@ class AdminUserController extends Controller
             accountType: AccountTypeEnum::DeliveryAgent,
             roles: $request->input('roles', ['delivery_agent']),
             profile: $request->input('profile', []),
+            address: $request->input('address', []),
         );
 
         $user = $this->createUserUseCase->execute($dto);
@@ -146,6 +148,7 @@ class AdminUserController extends Controller
             accountType: AccountTypeEnum::StaffMember,
             roles: $request->input('roles', ['staff_member']),
             profile: $request->input('profile', []),
+            address: $request->input('address', []),
         );
 
         $user = $this->createUserUseCase->execute($dto);

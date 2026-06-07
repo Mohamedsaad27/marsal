@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users\Presentation\Http\Resources;
 
+use App\Modules\Locations\Presentation\Http\Resources\AddressResource;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -27,6 +28,7 @@ class UserResource extends JsonResource
             'shipping_company' => ShippingCompanyResource::make($this->whenLoaded('shippingCompany')),
             'staff_member' => StaffMemberResource::make($this->whenLoaded('staffMember')),
             'delivery_agent' => DeliveryAgentResource::make($this->whenLoaded('deliveryAgent')),
+            'addresses' => AddressResource::collection($this->whenLoaded('addresses')),
             'last_login_at' => $this->last_login_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
         ];

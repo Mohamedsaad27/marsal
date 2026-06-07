@@ -4,6 +4,7 @@ namespace App\Modules\Users\Application\UseCases;
 
 use App\Modules\Users\Application\DTOs\CreateUserDTO;
 use App\Modules\Users\Domain\Interfaces\UserRepositoryInterface;
+use App\Modules\Locations\Infrastructure\Database\Models\Address;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use App\Modules\Users\Infrastructure\Database\Models\StaffMember;
@@ -69,12 +70,26 @@ class CreateUserUseCase
                 ]);
             }
 
-            $user = $user->load(['shippingCompany', 'deliveryAgent', 'staffMember']);
+            if ($dto->address !== []) {
+                Address::query()->create([
+                    'user_id' => $user->user_id,
+                    'city_id' => $dto->address['city_id'] ?? null,
+                    'address_line' => $dto->address['address_line'],
+                    'landmark' => $dto->address['landmark'] ?? null,
+                    'street' => $dto->address['street'] ?? null,
+                    'building_number' => $dto->address['building_number'] ?? null,
+                    'floor_number' => $dto->address['floor_number'] ?? null,
+                    'apartment_number' => $dto->address['apartment_number'] ?? null,
+                    'is_default' => $dto->address['is_default'] ?? true,
+                ]);
+            }
+
+            $user = $user->load(['shippingCompany', 'deliveryAgent', 'staffMember', 'addresses.city']);
 
             $this->sendWelcomeEmailUseCase->execute($user, $dto->password);
             $this->sendWelcomeMessageOnWhatsAppUseCase->execute($user, $dto->password);
 
-            return $user->fresh()->load(['shippingCompany', 'deliveryAgent', 'staffMember']);
+            return $user->fresh()->load(['shippingCompany', 'deliveryAgent', 'staffMember', 'addresses.city']);
         });
     }
 

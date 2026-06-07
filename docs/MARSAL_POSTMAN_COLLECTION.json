@@ -858,7 +858,7 @@
     },
     {
       "name": "Admin — Users",
-      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET /users` — all roles (`users.view`); dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters. `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
+      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET /users` — all roles (`users.view`); dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters. `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Address on create:** All create endpoints accept an `address` object. Required for `staff_member`, `shipping_company`, and `delivery_agent`; optional for `super_admin`. Persists to `addresses` (FK `user_id`, optional `city_id`). Create responses return `addresses[]` (with nested `city` when loaded).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
       "item": [
         {
           "name": "List Users",
@@ -1026,7 +1026,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "users"]
             },
-            "description": "Permission: `users.create`\n\nSends **welcome email** + returns **`welcome_whatsapp_url`** (wa.me link for admin to click and send).\n\n`account_type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` (drives which profile row is created — not stored on `users`).\n\n- `super_admin` → role only (full access via `super_admin` role)\n- `staff_member` → creates `staff_members` (`profile.department`, `profile.job_title`, `profile.notes`)\n- `shipping_company` → creates `shipping_companies`\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional)\n\n`roles`: array of existing role names (required).\n\n`password`: min 8, upper + lower + number + symbol."
+            "description": "Permission: `users.create`\n\nSends **welcome email** + returns **`welcome_whatsapp_url`** (wa.me link for admin to click and send).\n\n`account_type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` (drives which profile row is created — not stored on `users`).\n\n- `super_admin` → role only (full access via `super_admin` role); `address` optional\n- `staff_member` → creates `staff_members` (`profile.department`, `profile.job_title`, `profile.notes`); **`address` required**\n- `shipping_company` → creates `shipping_companies`; **`address` required**\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional); **`address` required**\n\n**`address` object** (stored in `addresses` table):\n- `address.city_id` — optional UUID (`exists:cities`); use `{{city_id}}` from **Locations — Reference**\n- `address.address_line` — required when `address` is sent\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number` — optional\n- `address.is_default` — optional boolean (defaults to `true` on create)\n\n**Success (201):** `UserResource` includes `addresses[]` with nested `city` when provided.\n\n`roles`: array of existing role names (required).\n\n`password`: min 8, upper + lower + number + symbol."
           }
         },
         {
@@ -1065,7 +1065,7 @@
                 { "key": "department", "value": "", "description": "Exact match on staff_members.department (e.g. operations, finance)" }
               ]
             },
-            "description": "Permission: `users.view`\n\nPaginated list for the **Staff Members** admin page. Only users with role `staff_member`.\n\n**Query:** `search`, `is_active` (0|1), `department`, `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `staff_member` (`id`, `department`, `job_title`, `notes`)\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or `department` length.\n\nSaves first `items[].id` to `{{user_id}}`."
+            "description": "Permission: `users.view`\n\nPaginated list for the **Staff Members** admin page. Only users with role `staff_member`.\n\n**Query:** `search`, `is_active` (0|1), `department`, `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `staff_member` (`id`, `department`, `job_title`, `notes`) and `addresses[]`\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or `department` length.\n\nSaves first `items[].id` to `{{user_id}}`."
           }
         },
         {
@@ -1078,14 +1078,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"operations\",\n    \"job_title\": \"Operations Manager\",\n    \"notes\": \"Internal staff account\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"operations\",\n    \"job_title\": \"Operations Manager\",\n    \"notes\": \"Internal staff account\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"floor_number\": \"3\",\n    \"apartment_number\": \"12\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff-members",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "staff-members"]
             },
-            "description": "Permission: `users.create`\n\nCreates `users` + `staff_members` row. Sends welcome email. Default role `staff_member` if `roles` omitted. Response `account_type`: `staff_member`."
+            "description": "Permission: `users.create`\n\nCreates `users` + `staff_members` + `addresses` row (same transaction). Sends welcome email. Default role `staff_member` if `roles` omitted.\n\n**`address`:** required — `address_line` required; `city_id` optional UUID (`{{city_id}}` from **Locations — Reference**).\n\n**Success (201):** `UserResource` with `account_type`: `staff_member` and `addresses[]`."
           }
         },
         {
@@ -1137,14 +1137,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Acme Logistics\",\n  \"email\": \"ops@acme.com\",\n  \"phone\": \"01011111111\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"shipping_company\"],\n  \"profile\": {\n    \"company_name\": \"Acme Logistics\",\n    \"commercial_reg\": \"CR-123456\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Acme Logistics\",\n  \"email\": \"ops@acme.com\",\n  \"phone\": \"01011111111\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"shipping_company\"],\n  \"profile\": {\n    \"company_name\": \"Acme Logistics\",\n    \"commercial_reg\": \"CR-123456\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"Industrial Zone, Block 7\",\n    \"landmark\": \"Gate 3\",\n    \"street\": \"Ring Road\",\n    \"building_number\": \"7\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/shipping-companies",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "shipping-companies"]
             },
-            "description": "Permission: `shipping_companies.create`\n\nCreates `users` + `shipping_companies` row. Sends welcome email. Default role `shipping_company` if `roles` omitted."
+            "description": "Permission: `shipping_companies.create`\n\nCreates `users` + `shipping_companies` + `addresses` row (same transaction). Sends welcome email. Default role `shipping_company` if `roles` omitted.\n\n**`address`:** required — used for company location and `city_id` list filter on **List Shipping Companies**. `address_line` required; `city_id` optional UUID (`{{city_id}}`).\n\n**Success (201):** `UserResource` with `shipping_company` and `addresses[]` (nested `city` when `city_id` set)."
           }
         },
         {
@@ -1187,7 +1187,7 @@
                 { "key": "commission_type", "value": "", "description": "1 = percentage, 2 = fixed amount (delivery_agents.commission_type)" }
               ]
             },
-            "description": "Permission: `delivery_agents.view`\n\nPaginated list for the **Delivery Agents** admin page. Only users with role `delivery_agent`.\n\n**Query:** `search`, `is_active` (0|1), `commission_type` (1|2), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `delivery_agent` (`id`, `supervisor_agent_id`, `is_supervisor`, `vehicle`, `commission` with `type.code`/`type.label`, `balance`, `is_available`, `supervisor` when loaded)\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or `commission_type`.\n\nSaves first `items[].id` to `{{user_id}}` and first `delivery_agent.id` to `{{supervisor_agent_id}}` when present."
+            "description": "Permission: `delivery_agents.view`\n\nPaginated list for the **Delivery Agents** admin page. Only users with role `delivery_agent`.\n\n**Query:** `search`, `is_active` (0|1), `commission_type` (1|2), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `delivery_agent` (`id`, `supervisor_agent_id`, `is_supervisor`, `vehicle`, `commission` with `type.code`/`type.label`, `balance`, `is_available`, `supervisor` when loaded) and `addresses[]`\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or `commission_type`.\n\nSaves first `items[].id` to `{{user_id}}` and first `delivery_agent.id` to `{{supervisor_agent_id}}` when present."
           }
         },
         {
@@ -1223,14 +1223,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Supervisor Agent\",\n  \"email\": \"supervisor@marsal.com\",\n  \"phone\": \"01022222222\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"national_id\": \"29001011234567\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"ABC 1234\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Supervisor Agent\",\n  \"email\": \"supervisor@marsal.com\",\n  \"phone\": \"01022222222\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"national_id\": \"29001011234567\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"ABC 1234\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"22 Nasr St, Nasr City\",\n    \"landmark\": \"Opposite City Stars\",\n    \"street\": \"Nasr St\",\n    \"building_number\": \"22\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "delivery-agents"]
             },
-            "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` row. Sends welcome email. Omit `profile.supervisor_agent_id` to create a **supervisor** (`is_supervisor: true`). Save `delivery_agent_id` from the response into collection variable `supervisor_agent_id` for subordinate requests.\n\n`vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\nCan assign custom roles e.g. `[\"field_lead\"]` if role exists."
+            "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` + `addresses` row (same transaction). Sends welcome email. Omit `profile.supervisor_agent_id` to create a **supervisor** (`is_supervisor: true`). Save `delivery_agent_id` from the response into collection variable `supervisor_agent_id` for subordinate requests.\n\n**`address`:** required — `address_line` required; `city_id` optional UUID (`{{city_id}}`).\n\n`vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\n**Success (201):** `UserResource` with `delivery_agent` and `addresses[]`.\n\nCan assign custom roles e.g. `[\"field_lead\"]` if role exists."
           }
         },
         {
@@ -1243,14 +1243,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Agent One\",\n  \"email\": \"agent1@marsal.com\",\n  \"phone\": \"01033335555\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\",\n    \"national_id\": \"29001019876543\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"XYZ 5678\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Agent One\",\n  \"email\": \"agent1@marsal.com\",\n  \"phone\": \"01033335555\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\",\n    \"national_id\": \"29001019876543\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"XYZ 5678\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"8 El Haram St, Giza\",\n    \"landmark\": \"Near pyramid road\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "delivery-agents"]
             },
-            "description": "Creates a subordinate agent linked to a supervisor. Set collection variable `supervisor_agent_id` to the supervisor's `delivery_agent_id` (from **Create Delivery Agent** response). Response includes `delivery_agent.supervisor_agent_id` and `is_supervisor: false`."
+            "description": "Creates a subordinate agent linked to a supervisor. Set collection variable `supervisor_agent_id` to the supervisor's `delivery_agent_id` (from **Create Delivery Agent** response). **`address` required** (same shape as **Create Delivery Agent**). Response includes `delivery_agent.supervisor_agent_id`, `is_supervisor: false`, and `addresses[]`."
           }
         },
         {
@@ -1263,14 +1263,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Field Lead Agent\",\n  \"email\": \"lead@marsal.com\",\n  \"phone\": \"01055556666\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"field_lead\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Field Lead Agent\",\n  \"email\": \"lead@marsal.com\",\n  \"phone\": \"01055556666\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"field_lead\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"5 October City, District 12\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "delivery-agents"]
             },
-            "description": "Create agent with a custom role — create the role first via **Admin → Roles → Create Role**, then sync permissions. Optional `profile.supervisor_agent_id` links to a supervisor."
+            "description": "Create agent with a custom role — create the role first via **Admin → Roles → Create Role**, then sync permissions. Optional `profile.supervisor_agent_id` links to a supervisor. **`address` required** when account type is `delivery_agent`."
           }
         },
         {

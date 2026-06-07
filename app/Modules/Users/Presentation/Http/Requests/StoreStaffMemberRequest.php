@@ -3,9 +3,11 @@
 namespace App\Modules\Users\Presentation\Http\Requests;
 
 use App\Modules\Core\Presentation\Http\Requests\BaseFormRequest;
+use App\Modules\Users\Presentation\Http\Requests\Concerns\ValidatesUserAddress;
 
 class StoreStaffMemberRequest extends BaseFormRequest
 {
+    use ValidatesUserAddress;
     protected function translationNamespace(): string
     {
         return 'users';
@@ -29,6 +31,7 @@ class StoreStaffMemberRequest extends BaseFormRequest
             'profile.department' => ['nullable', 'string', 'max:100'],
             'profile.job_title' => ['nullable', 'string', 'max:150'],
             'profile.notes' => ['nullable', 'string'],
+            ...$this->addressRules(),
         ];
     }
 }

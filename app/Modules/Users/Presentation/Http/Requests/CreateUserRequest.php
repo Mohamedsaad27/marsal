@@ -5,10 +5,12 @@ namespace App\Modules\Users\Presentation\Http\Requests;
 use App\Modules\Users\Application\DTOs\CreateUserDTO;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Core\Presentation\Http\Requests\BaseFormRequest;
+use App\Modules\Users\Presentation\Http\Requests\Concerns\ValidatesUserAddress;
 use Illuminate\Validation\Rule;
 
 class CreateUserRequest extends BaseFormRequest
 {
+    use ValidatesUserAddress;
     protected function translationNamespace(): string
     {
         return 'users';
@@ -39,6 +41,7 @@ class CreateUserRequest extends BaseFormRequest
             'profile.vehicle_type' => ['nullable', 'integer', 'min:1', 'max:5'],
             'profile.vehicle_plate_number' => ['nullable', 'string', 'max:30'],
             'profile.supervisor_agent_id' => ['nullable', 'uuid', 'exists:delivery_agents,delivery_agent_id'],
+            ...$this->addressRules(required: $this->string('account_type')->toString() !== 'super_admin'),
         ];
     }
 
@@ -52,6 +55,7 @@ class CreateUserRequest extends BaseFormRequest
             accountType: AccountTypeEnum::fromCode($this->string('account_type')->toString()),
             roles: $this->input('roles', []),
             profile: $this->input('profile', []),
+            address: $this->input('address', []),
         );
     }
 }

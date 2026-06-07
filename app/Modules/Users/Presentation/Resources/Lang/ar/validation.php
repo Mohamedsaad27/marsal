@@ -18,6 +18,15 @@ return [
         'profile.vehicle_plate_number' => 'رقم لوحة المركبة',
         'gender' => 'الجنس',
         'avatar' => 'الصورة الشخصية',
+        'address' => 'العنوان',
+        'address.city_id' => 'المدينة',
+        'address.address_line' => 'سطر العنوان',
+        'address.landmark' => 'علامة مميزة',
+        'address.street' => 'الشارع',
+        'address.building_number' => 'رقم المبنى',
+        'address.floor_number' => 'رقم الطابق',
+        'address.apartment_number' => 'رقم الشقة',
+        'address.is_default' => 'العنوان الافتراضي',
     ],
 
     'messages' => [
@@ -82,5 +91,15 @@ return [
         'avatar.image' => 'الصورة الشخصية يجب أن تكون صورة.',
         'avatar.mimes' => 'صيغة الصورة غير مدعومة. استخدم jpg أو jpeg أو png أو webp.',
         'avatar.max' => 'حجم الصورة يتجاوز الحد المسموح (2 ميجابايت).',
+
+        'address.required' => 'العنوان مطلوب.',
+        'address.array' => 'يجب إرسال العنوان ككائن.',
+
+        'address.address_line.required' => 'سطر العنوان مطلوب.',
+        'address.address_line.string' => 'سطر العنوان يجب أن يكون نصاً.',
+        'address.address_line.max' => 'سطر العنوان طويل جداً (الحد الأقصى 500 حرف).',
+
+        'address.city_id.uuid' => 'معرف المدينة يجب أن يكون UUID صالحاً.',
+        'address.city_id.exists' => 'المدينة المحددة غير موجودة.',
     ],
 ];

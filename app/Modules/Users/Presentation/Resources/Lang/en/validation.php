@@ -18,6 +18,15 @@ return [
         'profile.vehicle_plate_number' => 'vehicle plate number',
         'gender' => 'gender',
         'avatar' => 'profile photo',
+        'address' => 'address',
+        'address.city_id' => 'city',
+        'address.address_line' => 'address line',
+        'address.landmark' => 'landmark',
+        'address.street' => 'street',
+        'address.building_number' => 'building number',
+        'address.floor_number' => 'floor number',
+        'address.apartment_number' => 'apartment number',
+        'address.is_default' => 'default address flag',
     ],
 
     'messages' => [
@@ -82,5 +91,15 @@ return [
         'avatar.image' => 'Profile photo must be an image.',
         'avatar.mimes' => 'Unsupported image format. Use jpg, jpeg, png, or webp.',
         'avatar.max' => 'Image size exceeds the allowed limit (2 MB).',
+
+        'address.required' => 'Address is required.',
+        'address.array' => 'Address must be sent as an object.',
+
+        'address.address_line.required' => 'Address line is required.',
+        'address.address_line.string' => 'Address line must be text.',
+        'address.address_line.max' => 'Address line is too long (maximum 500 characters).',
+
+        'address.city_id.uuid' => 'City ID must be a valid UUID.',
+        'address.city_id.exists' => 'The selected city does not exist.',
     ],
 ];

@@ -9,6 +9,7 @@ readonly class CreateUserDTO
     /**
      * @param  array<int, string>  $roles
      * @param  array<string, mixed>  $profile
+     * @param  array<string, mixed>  $address
      */
     public function __construct(
         public string $name,
@@ -18,5 +19,6 @@ readonly class CreateUserDTO
         public AccountTypeEnum $accountType,
         public array $roles,
         public array $profile = [],
+        public array $address = [],
     ) {}
 }

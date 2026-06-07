@@ -3,9 +3,11 @@
 namespace App\Modules\Users\Presentation\Http\Requests;
 
 use App\Modules\Core\Presentation\Http\Requests\BaseFormRequest;
+use App\Modules\Users\Presentation\Http\Requests\Concerns\ValidatesUserAddress;
 
 class StoreShippingCompanyRequest extends BaseFormRequest
 {
+    use ValidatesUserAddress;
     protected function translationNamespace(): string
     {
         return 'users';
@@ -28,6 +30,7 @@ class StoreShippingCompanyRequest extends BaseFormRequest
             'profile' => ['nullable', 'array'],
             'profile.company_name' => ['required', 'string', 'max:200'],
             'profile.commercial_reg' => ['nullable', 'string', 'max:100'],
+            ...$this->addressRules(),
         ];
     }
 }
