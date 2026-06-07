@@ -16,6 +16,8 @@ return [
         'profile.national_id' => 'الرقم القومي',
         'profile.vehicle_type' => 'نوع المركبة',
         'profile.vehicle_plate_number' => 'رقم لوحة المركبة',
+        'gender' => 'الجنس',
+        'avatar' => 'الصورة الشخصية',
     ],
 
     'messages' => [
@@ -72,5 +74,13 @@ return [
 
         'profile.vehicle_plate_number.string' => 'رقم اللوحة يجب أن يكون نصاً.',
         'profile.vehicle_plate_number.max' => 'رقم اللوحة طويل جداً (الحد الأقصى 30 حرفاً).',
+
+        'gender.string' => 'يجب أن يكون الجنس نصاً.',
+        'gender.in' => 'الجنس يجب أن يكون ذكراً أو أنثى.',
+
+        'avatar.file' => 'الصورة الشخصية يجب أن تكون ملفاً.',
+        'avatar.image' => 'الصورة الشخصية يجب أن تكون صورة.',
+        'avatar.mimes' => 'صيغة الصورة غير مدعومة. استخدم jpg أو jpeg أو png أو webp.',
+        'avatar.max' => 'حجم الصورة يتجاوز الحد المسموح (2 ميجابايت).',
     ],
 ];

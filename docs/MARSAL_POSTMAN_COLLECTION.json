@@ -207,6 +207,31 @@
           }
         },
         {
+          "name": "Update Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                { "key": "name", "value": "عبدالله الراشد", "type": "text", "description": "optional" },
+                { "key": "email", "value": "abdullah@marsal.io", "type": "text", "description": "optional" },
+                { "key": "phone", "value": "01001234567", "type": "text", "description": "optional" },
+                { "key": "gender", "value": "male", "type": "text", "description": "optional: male | female" },
+                { "key": "avatar", "type": "file", "src": [], "description": "optional image (jpg/jpeg/png/webp, max 2MB)" }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profile"]
+            },
+            "description": "Update the **authenticated** user's profile. **Bearer token required.** No special permission.\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Multipart fields (all optional):** `name`, `email`, `phone`, `gender` (`male` | `female`), `avatar` (image file).\n\n`is_active` cannot be changed from this endpoint.\n\n**Success (200):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم تحديث الملف الشخصي بنجاح\",\n  \"data\": {\n    \"user_id\": \"uuid\",\n    \"name\": \"عبدالله الراشد\",\n    \"email\": \"abdullah@marsal.io\",\n    \"phone\": \"01001234567\",\n    \"gender\": \"male\",\n    \"avatar_url\": \"https://...\",\n    \"department\": \"العمليات\",\n    \"job_title\": \"مدير النظام\",\n    \"roles\": [\"super_admin\"]\n  }\n}\n```\n\n**422:** validation (duplicate email/phone, invalid gender, invalid avatar)."
+          }
+        },
+        {
           "name": "Refresh Token",
           "request": {
             "method": "POST",

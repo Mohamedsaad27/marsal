@@ -14,6 +14,7 @@ return [
     'shipping_companies_fetched' => 'Shipping companies fetched successfully.',
     'delivery_agents_fetched' => 'Delivery agents fetched successfully.',
     'user_updated' => 'User updated successfully.',
+    'profile_updated' => 'Profile updated successfully.',
     'user_status_toggled' => 'User status updated successfully.',
     'user_deleted' => 'User deleted successfully.',
     'action_forbidden' => 'You are not allowed to perform this action on this user.',

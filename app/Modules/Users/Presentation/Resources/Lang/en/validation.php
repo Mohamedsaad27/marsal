@@ -16,6 +16,8 @@ return [
         'profile.national_id' => 'national ID',
         'profile.vehicle_type' => 'vehicle type',
         'profile.vehicle_plate_number' => 'vehicle plate number',
+        'gender' => 'gender',
+        'avatar' => 'profile photo',
     ],
 
     'messages' => [
@@ -72,5 +74,13 @@ return [
 
         'profile.vehicle_plate_number.string' => 'Plate number must be text.',
         'profile.vehicle_plate_number.max' => 'Plate number is too long (maximum 30 characters).',
+
+        'gender.string' => 'Gender must be text.',
+        'gender.in' => 'Gender must be male or female.',
+
+        'avatar.file' => 'Profile photo must be a file.',
+        'avatar.image' => 'Profile photo must be an image.',
+        'avatar.mimes' => 'Unsupported image format. Use jpg, jpeg, png, or webp.',
+        'avatar.max' => 'Image size exceeds the allowed limit (2 MB).',
     ],
 ];
