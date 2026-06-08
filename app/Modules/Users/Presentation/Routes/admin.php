@@ -18,6 +18,10 @@ Route::prefix('api/v1/admin')
             ->middleware('permission:shipping_companies.view')
             ->name('admin.shipping-companies.index');
 
+        Route::get('delivery-agents/supervisors', [AdminUserController::class, 'indexDeliveryAgentSupervisors'])
+            ->middleware('permission:delivery_agents.view')
+            ->name('admin.delivery-agents.supervisors');
+
         Route::get('delivery-agents', [AdminUserController::class, 'indexDeliveryAgents'])
             ->middleware('permission:delivery_agents.view')
             ->name('admin.delivery-agents.index');

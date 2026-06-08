@@ -13,6 +13,7 @@ return [
     'staff_members_fetched' => 'Staff members fetched successfully.',
     'shipping_companies_fetched' => 'Shipping companies fetched successfully.',
     'delivery_agents_fetched' => 'Delivery agents fetched successfully.',
+    'delivery_agent_supervisors_fetched' => 'Delivery agent supervisors fetched successfully.',
     'user_updated' => 'User updated successfully.',
     'profile_updated' => 'Profile updated successfully.',
     'user_status_toggled' => 'User status updated successfully.',

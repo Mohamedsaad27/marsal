@@ -13,6 +13,7 @@ return [
     'staff_members_fetched' => 'تم جلب أعضاء الفريق بنجاح.',
     'shipping_companies_fetched' => 'تم جلب شركات الشحن بنجاح.',
     'delivery_agents_fetched' => 'تم جلب مندوبي التوصيل بنجاح.',
+    'delivery_agent_supervisors_fetched' => 'تم جلب المشرفين بنجاح.',
     'user_updated' => 'تم تحديث المستخدم بنجاح.',
     'profile_updated' => 'تم تحديث الملف الشخصي بنجاح',
     'user_status_toggled' => 'تم تحديث حالة المستخدم بنجاح.',

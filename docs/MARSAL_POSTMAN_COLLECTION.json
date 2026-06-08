@@ -870,7 +870,7 @@
     },
     {
       "name": "Admin — Users",
-      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET /users` — all roles (`users.view`); dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters. `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Address on create & update:** All create endpoints accept an `address` object. Required for `staff_member`, `shipping_company`, and `delivery_agent`; optional for `super_admin`. `PUT /users/{userId}` accepts the same `address` object (optional partial update) — updates the user's default address, or creates one if missing. Persists to `addresses` (FK `user_id`, optional `city_id`). Create/update responses return `addresses[]` (with nested `city` when loaded).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
+      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET /users` — all roles (`users.view`); dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters; `GET /delivery-agents/supervisors` — lightweight supervisor dropdown (`delivery_agents.view`). `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Address on create & update:** All create endpoints accept an `address` object. Required for `staff_member`, `shipping_company`, and `delivery_agent`; optional for `super_admin`. `PUT /users/{userId}` accepts the same `address` object (optional partial update) — updates the user's default address, or creates one if missing. Persists to `addresses` (FK `user_id`, optional `city_id`). Create/update responses return `addresses[]` (with nested `city` when loaded).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
       "item": [
         {
           "name": "List Users",
@@ -1200,6 +1200,42 @@
               ]
             },
             "description": "Permission: `delivery_agents.view`\n\nPaginated list for the **Delivery Agents** admin page. Only users with role `delivery_agent`.\n\n**Query:** `search`, `is_active` (0|1), `commission_type` (1|2), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `delivery_agent` (`id`, `supervisor_agent_id`, `is_supervisor`, `vehicle`, `commission` with `type.code`/`type.label`, `balance`, `is_available`, `supervisor` when loaded) and `addresses[]`\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or `commission_type`.\n\nSaves first `items[].id` to `{{user_id}}` and first `delivery_agent.id` to `{{supervisor_agent_id}}` when present."
+          }
+        },
+        {
+          "name": "List Delivery Agent Supervisors",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data || [];",
+                  "    if (items[0]?.id) {",
+                  "        pm.collectionVariables.set('supervisor_agent_id', items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/delivery-agents/supervisors?search=&is_active=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "delivery-agents", "supervisors"],
+              "query": [
+                { "key": "search", "value": "", "description": "LIKE match on supervisor name or phone" },
+                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" }
+              ]
+            },
+            "description": "Permission: `delivery_agents.view`\n\nReturns delivery agents where `supervisor_agent_id IS NULL` (supervisors only). Use for supervisor dropdown when creating or updating a subordinate agent (`profile.supervisor_agent_id`).\n\n**Query:** `search`, `is_active` (0|1).\n\n**Response `data`:** array of `DeliveryAgentSupervisorResource` objects:\n- `id` — `delivery_agent_id` (use as `profile.supervisor_agent_id`)\n- `name`, `phone` — from linked user\n- `is_active`, `is_available`\n\nNot paginated. Ordered by supervisor name ascending.\n\n**422:** invalid `is_active`.\n\nSaves first `data[0].id` to `{{supervisor_agent_id}}` when present."
           }
         },
         {

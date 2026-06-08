@@ -155,6 +155,49 @@ class AdminUserListPagesTest extends TestCase
             ->assertJsonPath('data.items.0.delivery_agent.commission.type.code', 2);
     }
 
+    public function test_delivery_agent_supervisors_index_returns_only_supervisors(): void
+    {
+        $create = app(CreateUserUseCase::class);
+
+        $supervisor = $create->execute(new CreateUserDTO(
+            name: 'Supervisor Alpha',
+            email: 'supervisor-alpha@example.com',
+            phone: '01090000007',
+            password: 'password123',
+            accountType: AccountTypeEnum::DeliveryAgent,
+            roles: ['delivery_agent'],
+            profile: ['national_id' => '29001011234567'],
+        ));
+
+        $supervisorId = $supervisor->deliveryAgent->delivery_agent_id;
+
+        $create->execute(new CreateUserDTO(
+            name: 'Subordinate Agent',
+            email: 'subordinate@example.com',
+            phone: '01090000008',
+            password: 'password123',
+            accountType: AccountTypeEnum::DeliveryAgent,
+            roles: ['delivery_agent'],
+            profile: [
+                'supervisor_agent_id' => $supervisorId,
+                'national_id' => '29001019876543',
+            ],
+        ));
+
+        $this->auth()
+            ->getJson('/api/v1/admin/delivery-agents/supervisors')
+            ->assertOk()
+            ->assertJsonPath('isSuccess', true)
+            ->assertJsonCount(1, 'data')
+            ->assertJsonPath('data.0.name', 'Supervisor Alpha')
+            ->assertJsonPath('data.0.phone', '01090000007');
+
+        $this->auth()
+            ->getJson('/api/v1/admin/delivery-agents/supervisors?search=Subordinate')
+            ->assertOk()
+            ->assertJsonCount(0, 'data');
+    }
+
     protected function auth(): static
     {
         return $this->withHeader('Authorization', "Bearer {$this->token}");

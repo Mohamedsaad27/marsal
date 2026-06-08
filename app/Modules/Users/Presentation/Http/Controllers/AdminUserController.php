@@ -7,6 +7,7 @@ use App\Modules\Core\Infrastructure\Traits\ApiResponseTrait;
 use App\Modules\Users\Application\DTOs\AdminChangeUserPasswordDTO;
 use App\Modules\Users\Application\DTOs\CreateUserDTO;
 use App\Modules\Users\Application\DTOs\GetUsersDTO;
+use App\Modules\Users\Application\DTOs\ListDeliveryAgentSupervisorsDTO;
 use App\Modules\Users\Application\DTOs\UpdateUserDTO;
 use App\Modules\Users\Application\Exceptions\ImportUsersUnreadableFileException;
 use App\Modules\Users\Application\UseCases\AdminChangeUserPasswordUseCase;
@@ -14,6 +15,7 @@ use App\Modules\Users\Application\UseCases\CreateUserUseCase;
 use App\Modules\Users\Application\UseCases\DeleteUserUseCase;
 use App\Modules\Users\Application\UseCases\GetUsersUseCase;
 use App\Modules\Users\Application\UseCases\ImportUsersUseCase;
+use App\Modules\Users\Application\UseCases\ListDeliveryAgentSupervisorsUseCase;
 use App\Modules\Users\Application\UseCases\ToggleUserStatusUseCase;
 use App\Modules\Users\Application\UseCases\UpdateUserUseCase;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
@@ -21,17 +23,20 @@ use App\Modules\Users\Infrastructure\Excel\UsersImportTemplateExport;
 use App\Modules\Users\Presentation\Http\Requests\AdminChangeUserPasswordRequest;
 use App\Modules\Users\Presentation\Http\Requests\CreateUserRequest;
 use App\Modules\Users\Presentation\Http\Requests\GetUsersRequest;
+use App\Modules\Users\Presentation\Http\Requests\ImportUsersRequest;
 use App\Modules\Users\Presentation\Http\Requests\ListDeliveryAgentsRequest;
+use App\Modules\Users\Presentation\Http\Requests\ListDeliveryAgentSupervisorsRequest;
 use App\Modules\Users\Presentation\Http\Requests\ListShippingCompaniesRequest;
 use App\Modules\Users\Presentation\Http\Requests\ListStaffMembersRequest;
-use App\Modules\Users\Presentation\Http\Requests\ImportUsersRequest;
 use App\Modules\Users\Presentation\Http\Requests\StoreDeliveryAgentRequest;
 use App\Modules\Users\Presentation\Http\Requests\StoreShippingCompanyRequest;
 use App\Modules\Users\Presentation\Http\Requests\StoreStaffMemberRequest;
 use App\Modules\Users\Presentation\Http\Requests\UpdateUserRequest;
+use App\Modules\Users\Presentation\Http\Resources\DeliveryAgentSupervisorResource;
 use App\Modules\Users\Presentation\Http\Resources\ImportUsersResultResource;
 use App\Modules\Users\Presentation\Http\Resources\UserListResource;
 use App\Modules\Users\Presentation\Http\Resources\UserResource;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Routing\Controller;
 use Maatwebsite\Excel\Facades\Excel;
@@ -49,6 +54,7 @@ class AdminUserController extends Controller
         private readonly ToggleUserStatusUseCase $toggleUserStatusUseCase,
         private readonly DeleteUserUseCase $deleteUserUseCase,
         private readonly ImportUsersUseCase $importUsersUseCase,
+        private readonly ListDeliveryAgentSupervisorsUseCase $listDeliveryAgentSupervisorsUseCase,
     ) {}
 
     public function index(GetUsersRequest $request): JsonResponse
@@ -82,7 +88,19 @@ class AdminUserController extends Controller
         return $this->listUsersResponse($result, __('users::messages.delivery_agents_fetched'));
     }
 
-    /** @param array{users: \Illuminate\Contracts\Pagination\LengthAwarePaginator, counts: array<string, int>} $result */
+    public function indexDeliveryAgentSupervisors(ListDeliveryAgentSupervisorsRequest $request): JsonResponse
+    {
+        $supervisors = $this->listDeliveryAgentSupervisorsUseCase->execute(
+            ListDeliveryAgentSupervisorsDTO::fromArray($request->validated()),
+        );
+
+        return $this->success(
+            DeliveryAgentSupervisorResource::collection($supervisors),
+            __('users::messages.delivery_agent_supervisors_fetched'),
+        );
+    }
+
+    /** @param array{users: LengthAwarePaginator, counts: array<string, int>} $result */
     private function listUsersResponse(array $result, string $message): JsonResponse
     {
         $paginator = $result['users'];
