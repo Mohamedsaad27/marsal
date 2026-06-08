@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Locations (governorates & cities), Audit Logs.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent`",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Locations (governorates & cities), Audit Logs, Dashboard (admin home KPIs).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -870,7 +870,7 @@
     },
     {
       "name": "Admin — Users",
-      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET /users` — all roles (`users.view`); dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters. `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Address on create:** All create endpoints accept an `address` object. Required for `staff_member`, `shipping_company`, and `delivery_agent`; optional for `super_admin`. Persists to `addresses` (FK `user_id`, optional `city_id`). Create responses return `addresses[]` (with nested `city` when loaded).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
+      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET /users` — all roles (`users.view`); dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters. `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Address on create & update:** All create endpoints accept an `address` object. Required for `staff_member`, `shipping_company`, and `delivery_agent`; optional for `super_admin`. `PUT /users/{userId}` accepts the same `address` object (optional partial update) — updates the user's default address, or creates one if missing. Persists to `addresses` (FK `user_id`, optional `city_id`). Create/update responses return `addresses[]` (with nested `city` when loaded).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
       "item": [
         {
           "name": "List Users",
@@ -962,14 +962,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@marsal.com\",\n  \"phone\": \"01099998888\",\n  \"gender\": \"ذكر\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"finance\",\n    \"job_title\": \"Finance Lead\"\n  }\n}"
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@marsal.com\",\n  \"phone\": \"01099998888\",\n  \"gender\": \"ذكر\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"finance\",\n    \"job_title\": \"Finance Lead\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"20 Ramses St, Downtown\",\n    \"landmark\": \"Near train station\",\n    \"street\": \"Ramses St\",\n    \"building_number\": \"20\",\n    \"floor_number\": \"2\",\n    \"apartment_number\": \"5\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "users", "{{user_id}}"]
             },
-            "description": "Permission: `users.update`\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Body (all optional):** `name`, `email`, `phone`, `gender`, `avatar`, `roles[]`, `profile` (fields depend on linked account: staff `department`/`job_title`/`notes`, company `company_name`/`commercial_reg`/`logo_url`, agent `national_id`/`vehicle_type`/`vehicle_plate_number`/`supervisor_agent_id`).\n\n**403:** removing `super_admin` from the last active super admin.\n\n**404:** user not found or soft-deleted.\n\n**422:** validation (duplicate email/phone, invalid role)."
+            "description": "Permission: `users.update`\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Body (all optional):** `name`, `email`, `phone`, `gender`, `avatar`, `roles[]`, `profile` (fields depend on linked account: staff `department`/`job_title`/`notes`, company `company_name`/`commercial_reg`/`logo_url`, agent `national_id`/`vehicle_type`/`vehicle_plate_number`/`supervisor_agent_id`), `address`.\n\n**`address` object** (same shape as create):\n- Updates the user's default address (`is_default = true`), or the first address if none is default; creates a new row if the user has no addresses.\n- `address.address_line` — required when `address` is sent\n- `address.city_id` — optional UUID (`{{city_id}}` from **Locations — Reference**)\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number`, `is_default` — optional\n\n**Success (200):** `UserResource` with updated `addresses[]` (nested `city` when `city_id` set).\n\n**403:** removing `super_admin` from the last active super admin.\n\n**404:** user not found or soft-deleted.\n\n**422:** validation (duplicate email/phone, invalid role, missing `address_line` when `address` sent)."
           }
         },
         {
@@ -1031,7 +1031,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"System Admin\",\n  \"email\": \"admin2@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"account_type\": \"super_admin\",\n  \"roles\": [\"super_admin\"],\n  \"profile\": {}\n}"
+              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff2@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"account_type\": \"staff_member\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"operations\",\n    \"job_title\": \"Operations Lead\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users",
@@ -1379,6 +1379,128 @@
               ]
             },
             "description": "Permission: `audit_logs.view`\n\nGeneric subject history — same as **Audit Trail — User** but for any auditable table.\n\n**Path variables (collection):**\n- `auditable_type` — table name (`users`, `orders`, `shipping_companies`, `delivery_agents`, `settlements`, …)\n- `auditable_id` — record primary key as string\n\nSupports the same **date filters** as **List Audit Logs** (`date_period`, `date_from`, `date_to`).\n\n**Examples:**\n- User: `users` + `{{user_id}}`\n- Order (when module exists): `orders` + order UUID\n\n**Success (200):** paginated `items[]` + meta. Empty `items` if no logs exist for that record."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "description": "Admin dashboard home page APIs — summary cards, charts, KPIs, and recent orders.\n\n**Base path:** `/api/dashboard/*`\n\n**Auth:** JWT (`auth:api`) — run **Auth → Login** first. Permission checks are planned (`// TODO` in controller); `super_admin` can access all routes today.\n\n**Caching:** Endpoints 1–6 are cached for **60 seconds** (tag `dashboard`). **Recent Orders** is never cached.\n\n**Order status map (`orders.status`):** `1` pending · `2` in delivery · `3` delivered · `4` postponed · `5` failed · `6` rejected",
+      "item": [
+        {
+          "name": "Summary Cards",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard/summary",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard", "summary"]
+            },
+            "description": "Dashboard home — top summary cards.\n\n**Success (200) `data`:**\n- `total_orders` — count of non-deleted orders\n- `total_orders_change_percent` — orders created this month vs last month (`null` if last month = 0)\n- `in_delivery` — orders with `status = 2`\n- `in_delivery_label` — localized label (e.g. نشطة الآن)\n- `delivered_this_week` — `status = 3` and `updated_at` in current ISO week (Mon–Sun)\n- `delivered_change_percent` — delivered count this ISO week vs last week\n- `net_balance_companies` — `SUM(shipping_companies.balance)`\n- `net_balance_change_percent` — `SUM(order_financials.net_due_company)` this month vs last month (by order `updated_at`)\n\n**Success:** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`"
+          }
+        },
+        {
+          "name": "Shipments Performance Chart",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard/shipments-chart?period=week",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard", "shipments-chart"],
+              "query": [
+                { "key": "period", "value": "week", "description": "Only `week` supported for now (default). Arabic week Sat→Fri." }
+              ]
+            },
+            "description": "Weekly shipments chart for the dashboard.\n\n**Query:** `period=week` (default).\n\n**Per day (Sat→Fri):**\n- `delivered[]` — count `status = 3` where `DATE(updated_at)` = that day\n- `pending[]` — count `status IN (1, 4)` where `DATE(created_at)` = that day\n\n**Success (200) `data`:**\n- `labels[]` — Arabic weekday names\n- `delivered[]`, `pending[]` — 7 integers each"
+          }
+        },
+        {
+          "name": "Top Agents Today",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard/top-agents",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard", "top-agents"]
+            },
+            "description": "Top 4 delivery agents by deliveries completed today.\n\n**Logic:** Count orders per `delivery_agent_id` where `status = 3` and `DATE(updated_at) = today`, ordered DESC, limit 4.\n\n**Success (200) `data`:** array of:\n- `rank`, `delivery_agent_id` (UUID)\n- `name`, `city` (`cities.name_ar` from order address)\n- `avatar_url`, `shipments_today`"
+          }
+        },
+        {
+          "name": "Pending Collections Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard/collections-balance",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard", "collections-balance"]
+            },
+            "description": "Pending cash balance owed to shipping companies.\n\n**Success (200) `data`:**\n- `total_pending` — `SUM(balance)` where `shipping_companies.balance > 0`\n- `currency` — localized (e.g. ج.م)\n- `company_count` — count of companies with `balance > 0`"
+          }
+        },
+        {
+          "name": "Delivery Performance Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard/delivery-performance",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard", "delivery-performance"]
+            },
+            "description": "All-time delivery success metrics.\n\n**Success (200) `data`:**\n- `success_count` — `status = 3`\n- `failed_count` — `status IN (5, 6)`\n- `pending_count` — `status IN (1, 2, 4)`\n- `success_rate` — `success / (success + failed) × 100`, 1 decimal (`null` if denominator is 0)"
+          }
+        },
+        {
+          "name": "Average Delivery Time",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard/avg-delivery-time",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard", "avg-delivery-time"]
+            },
+            "description": "Average hours from order `created_at` to `updated_at` for delivered orders (`status = 3`) in the current ISO week, compared to last week.\n\n**Success (200) `data`:**\n- `avg_hours` — rounded to 1 decimal\n- `change_percent` — absolute % vs last week (`null` if no prior-week data)\n- `change_direction` — `improvement` | `regression` | `unchanged` (lower hours = improvement)\n- `comparison_label` — localized string (e.g. أسرع بـ 18% من الأسبوع الماضي)"
+          }
+        },
+        {
+          "name": "Recent Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/dashboard/recent-orders?per_page=15&page=1&status=&search=&sort_by=created_at&sort_dir=desc",
+              "host": ["{{base_url}}"],
+              "path": ["api", "dashboard", "recent-orders"],
+              "query": [
+                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
+                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
+                { "key": "status", "value": "", "description": "Filter by `orders.status`: 1 pending · 2 in delivery · 3 delivered · 4 postponed · 5 failed · 6 rejected" },
+                { "key": "search", "value": "", "description": "LIKE on `internal_code`, `customer_name`, `customer_phone`" },
+                { "key": "sort_by", "value": "created_at", "description": "created_at | updated_at | internal_code | status" },
+                { "key": "sort_dir", "value": "desc", "description": "asc | desc" }
+              ]
+            },
+            "description": "Paginated recent orders for the dashboard table — **not cached**.\n\n**Eager loads:** customer info, financials, agent + user, shipping company, address + governorate + city.\n\n**Each `data[]` item:**\n- `order_id`, `internal_code`, `reference_code` (maps to `reference_no`)\n- `customer_name`, `customer_phone`\n- `region` — `governorate.name_ar / city.name_ar`\n- `company_name`, `agent_name`, `agent_avatar_url`\n- `original_amount`, `collected_amount`\n- `status`, `status_label_ar`, `created_at` (ISO 8601)\n\n**Pagination:** `meta` is a **sibling** of `data` (not nested inside `data`):\n- `current_page`, `per_page`, `total`, `last_page`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": [ ... ], \"meta\": { ... } }`\n\n**422:** invalid `status`, `sort_by`, or `sort_dir`."
           }
         }
       ]

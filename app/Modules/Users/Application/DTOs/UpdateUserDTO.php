@@ -16,6 +16,8 @@ readonly class UpdateUserDTO
         public ?array $roles = null,
         /** @var array<string, mixed>|null */
         public ?array $profile = null,
+        /** @var array<string, mixed>|null */
+        public ?array $address = null,
         public array $presentKeys = [],
     ) {}
 
@@ -30,6 +32,7 @@ readonly class UpdateUserDTO
             avatar: $data['avatar'] ?? null,
             roles: $data['roles'] ?? null,
             profile: $data['profile'] ?? null,
+            address: $data['address'] ?? null,
             presentKeys: array_keys($data),
         );
     }

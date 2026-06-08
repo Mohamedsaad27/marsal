@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Application\UseCases;
 
 use App\Modules\Auth\Application\Exceptions\RoleNotFoundException;
+use App\Modules\Locations\Infrastructure\Database\Models\Address;
 use App\Modules\Users\Application\DTOs\UpdateUserDTO;
 use App\Modules\Users\Application\Exceptions\UserActionForbiddenException;
 use App\Modules\Users\Domain\Interfaces\UserRepositoryInterface;
@@ -42,8 +43,40 @@ class UpdateUserUseCase
                 $this->updateLinkedProfile($user, $dto->profile);
             }
 
-            return $user->fresh()->load(['roles', 'deliveryAgent', 'shippingCompany', 'staffMember']);
+            if (in_array('address', $dto->presentKeys, true) && $dto->address !== null) {
+                $this->upsertUserAddress($user, $dto->address);
+            }
+
+            return $user->fresh()->load(['roles', 'deliveryAgent', 'shippingCompany', 'staffMember', 'addresses.city']);
         });
+    }
+
+    /**
+     * @param  array<string, mixed>  $address
+     */
+    private function upsertUserAddress(User $user, array $address): void
+    {
+        $payload = [
+            'city_id' => $address['city_id'] ?? null,
+            'address_line' => $address['address_line'],
+            'landmark' => $address['landmark'] ?? null,
+            'street' => $address['street'] ?? null,
+            'building_number' => $address['building_number'] ?? null,
+            'floor_number' => $address['floor_number'] ?? null,
+            'apartment_number' => $address['apartment_number'] ?? null,
+            'is_default' => $address['is_default'] ?? true,
+        ];
+
+        $existing = $user->addresses()->where('is_default', true)->first()
+            ?? $user->addresses()->first();
+
+        if ($existing) {
+            $existing->update($payload);
+
+            return;
+        }
+
+        Address::query()->create(array_merge($payload, ['user_id' => $user->user_id]));
     }
 
     /**

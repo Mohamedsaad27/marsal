@@ -4,10 +4,13 @@ namespace App\Modules\Users\Presentation\Http\Requests;
 
 use App\Modules\Core\Presentation\Http\Requests\BaseFormRequest;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
+use App\Modules\Users\Presentation\Http\Requests\Concerns\ValidatesUserAddress;
 use Illuminate\Validation\Rule;
 
 class UpdateUserRequest extends BaseFormRequest
 {
+    use ValidatesUserAddress;
+
     protected function translationNamespace(): string
     {
         return 'users';
@@ -66,6 +69,7 @@ class UpdateUserRequest extends BaseFormRequest
                 'uuid',
                 'exists:delivery_agents,delivery_agent_id',
             ],
+            ...$this->addressRulesForUpdate(),
         ];
     }
 }

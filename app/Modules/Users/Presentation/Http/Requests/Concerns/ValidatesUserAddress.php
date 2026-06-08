@@ -20,4 +20,19 @@ trait ValidatesUserAddress
             'address.is_default' => ['nullable', 'boolean'],
         ];
     }
+
+    protected function addressRulesForUpdate(): array
+    {
+        return [
+            'address' => ['sometimes', 'array'],
+            'address.city_id' => ['nullable', 'uuid', 'exists:cities,city_id'],
+            'address.address_line' => ['required_with:address', 'string', 'max:500'],
+            'address.landmark' => ['nullable', 'string', 'max:255'],
+            'address.street' => ['nullable', 'string', 'max:255'],
+            'address.building_number' => ['nullable', 'string', 'max:50'],
+            'address.floor_number' => ['nullable', 'string', 'max:20'],
+            'address.apartment_number' => ['nullable', 'string', 'max:20'],
+            'address.is_default' => ['nullable', 'boolean'],
+        ];
+    }
 }
