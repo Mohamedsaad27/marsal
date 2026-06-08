@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users\Infrastructure\Database\Models;
 
+use App\Modules\AuditLog\Infrastructure\Traits\Auditable;
 use App\Modules\Core\Infrastructure\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ShippingCompany extends Model
 {
+    use Auditable;
     use HasUuid;
     use SoftDeletes;
 

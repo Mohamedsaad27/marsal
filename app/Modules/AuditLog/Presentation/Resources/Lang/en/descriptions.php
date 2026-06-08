@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'created'                => 'Created :entity :subject',
+    'updated'                => 'Updated :entity :subject',
+    'updated_with_changes'   => 'Updated :entity :subject',
+    'deleted'                => 'Deleted :entity :subject',
+    'restored'               => 'Restored :entity :subject',
+    'login'                  => 'Login :subject',
+    'logout'                 => 'Logout :subject',
+    'password_changed'       => 'Password changed for :entity :subject',
+    'activated'              => 'Activated :entity :subject',
+    'deactivated'            => 'Deactivated :entity :subject',
+    'status_changed'         => ':entity :subject status changed from :old to :new',
+    'status_changed_generic' => ':entity :subject status changed',
+    'assigned'               => 'Assigned :entity :subject',
+    'approved'               => 'Approved :entity :subject',
+    'rejected'               => 'Rejected :entity :subject',
+    'settled'                => 'Settled :entity :subject',
+    'collected'              => 'Collected :entity :subject',
+    'returned'               => 'Returned :entity :subject',
+    'exported'               => 'Exported :entity :subject',
+    'permissions_sync'       => 'Updated permissions for role :role',
+    'permissions_changed'    => 'Permissions: :old_count → :new_count',
+    'field_change'           => ':field: :old → :new',
+];

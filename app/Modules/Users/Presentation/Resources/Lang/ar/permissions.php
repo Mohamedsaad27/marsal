@@ -65,4 +65,6 @@ return [
 
     'governorates.view' => 'عرض المحافظات',
     'governorates.manage' => 'إدارة المحافظات والمدن',
+
+    'audit_logs.view' => 'عرض سجلات النشاط',
 ];

@@ -2,6 +2,8 @@
 
 namespace App\Modules\Users\Application\UseCases;
 
+use App\Modules\AuditLog\Application\UseCases\RecordAuditUseCase;
+use App\Modules\AuditLog\Domain\Enums\AuditEventEnum;
 use App\Modules\Users\Application\Exceptions\UserActionForbiddenException;
 use App\Modules\Users\Domain\Interfaces\UserRepositoryInterface;
 use App\Modules\Users\Infrastructure\Database\Models\User;
@@ -12,6 +14,7 @@ class ToggleUserStatusUseCase
     public function __construct(
         private readonly UserRepositoryInterface $repository,
         private readonly GetUserUseCase $getUserUseCase,
+        private readonly RecordAuditUseCase $recordAudit,
     ) {}
 
     public function execute(string $userId): User
@@ -29,6 +32,18 @@ class ToggleUserStatusUseCase
             }
         }
 
-        return $this->repository->toggleActive($user);
+        $wasActive = $user->is_active;
+        $user = $this->repository->toggleActive($user);
+
+        $this->recordAudit->execute(
+            userId:        $actorId,
+            event:         $wasActive ? AuditEventEnum::Deactivated : AuditEventEnum::Activated,
+            auditableType: 'users',
+            auditableId:   $user->user_id,
+            oldValues:     ['is_active' => $wasActive],
+            newValues:     ['is_active' => $user->is_active],
+        );
+
+        return $user;
     }
 }

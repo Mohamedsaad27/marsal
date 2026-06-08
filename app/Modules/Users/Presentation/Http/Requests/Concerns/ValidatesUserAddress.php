@@ -4,9 +4,6 @@ namespace App\Modules\Users\Presentation\Http\Requests\Concerns;
 
 trait ValidatesUserAddress
 {
-    /**
-     * @return array<string, list<mixed>>
-     */
     protected function addressRules(bool $required = true): array
     {
         $presence = $required ? ['required'] : ['nullable'];

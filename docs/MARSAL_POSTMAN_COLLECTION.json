@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Locations (governorates & cities).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent`",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Locations (governorates & cities), Audit Logs.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -51,6 +51,18 @@
       "value": "",
       "type": "string",
       "description": "UUID of a user (`user_id`). Auto-set from Admin — Users create responses, or paste from dashboard."
+    },
+    {
+      "key": "auditable_type",
+      "value": "users",
+      "type": "string",
+      "description": "Database table name for subject audit trail (e.g. `users`, `orders`, `settlements`). Used by Admin — Audit Logs."
+    },
+    {
+      "key": "auditable_id",
+      "value": "",
+      "type": "string",
+      "description": "Primary key of the audited record (UUID or BIGINT as string). For users, use `{{user_id}}`. Set manually for orders and other entities."
     }
   ],
   "auth": {
@@ -126,7 +138,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "login"]
             },
-            "description": "Authenticate with email **or** phone in `identifier` field. Returns JWT `access_token` and user (`account_type`, `roles[]`, optional `staff_member` / `shipping_company` / `delivery_agent`)."
+            "description": "Authenticate with email **or** phone in `identifier` field. Returns JWT `access_token` and user (`account_type`, `roles[]`, optional `staff_member` / `shipping_company` / `delivery_agent`).\n\nRecords audit event `login` (code 5) on `users` — view via **Admin — Audit Logs**."
           }
         },
         {
@@ -258,7 +270,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "logout"]
             },
-            "description": "Invalidate current JWT (blacklist)."
+            "description": "Invalidate current JWT (blacklist).\n\nRecords audit event `logout` (code 6) on `users` when authenticated."
           }
         }
       ]
@@ -1290,7 +1302,83 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "users", "{{user_id}}", "change-password"]
             },
-            "description": "Permission: `users.change_password`\n\nForce-reset any user's password from the admin dashboard — **no OTP or email flow**. Works for all account types (`super_admin`, `staff_member`, `shipping_company`, `delivery_agent`).\n\n**Path:** `userId` = target user's UUID (`{{user_id}}`). Set via **Create User** responses or paste manually.\n\n**Body:**\n- `password` — required, min 8 characters\n- `password_confirmation` — must match `password`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"Password changed successfully.\", \"data\": null }`\n\n**Errors:**\n- **401** — missing/invalid JWT or missing permission\n- **404** — user not found or soft-deleted\n- **422** — validation (password too short, confirmation mismatch)"
+            "description": "Permission: `users.change_password`\n\nForce-reset any user's password from the admin dashboard — **no OTP or email flow**. Works for all account types (`super_admin`, `staff_member`, `shipping_company`, `delivery_agent`).\n\n**Path:** `userId` = target user's UUID (`{{user_id}}`). Set via **Create User** responses or paste manually.\n\n**Body:**\n- `password` — required, min 8 characters\n- `password_confirmation` — must match `password`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"Password changed successfully.\", \"data\": null }`\n\nRecords an audit event (`password_changed`, event code 15).\n\n**Errors:**\n- **401** — missing/invalid JWT or missing permission\n- **404** — user not found or soft-deleted\n- **422** — validation (password too short, confirmation mismatch)"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Audit Logs",
+      "description": "Immutable audit trail for admin dashboard. Requires `audit_logs.view` (included in `super_admin` role after seeding).\n\n**Auto-logged (model trait):** `created`, `updated`, `deleted`, `restored` on `users`, `shipping_companies`, `delivery_agents`.\n\n**Manual events:** `login` (5), `logout` (6), `password_changed` (15), `activated` (16), `deactivated` (17) — plus order/settlement events when those modules are wired.\n\n**Actor types:** `1` super_admin · `2` shipping_company · `3` delivery_agent · `4` system",
+      "item": [
+        {
+          "name": "List Audit Logs",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/audit-logs?per_page=20&page=1&user_id=&event=&auditable_type=&auditable_id=&date_period=&date_from=&date_to=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "audit-logs"],
+              "query": [
+                { "key": "per_page", "value": "20", "description": "Items per page (5–100, default 20)" },
+                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
+                { "key": "user_id", "value": "", "description": "Filter by actor UUID (`users.user_id`). Use `{{user_id}}` to see actions by/for a specific user." },
+                { "key": "event", "value": "", "description": "Event code: 1=created, 2=updated, 3=deleted, 4=restored, 5=login, 6=logout, 7=status_changed, 8=assigned, 9=approved, 10=rejected, 11=settled, 12=collected, 13=returned, 14=exported, 15=password_changed, 16=activated, 17=deactivated" },
+                { "key": "auditable_type", "value": "", "description": "Table name filter (e.g. `users`, `orders`, `settlements`)" },
+                { "key": "auditable_id", "value": "", "description": "Record PK filter (UUID or BIGINT as string)" },
+                { "key": "date_period", "value": "", "description": "Date preset: `today` | `this_week` | `this_month` | `custom`. Omit for no date filter. When preset is set, `date_from`/`date_to` are ignored." },
+                { "key": "date_from", "value": "", "description": "Required when `date_period=custom` (or when using legacy range without `date_period`). Inclusive start date (Y-m-d)." },
+                { "key": "date_to", "value": "", "description": "Required when `date_period=custom` (or legacy range). Inclusive end date (Y-m-d); must be ≥ date_from." }
+              ]
+            },
+            "description": "Permission: `audit_logs.view`\n\nPaginated global audit log with optional filters. Includes dashboard **KPIs** (global totals, not affected by list filters).\n\n**Date filters (`date_period`):**\n| Value | Range |\n|-------|-------|\n| `today` | Start of today → end of today (app timezone) |\n| `this_week` | Start of week (Monday) → end of week |\n| `this_month` | Start of month → end of month |\n| `custom` | Requires `date_from` + `date_to` (inclusive, Y-m-d) |\n| *(omit)* | No date filter — all time |\n\n**Legacy:** `date_from` + `date_to` without `date_period` still works (treated as custom range).\n\n**Response `data`:**\n- `kpis` — dashboard cards:\n  - `total_logs` — all-time count\n  - `today_logs` — since start of today\n  - `security_events_today` — login + logout + password_changed today\n- `items[]` — each entry:\n  - `id` (BIGINT)\n  - `description` — human-readable Arabic summary of the change\n  - `event` — `{ \"code\": 5, \"label\": \"تسجيل دخول\" }`\n  - `actor_type`, `actor_type_label`\n  - `actor` — `{ \"id\", \"name\", \"phone\" }` when loaded\n  - `auditable_type`, `auditable_id`\n  - `old_values`, `new_values`, `metadata` (JSON objects or null)\n  - `ip_address`, `created_at` (ISO 8601)\n- `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`\n\n**422:** invalid `event`, `user_id`, `date_period`, or incomplete custom date range."
+          }
+        },
+        {
+          "name": "Audit Trail — User",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/audit-logs/users/{{user_id}}?per_page=20&page=1&date_period=&date_from=&date_to=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "audit-logs", "users", "{{user_id}}"],
+              "query": [
+                { "key": "per_page", "value": "20", "description": "Items per page (5–100, default 20)" },
+                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
+                { "key": "date_period", "value": "", "description": "Optional: `today` | `this_week` | `this_month` | `custom`" },
+                { "key": "date_from", "value": "", "description": "Required when `date_period=custom`" },
+                { "key": "date_to", "value": "", "description": "Required when `date_period=custom`" }
+              ]
+            },
+            "description": "Permission: `audit_logs.view`\n\nAll audit entries where `auditable_type = users` and `auditable_id` matches the target user.\n\n**Path:** `{{user_id}}` — set via **Admin — Users → List Users** (auto-saved) or **Create User** response.\n\nSupports the same **date filters** as **List Audit Logs** (`date_period`, `date_from`, `date_to`).\n\nUse after **Login**, **Toggle User Status**, or **Change Password** to verify events (`login`, `activated`/`deactivated`, `password_changed`, `updated`).\n\nSame response shape as **List Audit Logs**."
+          }
+        },
+        {
+          "name": "Audit Trail — Subject",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/audit-logs/{{auditable_type}}/{{auditable_id}}?per_page=20&page=1&date_period=&date_from=&date_to=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "audit-logs", "{{auditable_type}}", "{{auditable_id}}"],
+              "query": [
+                { "key": "per_page", "value": "20", "description": "Items per page (5–100, default 20)" },
+                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
+                { "key": "date_period", "value": "", "description": "Optional: `today` | `this_week` | `this_month` | `custom`" },
+                { "key": "date_from", "value": "", "description": "Required when `date_period=custom`" },
+                { "key": "date_to", "value": "", "description": "Required when `date_period=custom`" }
+              ]
+            },
+            "description": "Permission: `audit_logs.view`\n\nGeneric subject history — same as **Audit Trail — User** but for any auditable table.\n\n**Path variables (collection):**\n- `auditable_type` — table name (`users`, `orders`, `shipping_companies`, `delivery_agents`, `settlements`, …)\n- `auditable_id` — record primary key as string\n\nSupports the same **date filters** as **List Audit Logs** (`date_period`, `date_from`, `date_to`).\n\n**Examples:**\n- User: `users` + `{{user_id}}`\n- Order (when module exists): `orders` + order UUID\n\n**Success (200):** paginated `items[]` + meta. Empty `items` if no logs exist for that record."
           }
         }
       ]

@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users\Infrastructure\Database\Models;
 
+use App\Modules\AuditLog\Infrastructure\Traits\Auditable;
 use App\Modules\Core\Infrastructure\Traits\HasUuid;
 use App\Modules\Locations\Infrastructure\Database\Models\Address;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
@@ -17,6 +18,7 @@ use Tymon\JWTAuth\Contracts\JWTSubject;
 
 class User extends Authenticatable implements JWTSubject
 {
+    use Auditable;
     use HasFactory;
     use HasRoles;
     use HasUuid;

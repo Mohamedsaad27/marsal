@@ -1,0 +1,26 @@
+<?php
+
+return [
+    'created'                => 'تم إنشاء :entity :subject',
+    'updated'                => 'تم تعديل :entity :subject',
+    'updated_with_changes'   => 'تم تعديل :entity :subject',
+    'deleted'                => 'تم حذف :entity :subject',
+    'restored'               => 'تم استرجاع :entity :subject',
+    'login'                  => 'تسجيل دخول :subject',
+    'logout'                 => 'تسجيل خروج :subject',
+    'password_changed'       => 'تم تغيير كلمة مرور :entity :subject',
+    'activated'              => 'تم تفعيل :entity :subject',
+    'deactivated'            => 'تم تعطيل :entity :subject',
+    'status_changed'         => 'تغيير حالة :entity :subject من :old إلى :new',
+    'status_changed_generic' => 'تغيير حالة :entity :subject',
+    'assigned'               => 'تم تعيين :entity :subject',
+    'approved'               => 'تمت الموافقة على :entity :subject',
+    'rejected'               => 'تم رفض :entity :subject',
+    'settled'                => 'تمت تسوية :entity :subject',
+    'collected'              => 'تم تحصيل :entity :subject',
+    'returned'               => 'تم إرجاع :entity :subject',
+    'exported'               => 'تم تصدير :entity :subject',
+    'permissions_sync'       => 'تم تحديث صلاحيات الدور :role',
+    'permissions_changed'    => 'الصلاحيات: من :old_count إلى :new_count',
+    'field_change'           => ':field: من :old إلى :new',
+];

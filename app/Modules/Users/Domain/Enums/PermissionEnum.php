@@ -69,6 +69,8 @@ enum PermissionEnum: string
     case GovernoratesView = 'governorates.view';
     case GovernoratesManage = 'governorates.manage';
 
+    case AuditLogsView = 'audit_logs.view';
+
     public function label(): string
     {
         return __("users::permissions.{$this->value}");
@@ -106,6 +108,7 @@ enum PermissionEnum: string
             'reports' => 'التقارير',
             'chat' => 'الدردشة',
             'governorates' => 'المناطق الجغرافية',
+            'audit_logs' => 'سجلات النشاط',
             default => $this->group(),
         };
     }
