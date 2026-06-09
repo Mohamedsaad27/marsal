@@ -28,7 +28,7 @@ class SuperAdminSeeder extends Seeder
 
         StaffMember::query()->create([
             'user_id' => $user->user_id,
-            'department' => 'operations',
+            'department_id' => null,
             'job_title' => 'System Administrator',
         ]);
 

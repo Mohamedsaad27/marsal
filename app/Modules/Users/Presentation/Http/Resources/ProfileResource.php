@@ -19,7 +19,19 @@ class ProfileResource extends JsonResource
             'phone' => $this->phone,
             'gender' => $this->gender,
             'avatar_url' => $this->resolveAvatarUrl($this->avatar),
-            'department' => $this->whenLoaded('staffMember', fn () => $this->staffMember?->department),
+            'department' => $this->whenLoaded('staffMember', function () {
+                $staffMember = $this->staffMember;
+
+                if ($staffMember === null || $staffMember->department_id === null) {
+                    return null;
+                }
+
+                if ($staffMember->relationLoaded('department') && $staffMember->department !== null) {
+                    return $staffMember->department->name_ar;
+                }
+
+                return null;
+            }),
             'job_title' => $this->whenLoaded('staffMember', fn () => $this->staffMember?->job_title),
             'roles' => $this->getRoleNames()->values()->all(),
         ];

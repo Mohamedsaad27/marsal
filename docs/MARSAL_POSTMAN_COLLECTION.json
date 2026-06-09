@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Locations (governorates & cities), Audit Logs, Dashboard (admin home KPIs).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent`",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Audit Logs, Dashboard (admin home KPIs).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent`",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -51,6 +51,12 @@
       "value": "",
       "type": "string",
       "description": "UUID of a user (`user_id`). Auto-set from Admin — Users create responses, or paste from dashboard."
+    },
+    {
+      "key": "department_id",
+      "value": "",
+      "type": "string",
+      "description": "UUID of a department (`department_id`). Auto-set from Admin — Departments list/create responses."
     },
     {
       "key": "auditable_type",
@@ -240,7 +246,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "profile"]
             },
-            "description": "Update the **authenticated** user's profile. **Bearer token required.** No special permission.\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Multipart fields (all optional):** `name`, `email`, `phone`, `gender` (`male` | `female`), `avatar` (image file).\n\n`is_active` cannot be changed from this endpoint.\n\n**Success (200):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم تحديث الملف الشخصي بنجاح\",\n  \"data\": {\n    \"user_id\": \"uuid\",\n    \"name\": \"عبدالله الراشد\",\n    \"email\": \"abdullah@marsal.io\",\n    \"phone\": \"01001234567\",\n    \"gender\": \"male\",\n    \"avatar_url\": \"https://...\",\n    \"department\": \"العمليات\",\n    \"job_title\": \"مدير النظام\",\n    \"roles\": [\"super_admin\"]\n  }\n}\n```\n\n**422:** validation (duplicate email/phone, invalid gender, invalid avatar)."
+            "description": "Update the **authenticated** user's profile. **Bearer token required.** No special permission.\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Multipart fields (all optional):** `name`, `email`, `phone`, `gender` (`male` | `female`), `avatar` (image file).\n\n`is_active` cannot be changed from this endpoint.\n\n**Success (200):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم تحديث الملف الشخصي بنجاح\",\n  \"data\": {\n    \"user_id\": \"uuid\",\n    \"name\": \"عبدالله الراشد\",\n    \"email\": \"abdullah@marsal.io\",\n    \"phone\": \"01001234567\",\n    \"gender\": \"male\",\n    \"avatar_url\": \"https://...\",\n    \"department\": \"العمليات (name_ar when staff member has department_id)\",\n    \"job_title\": \"مدير النظام\",\n    \"roles\": [\"super_admin\"]\n  }\n}\n```\n\n**422:** validation (duplicate email/phone, invalid gender, invalid avatar)."
           }
         },
         {
@@ -869,6 +875,150 @@
       ]
     },
     {
+      "name": "Admin — Departments",
+      "description": "CRUD for organizational departments (UUID `department_id`). Staff members link via `staff_members.department_id`.\n\nPermissions: `departments.view` (GET), `departments.manage` (POST/PUT/DELETE/restore).\n\nEach department has an optional `manager_id` (FK → `users.user_id`, SET NULL on manager delete).\n\n**Delete rules:** **422** if department has active (non-deleted) staff members — reassign members first.\n\nPaginated list returns `data.items` plus standard pagination meta (`current_page`, `total`, `has_more`, …).\n\n**KPIs in list:** `data.kpis.total_departments`, `data.kpis.total_active`, `data.kpis.total_members`.",
+      "item": [
+        {
+          "name": "List Departments",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    if (items[0]?.id) {",
+                  "        pm.collectionVariables.set('department_id', items[0].id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/departments?per_page=15&search=&is_active=",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "departments"],
+              "query": [
+                { "key": "per_page", "value": "15", "description": "Items per page (default 15)" },
+                { "key": "search", "value": "", "description": "Filter name_ar or name_en" },
+                { "key": "is_active", "value": "", "description": "true or false (omit for all)" }
+              ]
+            },
+            "description": "Permission: `departments.view`\n\nPaginated departments list. Each item includes `staff_count`, optional nested `manager`, and `is_active`.\n\nAlso returns `data.kpis`:\n- `total_departments` — all non-deleted departments\n- `total_active` — departments where `is_active = true`\n- `total_members` — staff members assigned to a department (`department_id` IS NOT NULL)\n\nKPIs are global totals (not affected by `search` / `is_active` filters).\n\nSaves first `items[].id` to `{{department_id}}`."
+          }
+        },
+        {
+          "name": "Get Department",
+          "request": {
+            "method": "GET",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/departments/{{department_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "departments", "{{department_id}}"]
+            },
+            "description": "Permission: `departments.view`\n\nSingle department with `manager` and `staff_count`."
+          }
+        },
+        {
+          "name": "Create Department",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 201) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data?.id) {",
+                  "        pm.collectionVariables.set('department_id', json.data.id);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name_ar\": \"العمليات\",\n  \"name_en\": \"Operations\",\n  \"description\": \"Handles daily logistics operations\",\n  \"manager_id\": \"{{user_id}}\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/departments",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "departments"]
+            },
+            "description": "Permission: `departments.manage`\n\n`manager_id` is optional — use `{{user_id}}` from **Admin — Users** or omit/null.\n\n`name_ar` and `name_en` must be unique."
+          }
+        },
+        {
+          "name": "Update Department",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Accept", "value": "application/json" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name_ar\": \"العمليات\",\n  \"name_en\": \"Operations\",\n  \"description\": \"Updated department description\",\n  \"manager_id\": \"{{user_id}}\",\n  \"is_active\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/departments/{{department_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "departments", "{{department_id}}"]
+            },
+            "description": "Permission: `departments.manage`\n\nPartial update supported (`sometimes` rules). Pass `\"manager_id\": null` to clear the manager."
+          }
+        },
+        {
+          "name": "Delete Department",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/departments/{{department_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "departments", "{{department_id}}"]
+            },
+            "description": "Permission: `departments.manage`\n\nSoft delete. **422** if department still has active staff members."
+          }
+        },
+        {
+          "name": "Restore Department",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Accept", "value": "application/json" }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/departments/{{department_id}}/restore",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "departments", "{{department_id}}", "restore"]
+            },
+            "description": "Permission: `departments.manage`\n\nRestores a soft-deleted department by UUID."
+          }
+        }
+      ]
+    },
+    {
       "name": "Admin — Users",
       "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET /users` — all roles (`users.view`); dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters; `GET /delivery-agents/supervisors` — lightweight supervisor dropdown (`delivery_agents.view`). `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Address on create & update:** All create endpoints accept an `address` object. Required for `staff_member`, `shipping_company`, and `delivery_agent`; optional for `super_admin`. `PUT /users/{userId}` accepts the same `address` object (optional partial update) — updates the user's default address, or creates one if missing. Persists to `addresses` (FK `user_id`, optional `city_id`). Create/update responses return `addresses[]` (with nested `city` when loaded).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
       "item": [
@@ -962,14 +1112,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@marsal.com\",\n  \"phone\": \"01099998888\",\n  \"gender\": \"ذكر\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"finance\",\n    \"job_title\": \"Finance Lead\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"20 Ramses St, Downtown\",\n    \"landmark\": \"Near train station\",\n    \"street\": \"Ramses St\",\n    \"building_number\": \"20\",\n    \"floor_number\": \"2\",\n    \"apartment_number\": \"5\",\n    \"is_default\": true\n  }\n}"
+              "raw": "{\n  \"name\": \"Updated Name\",\n  \"email\": \"updated@marsal.com\",\n  \"phone\": \"01099998888\",\n  \"gender\": \"ذكر\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department_id\": \"{{department_id}}\",\n    \"job_title\": \"Finance Lead\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"20 Ramses St, Downtown\",\n    \"landmark\": \"Near train station\",\n    \"street\": \"Ramses St\",\n    \"building_number\": \"20\",\n    \"floor_number\": \"2\",\n    \"apartment_number\": \"5\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "users", "{{user_id}}"]
             },
-            "description": "Permission: `users.update`\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Body (all optional):** `name`, `email`, `phone`, `gender`, `avatar`, `roles[]`, `profile` (fields depend on linked account: staff `department`/`job_title`/`notes`, company `company_name`/`commercial_reg`/`logo_url`, agent `national_id`/`vehicle_type`/`vehicle_plate_number`/`supervisor_agent_id`), `address`.\n\n**`address` object** (same shape as create):\n- Updates the user's default address (`is_default = true`), or the first address if none is default; creates a new row if the user has no addresses.\n- `address.address_line` — required when `address` is sent\n- `address.city_id` — optional UUID (`{{city_id}}` from **Locations — Reference**)\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number`, `is_default` — optional\n\n**Success (200):** `UserResource` with updated `addresses[]` (nested `city` when `city_id` set).\n\n**403:** removing `super_admin` from the last active super admin.\n\n**404:** user not found or soft-deleted.\n\n**422:** validation (duplicate email/phone, invalid role, missing `address_line` when `address` sent)."
+            "description": "Permission: `users.update`\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Body (all optional):** `name`, `email`, `phone`, `gender`, `avatar`, `roles[]`, `profile` (fields depend on linked account: staff `department_id` (UUID)/`job_title`/`notes`, company `company_name`/`commercial_reg`/`logo_url`, agent `national_id`/`vehicle_type`/`vehicle_plate_number`/`supervisor_agent_id`), `address`.\n\n**`address` object** (same shape as create):\n- Updates the user's default address (`is_default = true`), or the first address if none is default; creates a new row if the user has no addresses.\n- `address.address_line` — required when `address` is sent\n- `address.city_id` — optional UUID (`{{city_id}}` from **Locations — Reference**)\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number`, `is_default` — optional\n\n**Success (200):** `UserResource` with updated `addresses[]` (nested `city` when `city_id` set).\n\n**403:** removing `super_admin` from the last active super admin.\n\n**404:** user not found or soft-deleted.\n\n**422:** validation (duplicate email/phone, invalid role, missing `address_line` when `address` sent)."
           }
         },
         {
@@ -1031,14 +1181,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff2@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"account_type\": \"staff_member\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"operations\",\n    \"job_title\": \"Operations Lead\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"is_default\": true\n  }\n}"
+              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff2@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"account_type\": \"staff_member\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department_id\": \"{{department_id}}\",\n    \"job_title\": \"Operations Lead\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "users"]
             },
-            "description": "Permission: `users.create`\n\nSends **welcome email** + returns **`welcome_whatsapp_url`** (wa.me link for admin to click and send).\n\n`account_type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` (drives which profile row is created — not stored on `users`).\n\n- `super_admin` → role only (full access via `super_admin` role); `address` optional\n- `staff_member` → creates `staff_members` (`profile.department`, `profile.job_title`, `profile.notes`); **`address` required**\n- `shipping_company` → creates `shipping_companies`; **`address` required**\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional); **`address` required**\n\n**`address` object** (stored in `addresses` table):\n- `address.city_id` — optional UUID (`exists:cities`); use `{{city_id}}` from **Locations — Reference**\n- `address.address_line` — required when `address` is sent\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number` — optional\n- `address.is_default` — optional boolean (defaults to `true` on create)\n\n**Success (201):** `UserResource` includes `addresses[]` with nested `city` when provided.\n\n`roles`: array of existing role names (required).\n\n`password`: min 8, upper + lower + number + symbol."
+            "description": "Permission: `users.create`\n\nSends **welcome email** + returns **`welcome_whatsapp_url`** (wa.me link for admin to click and send).\n\n`account_type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` (drives which profile row is created — not stored on `users`).\n\n- `super_admin` → role only (full access via `super_admin` role); `address` optional\n- `staff_member` → creates `staff_members` (`profile.department_id` UUID, `profile.job_title`, `profile.notes`); **`address` required**\n- `shipping_company` → creates `shipping_companies`; **`address` required**\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional); **`address` required**\n\n**`address` object** (stored in `addresses` table):\n- `address.city_id` — optional UUID (`exists:cities`); use `{{city_id}}` from **Locations — Reference**\n- `address.address_line` — required when `address` is sent\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number` — optional\n- `address.is_default` — optional boolean (defaults to `true` on create)\n\n**Success (201):** `UserResource` includes `addresses[]` with nested `city` when provided.\n\n`roles`: array of existing role names (required).\n\n`password`: min 8, upper + lower + number + symbol."
           }
         },
         {
@@ -1066,7 +1216,7 @@
               { "key": "Accept", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/admin/staff-members?per_page=15&page=1&search=&is_active=&department=",
+              "raw": "{{base_url}}/api/v1/admin/staff-members?per_page=15&page=1&search=&is_active=&department_id=",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "staff-members"],
               "query": [
@@ -1074,10 +1224,10 @@
                 { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
                 { "key": "search", "value": "", "description": "LIKE match on name, email, phone" },
                 { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" },
-                { "key": "department", "value": "", "description": "Exact match on staff_members.department (e.g. operations, finance)" }
+                { "key": "department_id", "value": "{{department_id}}", "description": "UUID filter — exact match on staff_members.department_id" }
               ]
             },
-            "description": "Permission: `users.view`\n\nPaginated list for the **Staff Members** admin page. Only users with role `staff_member`.\n\n**Query:** `search`, `is_active` (0|1), `department`, `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `staff_member` (`id`, `department`, `job_title`, `notes`) and `addresses[]`\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or `department` length.\n\nSaves first `items[].id` to `{{user_id}}`."
+            "description": "Permission: `users.view`\n\nPaginated list for the **Staff Members** admin page. Only users with role `staff_member`.\n\n**Query:** `search`, `is_active` (0|1), `department_id` (UUID), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `staff_member` (`id`, nested `department` object, `job_title`, `notes`) and `addresses[]`\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or unknown `department_id`.\n\nSaves first `items[].id` to `{{user_id}}`."
           }
         },
         {
@@ -1090,7 +1240,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department\": \"operations\",\n    \"job_title\": \"Operations Manager\",\n    \"notes\": \"Internal staff account\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"floor_number\": \"3\",\n    \"apartment_number\": \"12\",\n    \"is_default\": true\n  }\n}"
+              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department_id\": \"{{department_id}}\",\n    \"job_title\": \"Operations Manager\",\n    \"notes\": \"Internal staff account\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"floor_number\": \"3\",\n    \"apartment_number\": \"12\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff-members",

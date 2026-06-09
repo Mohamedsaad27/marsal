@@ -121,8 +121,8 @@ class UserRepository implements UserRepositoryInterface
             $query->where('is_active', $dto->isActive);
         }
 
-        if ($dto->department !== null) {
-            $query->whereHas('staffMember', fn ($q) => $q->where('department', $dto->department));
+        if ($dto->departmentId !== null) {
+            $query->whereHas('staffMember', fn ($q) => $q->where('department_id', $dto->departmentId));
         }
 
         if ($dto->cityId !== null) {
@@ -142,10 +142,10 @@ class UserRepository implements UserRepositoryInterface
     private function eagerLoadsForRole(?string $role): array
     {
         return match ($role) {
-            'staff_member' => ['roles', 'staffMember', 'addresses'],
+            'staff_member' => ['roles', 'staffMember.department', 'addresses'],
             'shipping_company' => ['roles', 'shippingCompany', 'addresses.city'],
             'delivery_agent' => ['roles', 'deliveryAgent.supervisor.user', 'addresses'],
-            default => ['roles', 'deliveryAgent', 'shippingCompany', 'staffMember', 'addresses'],
+            default => ['roles', 'deliveryAgent', 'shippingCompany', 'staffMember.department', 'addresses'],
         };
     }
 

@@ -41,7 +41,7 @@ class CreateUserUseCase
             if ($dto->accountType->requiresStaffMemberProfile()) {
                 StaffMember::query()->create([
                     'user_id' => $user->user_id,
-                    'department' => $dto->profile['department'] ?? null,
+                    'department_id' => $dto->profile['department_id'] ?? null,
                     'job_title' => $dto->profile['job_title'] ?? null,
                     'notes' => $dto->profile['notes'] ?? null,
                 ]);
@@ -84,12 +84,12 @@ class CreateUserUseCase
                 ]);
             }
 
-            $user = $user->load(['shippingCompany', 'deliveryAgent', 'staffMember', 'addresses.city']);
+            $user = $user->load(['shippingCompany', 'deliveryAgent', 'staffMember.department', 'addresses.city']);
 
             $this->sendWelcomeEmailUseCase->execute($user, $dto->password);
             $this->sendWelcomeMessageOnWhatsAppUseCase->execute($user, $dto->password);
 
-            return $user->fresh()->load(['shippingCompany', 'deliveryAgent', 'staffMember', 'addresses.city']);
+            return $user->fresh()->load(['shippingCompany', 'deliveryAgent', 'staffMember.department', 'addresses.city']);
         });
     }
 

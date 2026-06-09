@@ -1,0 +1,13 @@
+{
+    "name": "Departments",
+    "alias": "Departments",
+    "description": "Departments module",
+    "keywords": [
+        "Departments"
+    ],
+    "priority": 0,
+    "providers": [
+        "App\\Modules\\Departments\\Infrastructure\\Providers\\DepartmentsServiceProvider"
+    ],
+    "files": []
+}

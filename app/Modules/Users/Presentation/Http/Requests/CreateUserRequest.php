@@ -34,7 +34,7 @@ class CreateUserRequest extends BaseFormRequest
             'profile' => ['nullable', 'array'],
             'profile.company_name' => ['required_if:account_type,shipping_company', 'string', 'max:200'],
             'profile.commercial_reg' => ['nullable', 'string', 'max:100'],
-            'profile.department' => ['nullable', 'string', 'max:100'],
+            'profile.department_id' => ['nullable', 'uuid', 'exists:departments,department_id'],
             'profile.job_title' => ['nullable', 'string', 'max:150'],
             'profile.notes' => ['nullable', 'string'],
             'profile.national_id' => ['nullable', 'string', 'max:20', 'unique:delivery_agents,national_id'],

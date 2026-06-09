@@ -66,5 +66,8 @@ return [
     'governorates.view' => 'View Governorates',
     'governorates.manage' => 'Manage Governorates & Cities',
 
+    'departments.view' => 'View Departments',
+    'departments.manage' => 'Manage Departments',
+
     'audit_logs.view' => 'View Audit Logs',
 ];

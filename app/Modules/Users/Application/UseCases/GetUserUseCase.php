@@ -20,6 +20,6 @@ class GetUserUseCase
             throw new UserNotFoundException;
         }
 
-        return $user->load(['roles', 'deliveryAgent', 'shippingCompany', 'staffMember']);
+        return $user->load(['roles', 'deliveryAgent', 'shippingCompany', 'staffMember.department']);
     }
 }

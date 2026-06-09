@@ -40,7 +40,7 @@ class LoginUseCase
             ],
         );
 
-        $user->load(['shippingCompany', 'deliveryAgent', 'staffMember']);
+        $user->load(['shippingCompany', 'deliveryAgent', 'staffMember.department']);
 
         return [
             'access_token' => $token,

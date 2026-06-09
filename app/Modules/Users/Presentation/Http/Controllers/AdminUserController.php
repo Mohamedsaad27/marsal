@@ -188,7 +188,7 @@ class AdminUserController extends Controller
         $user = $this->toggleUserStatusUseCase->execute($userId);
 
         return $this->success(
-            new UserListResource($user->load(['roles', 'deliveryAgent', 'shippingCompany', 'staffMember'])),
+            new UserListResource($user->load(['roles', 'deliveryAgent', 'shippingCompany', 'staffMember.department'])),
             __('users::messages.user_status_toggled'),
         );
     }

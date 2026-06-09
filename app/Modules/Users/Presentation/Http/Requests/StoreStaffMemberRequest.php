@@ -28,7 +28,7 @@ class StoreStaffMemberRequest extends BaseFormRequest
             'roles' => ['nullable', 'array', 'min:1'],
             'roles.*' => ['required', 'string', 'max:100'],
             'profile' => ['nullable', 'array'],
-            'profile.department' => ['nullable', 'string', 'max:100'],
+            'profile.department_id' => ['nullable', 'uuid', 'exists:departments,department_id'],
             'profile.job_title' => ['nullable', 'string', 'max:150'],
             'profile.notes' => ['nullable', 'string'],
             ...$this->addressRules(),

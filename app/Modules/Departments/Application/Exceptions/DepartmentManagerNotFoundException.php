@@ -1,0 +1,18 @@
+<?php
+
+namespace App\Modules\Departments\Application\Exceptions;
+
+use App\Modules\Core\Application\Exceptions\BaseException;
+
+class DepartmentManagerNotFoundException extends BaseException
+{
+    protected function getDefaultMessage(): string
+    {
+        return __('departments::messages.manager_not_found');
+    }
+
+    protected function getDefaultStatusCode(): int
+    {
+        return 422;
+    }
+}

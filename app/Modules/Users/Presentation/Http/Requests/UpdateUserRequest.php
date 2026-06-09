@@ -50,7 +50,7 @@ class UpdateUserRequest extends BaseFormRequest
             'profile.company_name' => ['sometimes', 'string', 'max:200'],
             'profile.commercial_reg' => ['sometimes', 'nullable', 'string', 'max:100'],
             'profile.logo_url' => ['sometimes', 'nullable', 'string', 'max:500'],
-            'profile.department' => ['sometimes', 'nullable', 'string', 'max:100'],
+            'profile.department_id' => ['sometimes', 'nullable', 'uuid', 'exists:departments,department_id'],
             'profile.job_title' => ['sometimes', 'nullable', 'string', 'max:150'],
             'profile.notes' => ['sometimes', 'nullable', 'string'],
             'profile.national_id' => [

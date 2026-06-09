@@ -11,6 +11,6 @@ class GetAuthenticatedUserUseCase
         /** @var User $user */
         $user = auth('api')->user();
 
-        return $user->load(['shippingCompany', 'deliveryAgent', 'staffMember']);
+        return $user->load(['shippingCompany', 'deliveryAgent', 'staffMember.department']);
     }
 }

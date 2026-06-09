@@ -47,7 +47,7 @@ class UpdateUserUseCase
                 $this->upsertUserAddress($user, $dto->address);
             }
 
-            return $user->fresh()->load(['roles', 'deliveryAgent', 'shippingCompany', 'staffMember', 'addresses.city']);
+            return $user->fresh()->load(['roles', 'deliveryAgent', 'shippingCompany', 'staffMember.department', 'addresses.city']);
         });
     }
 
@@ -85,7 +85,7 @@ class UpdateUserUseCase
     private function updateLinkedProfile(User $user, array $profile): void
     {
         if ($user->staffMember) {
-            $updates = array_intersect_key($profile, array_flip(['department', 'job_title', 'notes']));
+            $updates = array_intersect_key($profile, array_flip(['department_id', 'job_title', 'notes']));
             if ($updates !== []) {
                 $user->staffMember->update($updates);
             }

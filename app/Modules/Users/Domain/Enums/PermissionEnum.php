@@ -69,6 +69,9 @@ enum PermissionEnum: string
     case GovernoratesView = 'governorates.view';
     case GovernoratesManage = 'governorates.manage';
 
+    case DepartmentsView = 'departments.view';
+    case DepartmentsManage = 'departments.manage';
+
     case AuditLogsView = 'audit_logs.view';
 
     public function label(): string
@@ -108,6 +111,7 @@ enum PermissionEnum: string
             'reports' => 'التقارير',
             'chat' => 'الدردشة',
             'governorates' => 'المناطق الجغرافية',
+            'departments' => 'الأقسام',
             'audit_logs' => 'سجلات النشاط',
             default => $this->group(),
         };

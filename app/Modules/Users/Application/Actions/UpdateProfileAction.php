@@ -34,7 +34,7 @@ class UpdateProfileAction
 
         // TODO: fire ProfileUpdatedEvent
 
-        return $user->fresh()->load(['roles', 'staffMember']);
+        return $user->fresh()->load(['roles', 'staffMember.department']);
     }
 
     private function storeAvatar(User $user, UpdateProfileData $data): ?string

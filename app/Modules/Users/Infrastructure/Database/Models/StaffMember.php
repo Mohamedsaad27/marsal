@@ -22,7 +22,7 @@ class StaffMember extends Model
 
     protected $fillable = [
         'user_id',
-        'department',
+        'department_id',
         'job_title',
         'notes',
     ];
@@ -30,5 +30,14 @@ class StaffMember extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
+    }
+
+    public function department(): BelongsTo
+    {
+        return $this->belongsTo(
+            \App\Modules\Departments\Infrastructure\Database\Models\Department::class,
+            'department_id',
+            'department_id',
+        );
     }
 }
