@@ -1,0 +1,9 @@
+{
+    "name": "Settings",
+    "alias": "Settings",
+    "description": "System settings management module",
+    "priority": 1,
+    "providers": [
+        "App\\Modules\\Settings\\Infrastructure\\Providers\\SettingsServiceProvider"
+    ]
+}

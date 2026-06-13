@@ -88,15 +88,25 @@
         {
           "name": "Health Check",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/core/health",
-              "host": ["{{base_url}}"],
-              "path": ["core", "health"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "core",
+                "health"
+              ]
             },
             "description": "Core module health check (no auth)."
           }
@@ -129,11 +139,19 @@
             }
           ],
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -141,8 +159,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/login",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "login"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
             },
             "description": "Authenticate with email **or** phone in `identifier` field. Returns JWT `access_token` and user (`account_type` from `users.account_type`, `roles[]`, optional `staff_member` / `shipping_company` / `delivery_agent`).\n\nRecords audit event `login` (code 5) on `users` — view via **Admin — Audit Logs**."
           }
@@ -150,11 +175,19 @@
         {
           "name": "Forgot Password",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -162,8 +195,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/forgot-password",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "forgot-password"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "forgot-password"
+              ]
             },
             "description": "Request a password-reset OTP by email. **No auth required.**\n\nAlways returns success (no email enumeration). If the account exists and is active, a 6-digit code is emailed (expires in 15 min, default).\n\nRate limits: 60s between requests per email; max 5 requests/hour.\n\nRequires SMTP (`MAIL_MAILER=smtp`) and queue worker if jobs are queued."
           }
@@ -171,11 +211,19 @@
         {
           "name": "Reset Password",
           "request": {
-            "auth": { "type": "noauth" },
+            "auth": {
+              "type": "noauth"
+            },
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -183,8 +231,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/reset-password",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "reset-password"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "reset-password"
+              ]
             },
             "description": "Reset password using email + OTP from **Forgot Password** email. **No auth required.**\n\n`otp`: exactly 6 digits.\n\n`password`: min 8, mixed case, number, symbol; cannot match email or previous password.\n\nMax 5 wrong OTP attempts per code. After success, log in with the new password."
           }
@@ -194,8 +249,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -203,8 +264,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/auth/change-password",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "change-password"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "change-password"
+              ]
             },
             "description": "Change password for the **authenticated** user. Requires Bearer token.\n\n`current_password` must match the active password.\n\n`password` must meet strength rules and differ from current password and email."
           }
@@ -214,12 +282,22 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/auth/me",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "me"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "me"
+              ]
             },
             "description": "Current user profile: `account_type` (from `users.account_type`), `roles[]`, optional `staff_member`, `shipping_company`, `delivery_agent` (includes `supervisor_agent_id`, `is_supervisor`)."
           }
@@ -229,22 +307,55 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "formdata",
               "formdata": [
-                { "key": "name", "value": "عبدالله الراشد", "type": "text", "description": "optional" },
-                { "key": "email", "value": "abdullah@marsal.io", "type": "text", "description": "optional" },
-                { "key": "phone", "value": "01001234567", "type": "text", "description": "optional" },
-                { "key": "gender", "value": "male", "type": "text", "description": "optional: male | female" },
-                { "key": "avatar", "type": "file", "src": [], "description": "optional image (jpg/jpeg/png/webp, max 2MB)" }
+                {
+                  "key": "name",
+                  "value": "عبدالله الراشد",
+                  "type": "text",
+                  "description": "optional"
+                },
+                {
+                  "key": "email",
+                  "value": "abdullah@marsal.io",
+                  "type": "text",
+                  "description": "optional"
+                },
+                {
+                  "key": "phone",
+                  "value": "01001234567",
+                  "type": "text",
+                  "description": "optional"
+                },
+                {
+                  "key": "gender",
+                  "value": "male",
+                  "type": "text",
+                  "description": "optional: male | female"
+                },
+                {
+                  "key": "avatar",
+                  "type": "file",
+                  "src": [],
+                  "description": "optional image (jpg/jpeg/png/webp, max 2MB)"
+                }
               ]
             },
             "url": {
               "raw": "{{base_url}}/api/profile",
-              "host": ["{{base_url}}"],
-              "path": ["api", "profile"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "profile"
+              ]
             },
             "description": "Update the **authenticated** user's profile. **Bearer token required.** No special permission.\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Multipart fields (all optional):** `name`, `email`, `phone`, `gender` (`male` | `female`), `avatar` (image file).\n\n`is_active` cannot be changed from this endpoint.\n\n**Success (200):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم تحديث الملف الشخصي بنجاح\",\n  \"data\": {\n    \"user_id\": \"uuid\",\n    \"name\": \"عبدالله الراشد\",\n    \"email\": \"abdullah@marsal.io\",\n    \"phone\": \"01001234567\",\n    \"gender\": \"male\",\n    \"avatar_url\": \"https://...\",\n    \"department\": \"العمليات (name_ar when staff member has department_id)\",\n    \"job_title\": \"مدير النظام\",\n    \"roles\": [\"super_admin\"]\n  }\n}\n```\n\n**422:** validation (duplicate email/phone, invalid gender, invalid avatar)."
           }
@@ -254,12 +365,22 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/auth/refresh",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "refresh"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "refresh"
+              ]
             },
             "description": "Issue a new JWT from a valid token (within refresh TTL)."
           }
@@ -269,12 +390,22 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/auth/logout",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "auth", "logout"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "logout"
+              ]
             },
             "description": "Invalidate current JWT (blacklist).\n\nRecords audit event `logout` (code 6) on `users` when authenticated."
           }
@@ -290,12 +421,22 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/roles",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "roles"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "roles"
+              ]
             },
             "description": "Permission: `roles.view`\n\nEach role includes `permissions[]` objects: `id`, `name`, `label_ar`, `label_en`, `group`, `group_label_ar`."
           }
@@ -305,8 +446,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -314,8 +461,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/roles",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "roles"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "roles"
+              ]
             },
             "description": "Permission: `roles.manage`"
           }
@@ -325,8 +479,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -334,10 +494,22 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/roles/:id",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "roles", ":id"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "roles",
+                ":id"
+              ],
               "variable": [
-                { "key": "id", "value": "1", "description": "Role ID" }
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Role ID"
+                }
               ]
             },
             "description": "Permission: `roles.manage`"
@@ -348,14 +520,29 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/roles/:id",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "roles", ":id"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "roles",
+                ":id"
+              ],
               "variable": [
-                { "key": "id", "value": "1", "description": "Role ID" }
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Role ID"
+                }
               ]
             },
             "description": "Permission: `roles.manage`"
@@ -366,8 +553,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -375,10 +568,23 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/roles/:id/permissions",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "roles", ":id", "permissions"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "roles",
+                ":id",
+                "permissions"
+              ],
               "variable": [
-                { "key": "id", "value": "1", "description": "Role ID" }
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Role ID"
+                }
               ]
             },
             "description": "Replace all permissions on a role. Permission: `roles.manage`. Use permission `name` strings (e.g. `orders.view`)."
@@ -395,12 +601,22 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/permissions",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "permissions"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "permissions"
+              ]
             },
             "description": "Permission: `roles.view`"
           }
@@ -410,8 +626,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -419,8 +641,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/permissions",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "permissions"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "permissions"
+              ]
             },
             "description": "Permission: `roles.manage`"
           }
@@ -430,8 +659,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -439,10 +674,22 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/permissions/:id",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "permissions", ":id"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "permissions",
+                ":id"
+              ],
               "variable": [
-                { "key": "id", "value": "1", "description": "Permission ID" }
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Permission ID"
+                }
               ]
             },
             "description": "Permission: `roles.manage`"
@@ -453,14 +700,29 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/permissions/:id",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "permissions", ":id"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "permissions",
+                ":id"
+              ],
               "variable": [
-                { "key": "id", "value": "1", "description": "Permission ID" }
+                {
+                  "key": "id",
+                  "value": "1",
+                  "description": "Permission ID"
+                }
               ]
             },
             "description": "Permission: `roles.manage`"
@@ -494,16 +756,37 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/locations/governorates?per_page=15&search=&is_active=true",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "locations", "governorates"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "locations",
+                "governorates"
+              ],
               "query": [
-                { "key": "per_page", "value": "15" },
-                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
-                { "key": "is_active", "value": "true", "description": "true | false (omit for all)" }
+                {
+                  "key": "per_page",
+                  "value": "15"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Filter name_ar, name_en, or code"
+                },
+                {
+                  "key": "is_active",
+                  "value": "true",
+                  "description": "true | false (omit for all)"
+                }
               ]
             },
             "description": "Permission: `governorates.view`\n\n**Query:** `per_page` (default 15), `search` (name_ar / name_en / code), `is_active` (boolean; omit = all).\n\n**Response `data`:** `items[]` (`governorate_id`, `name_ar`, `name_en`, `code`, `is_active`, `cities_count`), `current_page`, `last_page`, `per_page`, `total`, `has_more`.\n\nSaves first `governorate_id` from `data.items`."
@@ -531,16 +814,39 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/locations/governorates/{{governorate_id}}/cities?per_page=15&search=&is_active=true",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "locations", "governorates", "{{governorate_id}}", "cities"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "locations",
+                "governorates",
+                "{{governorate_id}}",
+                "cities"
+              ],
               "query": [
-                { "key": "per_page", "value": "15" },
-                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
-                { "key": "is_active", "value": "true", "description": "true | false (omit for all)" }
+                {
+                  "key": "per_page",
+                  "value": "15"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Filter name_ar, name_en, or code"
+                },
+                {
+                  "key": "is_active",
+                  "value": "true",
+                  "description": "true | false (omit for all)"
+                }
               ]
             },
             "description": "Permission: `governorates.view`\n\n**Path:** `governorateId` = `{{governorate_id}}`.\n\n**Query:** same as List Governorates (`per_page`, `search`, `is_active`).\n\n**Response `data.items[]`:** `city_id`, `governorate_id`, `name_ar`, `name_en`, `code`, `is_active`, optional nested `governorate`.\n\nSaves first `city_id` from `data.items`."
@@ -574,16 +880,38 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/governorates?per_page=15&search=&is_active=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "governorates"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "governorates"
+              ],
               "query": [
-                { "key": "per_page", "value": "15", "description": "Items per page (default 15)" },
-                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
-                { "key": "is_active", "value": "", "description": "true or false (omit for all)" }
+                {
+                  "key": "per_page",
+                  "value": "15",
+                  "description": "Items per page (default 15)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Filter name_ar, name_en, or code"
+                },
+                {
+                  "key": "is_active",
+                  "value": "",
+                  "description": "true or false (omit for all)"
+                }
               ]
             },
             "description": "Permission: `governorates.view`\n\nSame pagination/filters as **Locations — Reference → List Governorates**. Includes `cities_count` per row.\n\nAlso returns `data.kpis`:\n- `total_governorates`\n- `total_active`\n- `total_covered_cities`"
@@ -594,12 +922,23 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/governorates/{{governorate_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "governorates", "{{governorate_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "governorates",
+                "{{governorate_id}}"
+              ]
             },
             "description": "Permission: `governorates.view`"
           }
@@ -625,8 +964,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -634,8 +979,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/governorates",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "governorates"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "governorates"
+              ]
             },
             "description": "Permission: `governorates.manage`\n\n`code` is optional — auto-generated slug from `name_en` if omitted. `code` must match `^[a-z0-9-]+$` and be unique."
           }
@@ -645,8 +997,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -654,8 +1012,16 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/governorates/{{governorate_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "governorates", "{{governorate_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "governorates",
+                "{{governorate_id}}"
+              ]
             },
             "description": "Permission: `governorates.manage`\n\n`is_active` is required on update."
           }
@@ -665,12 +1031,24 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/governorates/{{governorate_id}}/toggle-status",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "governorates", "{{governorate_id}}", "toggle-status"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "governorates",
+                "{{governorate_id}}",
+                "toggle-status"
+              ]
             },
             "description": "Permission: `governorates.manage`\n\nFlips `is_active` for the target governorate and returns the updated governorate resource."
           }
@@ -680,12 +1058,23 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/governorates/{{governorate_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "governorates", "{{governorate_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "governorates",
+                "{{governorate_id}}"
+              ]
             },
             "description": "Permission: `governorates.manage`\n\nSoft delete + sets `is_active` false. **409** if governorate has cities or is linked to orders/addresses/zones."
           }
@@ -712,16 +1101,39 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/governorates/{{governorate_id}}/cities?per_page=15&search=&is_active=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "governorates", "{{governorate_id}}", "cities"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "governorates",
+                "{{governorate_id}}",
+                "cities"
+              ],
               "query": [
-                { "key": "per_page", "value": "15" },
-                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
-                { "key": "is_active", "value": "", "description": "true | false (omit for all)" }
+                {
+                  "key": "per_page",
+                  "value": "15"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Filter name_ar, name_en, or code"
+                },
+                {
+                  "key": "is_active",
+                  "value": "",
+                  "description": "true | false (omit for all)"
+                }
               ]
             },
             "description": "Permission: `governorates.view`\n\nPaginated cities for one governorate. Same query params as **Locations — Reference → List Cities by Governorate**."
@@ -755,17 +1167,42 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/cities?governorate_id={{governorate_id}}&per_page=15&search=&is_active=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "cities"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "cities"
+              ],
               "query": [
-                { "key": "governorate_id", "value": "{{governorate_id}}", "description": "Optional filter by governorate UUID" },
-                { "key": "per_page", "value": "15" },
-                { "key": "search", "value": "", "description": "Filter name_ar, name_en, or code" },
-                { "key": "is_active", "value": "", "description": "true | false (omit for all)" }
+                {
+                  "key": "governorate_id",
+                  "value": "{{governorate_id}}",
+                  "description": "Optional filter by governorate UUID"
+                },
+                {
+                  "key": "per_page",
+                  "value": "15"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Filter name_ar, name_en, or code"
+                },
+                {
+                  "key": "is_active",
+                  "value": "",
+                  "description": "true | false (omit for all)"
+                }
               ]
             },
             "description": "Permission: `governorates.view`\n\nGlobal city list with optional `governorate_id`, `search`, `is_active`, `per_page`. Returns `data.items` + pagination meta.\n\nAlso returns `data.kpis`:\n- `total_cities`\n- `total_active`\n- `total_covered_governorates`"
@@ -776,12 +1213,23 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/cities/{{city_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "cities", "{{city_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "cities",
+                "{{city_id}}"
+              ]
             },
             "description": "Permission: `governorates.view`\n\nIncludes nested `governorate` when loaded."
           }
@@ -807,8 +1255,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -816,8 +1270,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/cities",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "cities"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "cities"
+              ]
             },
             "description": "Permission: `governorates.manage`\n\n`governorate_id` must exist and be active. `code` optional on create (auto: `{gov-code}-{slug}`)."
           }
@@ -827,8 +1288,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -836,8 +1303,16 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/cities/{{city_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "cities", "{{city_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "cities",
+                "{{city_id}}"
+              ]
             },
             "description": "Permission: `governorates.manage`\n\n`code` is required on update."
           }
@@ -847,12 +1322,24 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/cities/{{city_id}}/toggle-status",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "cities", "{{city_id}}", "toggle-status"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "cities",
+                "{{city_id}}",
+                "toggle-status"
+              ]
             },
             "description": "Permission: `governorates.manage`\n\nFlips `is_active` for the target city and returns the updated city resource."
           }
@@ -862,12 +1349,23 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/cities/{{city_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "cities", "{{city_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "cities",
+                "{{city_id}}"
+              ]
             },
             "description": "Permission: `governorates.manage`\n\nSoft delete. **409** if city is in use."
           }
@@ -900,16 +1398,38 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/departments?per_page=15&search=&is_active=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "departments"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "departments"
+              ],
               "query": [
-                { "key": "per_page", "value": "15", "description": "Items per page (default 15)" },
-                { "key": "search", "value": "", "description": "Filter name_ar or name_en" },
-                { "key": "is_active", "value": "", "description": "true or false (omit for all)" }
+                {
+                  "key": "per_page",
+                  "value": "15",
+                  "description": "Items per page (default 15)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Filter name_ar or name_en"
+                },
+                {
+                  "key": "is_active",
+                  "value": "",
+                  "description": "true or false (omit for all)"
+                }
               ]
             },
             "description": "Permission: `departments.view`\n\nPaginated departments list. Each item includes `staff_count`, optional nested `manager`, and `is_active`.\n\nAlso returns `data.kpis`:\n- `total_departments` — all non-deleted departments\n- `total_active` — departments where `is_active = true`\n- `total_members` — staff members assigned to a department (`department_id` IS NOT NULL)\n\nKPIs are global totals (not affected by `search` / `is_active` filters).\n\nSaves first `items[].id` to `{{department_id}}`."
@@ -920,12 +1440,23 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/departments/{{department_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "departments", "{{department_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "departments",
+                "{{department_id}}"
+              ]
             },
             "description": "Permission: `departments.view`\n\nSingle department with `manager` and `staff_count`."
           }
@@ -951,8 +1482,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -960,8 +1497,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/departments",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "departments"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "departments"
+              ]
             },
             "description": "Permission: `departments.manage`\n\n`manager_id` is optional — use `{{user_id}}` from **Admin — Users** or omit/null.\n\n`name_ar` and `name_en` must be unique."
           }
@@ -971,8 +1515,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -980,8 +1530,16 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/departments/{{department_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "departments", "{{department_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "departments",
+                "{{department_id}}"
+              ]
             },
             "description": "Permission: `departments.manage`\n\nPartial update supported (`sometimes` rules). Pass `\"manager_id\": null` to clear the manager."
           }
@@ -991,12 +1549,23 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/departments/{{department_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "departments", "{{department_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "departments",
+                "{{department_id}}"
+              ]
             },
             "description": "Permission: `departments.manage`\n\nSoft delete. **422** if department still has active staff members."
           }
@@ -1006,12 +1575,24 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/departments/{{department_id}}/restore",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "departments", "{{department_id}}", "restore"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "departments",
+                "{{department_id}}",
+                "restore"
+              ]
             },
             "description": "Permission: `departments.manage`\n\nRestores a soft-deleted department by UUID."
           }
@@ -1044,19 +1625,53 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users?per_page=15&page=1&search=&type=&role=&is_active=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "users"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users"
+              ],
               "query": [
-                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
-                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
-                { "key": "search", "value": "", "description": "LIKE match on name, email, phone" },
-                { "key": "type", "value": "", "description": "super_admin | staff_member | shipping_company | delivery_agent — filters users.account_type (omit for all)" },
-                { "key": "role", "value": "", "description": "Spatie role name filter (omit for all)" },
-                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" }
+                {
+                  "key": "per_page",
+                  "value": "15",
+                  "description": "Items per page (1–100, default 15)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (≥ 1)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "LIKE match on name, email, phone"
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "description": "super_admin | staff_member | shipping_company | delivery_agent — filters users.account_type (omit for all)"
+                },
+                {
+                  "key": "role",
+                  "value": "",
+                  "description": "Spatie role name filter (omit for all)"
+                },
+                {
+                  "key": "is_active",
+                  "value": "",
+                  "description": "1 = active, 0 = inactive (omit for all)"
+                }
               ]
             },
             "description": "Permission: `users.view`\n\nPaginated users list for the admin dashboard (`/admin/users`).\n\n**Query:** `search`, `type` (account type on `users.account_type`), `role` (Spatie role name), `is_active` (0|1), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource`: `id`, `name`, `email`, `phone`, `gender`, `avatar`, `is_active`, `last_login_at`, `created_at`, `role` (`name`, `label`), `staff_member`, `shipping_company`, `delivery_agent`, `addresses`\n- `counts` — `total`, `super_admin`, `staff_member`, `shipping_company`, `delivery_agent` (global totals, not filtered)\n- `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`\n\n**422:** invalid `type`, `role`, or `is_active`.\n\nSaves first `items[].id` to `{{user_id}}`."
@@ -1067,12 +1682,24 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users/import/template",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "users", "import", "template"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "import",
+                "template"
+              ]
             },
             "description": "Permission: `users.import`\n\nDownloads `users_import_template.xlsx` with column headers: `name`, `email`, `phone`, `gender`, `role`, `company_name` and two example rows (delivery agent + shipping company).\n\n**Roles allowed in file:** `delivery_agent`, `shipping_company` only (`super_admin` rows are rejected).\n\n**Row limit:** 500 data rows per upload.\n\nUse **Import Users from Excel** to upload the filled file."
           }
@@ -1082,7 +1709,10 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "formdata",
@@ -1097,8 +1727,16 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users/import",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "users", "import"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "import"
+              ]
             },
             "description": "Permission: `users.import`\n\nBulk-creates users from Excel/CSV. Each valid row creates `users` + Spatie role + linked profile (`delivery_agents` or `shipping_companies`). Passwords are auto-generated (12 chars) and returned once in the response — not emailed.\n\n**Multipart:** `file` (required)\n\n**Columns (row 1 = headers):** `name`, `email`, `phone`, `gender` (optional: `ذكر` / `أنثى`), `role` (`delivery_agent` | `shipping_company`), `company_name` (required when role = `shipping_company`)\n\n**Success (200)** — full or partial import:\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"...\",\n  \"data\": {\n    \"summary\": { \"total_rows\": 3, \"imported_count\": 2, \"failed_count\": 1 },\n    \"imported\": [\n      { \"row\": 2, \"name\": \"...\", \"email\": \"...\", \"generated_password\": \"...\" }\n    ],\n    \"errors\": [\n      { \"row\": 4, \"email\": \"dup@example.com\", \"errors\": [\"The email has already been taken.\"] }\n    ]\n  }\n}\n```\n\n**422:** invalid/missing file, unreadable file, or file validation failed.\n\n**401/403:** missing JWT or `users.import` permission."
           }
@@ -1108,8 +1746,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1117,8 +1761,16 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "users", "{{user_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "{{user_id}}"
+              ]
             },
             "description": "Permission: `users.update`\n\nPartial update — send only fields to change (`sometimes` validation).\n\n**Body (all optional):** `name`, `email`, `phone`, `gender`, `avatar`, `roles[]`, `profile` (fields depend on linked account: staff `department_id` (UUID)/`job_title`/`notes`, company `company_name`/`commercial_reg`/`logo_url`, agent `national_id`/`vehicle_type`/`vehicle_plate_number`/`supervisor_agent_id`), `address`.\n\n**`address` object** (same shape as create):\n- Updates the user's default address (`is_default = true`), or the first address if none is default; creates a new row if the user has no addresses.\n- `address.address_line` — required when `address` is sent\n- `address.city_id` — optional UUID (`{{city_id}}` from **Locations — Reference**)\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number`, `is_default` — optional\n\n**Success (200):** `UserResource` with updated `addresses[]` (nested `city` when `city_id` set).\n\n**403:** removing `super_admin` from the last active super admin.\n\n**404:** user not found or soft-deleted.\n\n**422:** validation (duplicate email/phone, invalid role, missing `address_line` when `address` sent)."
           }
@@ -1128,12 +1780,24 @@
           "request": {
             "method": "PATCH",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/toggle-status",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "users", "{{user_id}}", "toggle-status"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "{{user_id}}",
+                "toggle-status"
+              ]
             },
             "description": "Permission: `users.toggle`\n\nFlips `users.is_active` (active ↔ inactive).\n\n**403:** cannot deactivate yourself; cannot deactivate the last active `super_admin`.\n\n**404:** user not found.\n\n**Success (200):** `data` includes updated user row (`UserListResource` shape) with new `is_active`."
           }
@@ -1143,12 +1807,23 @@
           "request": {
             "method": "DELETE",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "users", "{{user_id}}"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "{{user_id}}"
+              ]
             },
             "description": "Permission: `users.delete`\n\nSoft-deletes the user and linked profile (`staff_members`, `shipping_companies`, or `delivery_agents`).\n\n**403:** cannot delete yourself; cannot delete the last active `super_admin`.\n\n**409:** deletion blocked — agent/company has subordinates, non-terminal orders, open settlements (draft/approved), unsettled collections, or non-zero balance.\n\n**404:** user not found."
           }
@@ -1177,8 +1852,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1186,8 +1867,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "users"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users"
+              ]
             },
             "description": "Permission: `users.create`\n\nSends **welcome email** + returns **`welcome_whatsapp_url`** (wa.me link for admin to click and send).\n\n**Body:** `type` + `role` (both required). `type` is persisted on `users.account_type` and drives which profile row is created.\n\n`type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent`\n\n- `super_admin` → role only (full access via `super_admin` role); `address` optional\n- `staff_member` → creates `staff_members` (`profile.department_id` UUID, `profile.job_title`, `profile.notes`); **`address` required**\n- `shipping_company` → creates `shipping_companies`; **`address` required**\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional); **`address` required**\n\n**`address` object** (stored in `addresses` table):\n- `address.city_id` — optional UUID (`exists:cities`); use `{{city_id}}` from **Locations — Reference**\n- `address.address_line` — required when `address` is sent\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number` — optional\n- `address.is_default` — optional boolean (defaults to `true` on create)\n\n**Success (201):** `UserResource` includes `account_type` and `addresses[]` with nested `city` when provided.\n\n`role`: single existing Spatie role name (required).\n\n`password`: min 8, upper + lower + number + symbol."
           }
@@ -1214,18 +1902,48 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff-members?per_page=15&page=1&search=&is_active=&department_id=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "staff-members"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "staff-members"
+              ],
               "query": [
-                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
-                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
-                { "key": "search", "value": "", "description": "LIKE match on name, email, phone" },
-                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" },
-                { "key": "department_id", "value": "{{department_id}}", "description": "UUID filter — exact match on staff_members.department_id" }
+                {
+                  "key": "per_page",
+                  "value": "15",
+                  "description": "Items per page (1–100, default 15)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (≥ 1)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "LIKE match on name, email, phone"
+                },
+                {
+                  "key": "is_active",
+                  "value": "",
+                  "description": "1 = active, 0 = inactive (omit for all)"
+                },
+                {
+                  "key": "department_id",
+                  "value": "{{department_id}}",
+                  "description": "UUID filter — exact match on staff_members.department_id"
+                }
               ]
             },
             "description": "Permission: `users.view`\n\nPaginated list for the **Staff Members** admin page. Only users with role `staff_member`.\n\n**Query:** `search`, `is_active` (0|1), `department_id` (UUID), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `staff_member` (`id`, nested `department` object, `job_title`, `notes`) and `addresses[]`\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or unknown `department_id`.\n\nSaves first `items[].id` to `{{user_id}}`."
@@ -1236,8 +1954,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1245,8 +1969,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff-members",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "staff-members"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "staff-members"
+              ]
             },
             "description": "Permission: `users.create`\n\nCreates `users` + `staff_members` + `addresses` row (same transaction). Account type `staff_member` is set automatically. Sends welcome email.\n\n**Body:** `role` (required) — single Spatie role name, e.g. `\"staff_member\"` or a custom role.\n\n**`address`:** required — `address_line` required; `city_id` optional UUID (`{{city_id}}` from **Locations — Reference**).\n\n**Success (201):** `UserResource` with `account_type`: `staff_member` and `addresses[]`."
           }
@@ -1273,18 +2004,48 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/shipping-companies?per_page=15&page=1&search=&is_active=&city_id={{city_id}}",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "shipping-companies"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "shipping-companies"
+              ],
               "query": [
-                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
-                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
-                { "key": "search", "value": "", "description": "LIKE match on name, email, phone, or company_name" },
-                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" },
-                { "key": "city_id", "value": "{{city_id}}", "description": "UUID — users with at least one address in this city (from Locations)" }
+                {
+                  "key": "per_page",
+                  "value": "15",
+                  "description": "Items per page (1–100, default 15)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (≥ 1)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "LIKE match on name, email, phone, or company_name"
+                },
+                {
+                  "key": "is_active",
+                  "value": "",
+                  "description": "1 = active, 0 = inactive (omit for all)"
+                },
+                {
+                  "key": "city_id",
+                  "value": "{{city_id}}",
+                  "description": "UUID — users with at least one address in this city (from Locations)"
+                }
               ]
             },
             "description": "Permission: `shipping_companies.view`\n\nPaginated list for the **Shipping Companies** admin page. Only users with role `shipping_company`.\n\n**Query:** `search`, `is_active` (0|1), `city_id` (UUID, `exists:cities`), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `shipping_company` (`id`, `company_name`, `commission`, `balance`, …) and `addresses[]` (each may include nested `city`: `id`, `name_ar`, `name_en`)\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active`, unknown `city_id`.\n\nSaves first `items[].id` to `{{user_id}}`. Set `{{city_id}}` from **Admin — Cities** or **Locations — Reference**."
@@ -1295,8 +2056,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1304,8 +2071,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/shipping-companies",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "shipping-companies"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "shipping-companies"
+              ]
             },
             "description": "Permission: `shipping_companies.create`\n\nCreates `users` + `shipping_companies` + `addresses` row (same transaction). Account type `shipping_company` is set automatically. Sends welcome email.\n\n**Body:** `role` (required) — single Spatie role name, typically `\"shipping_company\"`.\n\n**`address`:** required — used for company location and `city_id` list filter on **List Shipping Companies**. `address_line` required; `city_id` optional UUID (`{{city_id}}`).\n\n**Success (201):** `UserResource` with `shipping_company` and `addresses[]` (nested `city` when `city_id` set)."
           }
@@ -1336,18 +2110,48 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents?per_page=15&page=1&search=&is_active=&commission_type=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "delivery-agents"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "delivery-agents"
+              ],
               "query": [
-                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
-                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
-                { "key": "search", "value": "", "description": "LIKE match on name, email, phone" },
-                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" },
-                { "key": "commission_type", "value": "", "description": "1 = percentage, 2 = fixed amount (delivery_agents.commission_type)" }
+                {
+                  "key": "per_page",
+                  "value": "15",
+                  "description": "Items per page (1–100, default 15)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (≥ 1)"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "LIKE match on name, email, phone"
+                },
+                {
+                  "key": "is_active",
+                  "value": "",
+                  "description": "1 = active, 0 = inactive (omit for all)"
+                },
+                {
+                  "key": "commission_type",
+                  "value": "",
+                  "description": "1 = percentage, 2 = fixed amount (delivery_agents.commission_type)"
+                }
               ]
             },
             "description": "Permission: `delivery_agents.view`\n\nPaginated list for the **Delivery Agents** admin page. Only users with role `delivery_agent`.\n\n**Query:** `search`, `is_active` (0|1), `commission_type` (1|2), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource` with `delivery_agent` (`id`, `supervisor_agent_id`, `is_supervisor`, `vehicle`, `commission` with `type.code`/`type.label`, `balance`, `is_available`, `supervisor` when loaded) and `addresses[]`\n- `counts` — `total`, `active`, `inactive` (role-scoped totals, not filtered)\n- Pagination meta: `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**422:** invalid `is_active` or `commission_type`.\n\nSaves first `items[].id` to `{{user_id}}` and first `delivery_agent.id` to `{{supervisor_agent_id}}` when present."
@@ -1375,15 +2179,34 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents/supervisors?search=&is_active=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "delivery-agents", "supervisors"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "delivery-agents",
+                "supervisors"
+              ],
               "query": [
-                { "key": "search", "value": "", "description": "LIKE match on supervisor name or phone" },
-                { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" }
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "LIKE match on supervisor name or phone"
+                },
+                {
+                  "key": "is_active",
+                  "value": "",
+                  "description": "1 = active, 0 = inactive (omit for all)"
+                }
               ]
             },
             "description": "Permission: `delivery_agents.view`\n\nReturns delivery agents where `supervisor_agent_id IS NULL` (supervisors only). Use for supervisor dropdown when creating or updating a subordinate agent (`profile.supervisor_agent_id`).\n\n**Query:** `search`, `is_active` (0|1).\n\n**Response `data`:** array of `DeliveryAgentSupervisorResource` objects:\n- `id` — `delivery_agent_id` (use as `profile.supervisor_agent_id`)\n- `name`, `phone` — from linked user\n- `is_active`, `is_available`\n\nNot paginated. Ordered by supervisor name ascending.\n\n**422:** invalid `is_active`.\n\nSaves first `data[0].id` to `{{supervisor_agent_id}}` when present."
@@ -1417,8 +2240,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1426,8 +2255,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "delivery-agents"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "delivery-agents"
+              ]
             },
             "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` + `addresses` row (same transaction). Account type `delivery_agent` is set automatically. Sends welcome email. Omit `profile.supervisor_agent_id` to create a **supervisor** (`is_supervisor: true`). Save `delivery_agent_id` from the response into collection variable `supervisor_agent_id` for subordinate requests.\n\n**Body:** `role` (required) — single Spatie role name, typically `\"delivery_agent\"` or a custom role like `\"field_lead\"`.\n\n**`address`:** required — `address_line` required; `city_id` optional UUID (`{{city_id}}`).\n\n`vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\n**Success (201):** `UserResource` with `delivery_agent` and `addresses[]`."
           }
@@ -1437,8 +2273,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1446,8 +2288,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "delivery-agents"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "delivery-agents"
+              ]
             },
             "description": "Creates a subordinate agent linked to a supervisor. Set collection variable `supervisor_agent_id` to the supervisor's `delivery_agent_id` (from **Create Delivery Agent** response). **`address` required** (same shape as **Create Delivery Agent**). Response includes `delivery_agent.supervisor_agent_id`, `is_supervisor: false`, and `addresses[]`."
           }
@@ -1457,8 +2306,14 @@
           "request": {
             "method": "POST",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1466,8 +2321,15 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "delivery-agents"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "delivery-agents"
+              ]
             },
             "description": "Create agent with a custom role — create the role first via **Admin → Roles → Create Role**, then sync permissions. Optional `profile.supervisor_agent_id` links to a supervisor. **`address` required** when account type is `delivery_agent`."
           }
@@ -1477,8 +2339,14 @@
           "request": {
             "method": "PUT",
             "header": [
-              { "key": "Accept", "value": "application/json" },
-              { "key": "Content-Type", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
             ],
             "body": {
               "mode": "raw",
@@ -1486,8 +2354,17 @@
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users/{{user_id}}/change-password",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "users", "{{user_id}}", "change-password"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "users",
+                "{{user_id}}",
+                "change-password"
+              ]
             },
             "description": "Permission: `users.change_password`\n\nForce-reset any user's password from the admin dashboard — **no OTP or email flow**. Works for all account types (`super_admin`, `staff_member`, `shipping_company`, `delivery_agent`).\n\n**Path:** `userId` = target user's UUID (`{{user_id}}`). Set via **Create User** responses or paste manually.\n\n**Body:**\n- `password` — required, min 8 characters\n- `password_confirmation` — must match `password`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"Password changed successfully.\", \"data\": null }`\n\nRecords an audit event (`password_changed`, event code 15).\n\n**Errors:**\n- **401** — missing/invalid JWT or missing permission\n- **404** — user not found or soft-deleted\n- **422** — validation (password too short, confirmation mismatch)"
           }
@@ -1503,22 +2380,68 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/audit-logs?per_page=20&page=1&user_id=&event=&auditable_type=&auditable_id=&date_period=&date_from=&date_to=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "audit-logs"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "audit-logs"
+              ],
               "query": [
-                { "key": "per_page", "value": "20", "description": "Items per page (5–100, default 20)" },
-                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
-                { "key": "user_id", "value": "", "description": "Filter by actor UUID (`users.user_id`). Use `{{user_id}}` to see actions by/for a specific user." },
-                { "key": "event", "value": "", "description": "Event code: 1=created, 2=updated, 3=deleted, 4=restored, 5=login, 6=logout, 7=status_changed, 8=assigned, 9=approved, 10=rejected, 11=settled, 12=collected, 13=returned, 14=exported, 15=password_changed, 16=activated, 17=deactivated" },
-                { "key": "auditable_type", "value": "", "description": "Table name filter (e.g. `users`, `orders`, `settlements`)" },
-                { "key": "auditable_id", "value": "", "description": "Record PK filter (UUID or BIGINT as string)" },
-                { "key": "date_period", "value": "", "description": "Date preset: `today` | `this_week` | `this_month` | `custom`. Omit for no date filter. When preset is set, `date_from`/`date_to` are ignored." },
-                { "key": "date_from", "value": "", "description": "Required when `date_period=custom` (or when using legacy range without `date_period`). Inclusive start date (Y-m-d)." },
-                { "key": "date_to", "value": "", "description": "Required when `date_period=custom` (or legacy range). Inclusive end date (Y-m-d); must be ≥ date_from." }
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page (5–100, default 20)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (≥ 1)"
+                },
+                {
+                  "key": "user_id",
+                  "value": "",
+                  "description": "Filter by actor UUID (`users.user_id`). Use `{{user_id}}` to see actions by/for a specific user."
+                },
+                {
+                  "key": "event",
+                  "value": "",
+                  "description": "Event code: 1=created, 2=updated, 3=deleted, 4=restored, 5=login, 6=logout, 7=status_changed, 8=assigned, 9=approved, 10=rejected, 11=settled, 12=collected, 13=returned, 14=exported, 15=password_changed, 16=activated, 17=deactivated"
+                },
+                {
+                  "key": "auditable_type",
+                  "value": "",
+                  "description": "Table name filter (e.g. `users`, `orders`, `settlements`)"
+                },
+                {
+                  "key": "auditable_id",
+                  "value": "",
+                  "description": "Record PK filter (UUID or BIGINT as string)"
+                },
+                {
+                  "key": "date_period",
+                  "value": "",
+                  "description": "Date preset: `today` | `this_week` | `this_month` | `custom`. Omit for no date filter. When preset is set, `date_from`/`date_to` are ignored."
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "description": "Required when `date_period=custom` (or when using legacy range without `date_period`). Inclusive start date (Y-m-d)."
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "description": "Required when `date_period=custom` (or legacy range). Inclusive end date (Y-m-d); must be ≥ date_from."
+                }
               ]
             },
             "description": "Permission: `audit_logs.view`\n\nPaginated global audit log with optional filters. Includes dashboard **KPIs** (global totals, not affected by list filters).\n\n**Date filters (`date_period`):**\n| Value | Range |\n|-------|-------|\n| `today` | Start of today → end of today (app timezone) |\n| `this_week` | Start of week (Monday) → end of week |\n| `this_month` | Start of month → end of month |\n| `custom` | Requires `date_from` + `date_to` (inclusive, Y-m-d) |\n| *(omit)* | No date filter — all time |\n\n**Legacy:** `date_from` + `date_to` without `date_period` still works (treated as custom range).\n\n**Response `data`:**\n- `kpis` — dashboard cards:\n  - `total_logs` — all-time count\n  - `today_logs` — since start of today\n  - `security_events_today` — login + logout + password_changed today\n- `items[]` — each entry:\n  - `id` (BIGINT)\n  - `description` — human-readable Arabic summary of the change\n  - `event` — `{ \"code\": 5, \"label\": \"تسجيل دخول\" }`\n  - `actor_type`, `actor_type_label`\n  - `actor` — `{ \"id\", \"name\", \"phone\" }` when loaded\n  - `auditable_type`, `auditable_id`\n  - `old_values`, `new_values`, `metadata` (JSON objects or null)\n  - `ip_address`, `created_at` (ISO 8601)\n- `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`\n\n**422:** invalid `event`, `user_id`, `date_period`, or incomplete custom date range."
@@ -1529,18 +2452,50 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/audit-logs/users/{{user_id}}?per_page=20&page=1&date_period=&date_from=&date_to=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "audit-logs", "users", "{{user_id}}"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "audit-logs",
+                "users",
+                "{{user_id}}"
+              ],
               "query": [
-                { "key": "per_page", "value": "20", "description": "Items per page (5–100, default 20)" },
-                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
-                { "key": "date_period", "value": "", "description": "Optional: `today` | `this_week` | `this_month` | `custom`" },
-                { "key": "date_from", "value": "", "description": "Required when `date_period=custom`" },
-                { "key": "date_to", "value": "", "description": "Required when `date_period=custom`" }
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page (5–100, default 20)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (≥ 1)"
+                },
+                {
+                  "key": "date_period",
+                  "value": "",
+                  "description": "Optional: `today` | `this_week` | `this_month` | `custom`"
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "description": "Required when `date_period=custom`"
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "description": "Required when `date_period=custom`"
+                }
               ]
             },
             "description": "Permission: `audit_logs.view`\n\nAll audit entries where `auditable_type = users` and `auditable_id` matches the target user.\n\n**Path:** `{{user_id}}` — set via **Admin — Users → List Users** (auto-saved) or **Create User** response.\n\nSupports the same **date filters** as **List Audit Logs** (`date_period`, `date_from`, `date_to`).\n\nUse after **Login**, **Toggle User Status**, or **Change Password** to verify events (`login`, `activated`/`deactivated`, `password_changed`, `updated`).\n\nSame response shape as **List Audit Logs**."
@@ -1551,18 +2506,50 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/v1/admin/audit-logs/{{auditable_type}}/{{auditable_id}}?per_page=20&page=1&date_period=&date_from=&date_to=",
-              "host": ["{{base_url}}"],
-              "path": ["api", "v1", "admin", "audit-logs", "{{auditable_type}}", "{{auditable_id}}"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "audit-logs",
+                "{{auditable_type}}",
+                "{{auditable_id}}"
+              ],
               "query": [
-                { "key": "per_page", "value": "20", "description": "Items per page (5–100, default 20)" },
-                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
-                { "key": "date_period", "value": "", "description": "Optional: `today` | `this_week` | `this_month` | `custom`" },
-                { "key": "date_from", "value": "", "description": "Required when `date_period=custom`" },
-                { "key": "date_to", "value": "", "description": "Required when `date_period=custom`" }
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Items per page (5–100, default 20)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (≥ 1)"
+                },
+                {
+                  "key": "date_period",
+                  "value": "",
+                  "description": "Optional: `today` | `this_week` | `this_month` | `custom`"
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "description": "Required when `date_period=custom`"
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "description": "Required when `date_period=custom`"
+                }
               ]
             },
             "description": "Permission: `audit_logs.view`\n\nGeneric subject history — same as **Audit Trail — User** but for any auditable table.\n\n**Path variables (collection):**\n- `auditable_type` — table name (`users`, `orders`, `shipping_companies`, `delivery_agents`, `settlements`, …)\n- `auditable_id` — record primary key as string\n\nSupports the same **date filters** as **List Audit Logs** (`date_period`, `date_from`, `date_to`).\n\n**Examples:**\n- User: `users` + `{{user_id}}`\n- Order (when module exists): `orders` + order UUID\n\n**Success (200):** paginated `items[]` + meta. Empty `items` if no logs exist for that record."
@@ -1579,12 +2566,21 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/dashboard/summary",
-              "host": ["{{base_url}}"],
-              "path": ["api", "dashboard", "summary"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "summary"
+              ]
             },
             "description": "Dashboard home — top summary cards.\n\n**Success (200) `data`:**\n- `total_orders` — count of non-deleted orders\n- `total_orders_change_percent` — orders created this month vs last month (`null` if last month = 0)\n- `in_delivery` — orders with `status = 2`\n- `in_delivery_label` — localized label (e.g. نشطة الآن)\n- `delivered_this_week` — `status = 3` and `updated_at` in current ISO week (Mon–Sun)\n- `delivered_change_percent` — delivered count this ISO week vs last week\n- `net_balance_companies` — `SUM(shipping_companies.balance)`\n- `net_balance_change_percent` — `SUM(order_financials.net_due_company)` this month vs last month (by order `updated_at`)\n\n**Success:** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`"
           }
@@ -1594,14 +2590,27 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/dashboard/shipments-chart?period=week",
-              "host": ["{{base_url}}"],
-              "path": ["api", "dashboard", "shipments-chart"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "shipments-chart"
+              ],
               "query": [
-                { "key": "period", "value": "week", "description": "Only `week` supported for now (default). Arabic week Sat→Fri." }
+                {
+                  "key": "period",
+                  "value": "week",
+                  "description": "Only `week` supported for now (default). Arabic week Sat→Fri."
+                }
               ]
             },
             "description": "Weekly shipments chart for the dashboard.\n\n**Query:** `period=week` (default).\n\n**Per day (Sat→Fri):**\n- `delivered[]` — count `status = 3` where `DATE(updated_at)` = that day\n- `pending[]` — count `status IN (1, 4)` where `DATE(created_at)` = that day\n\n**Success (200) `data`:**\n- `labels[]` — Arabic weekday names\n- `delivered[]`, `pending[]` — 7 integers each"
@@ -1612,12 +2621,21 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/dashboard/top-agents",
-              "host": ["{{base_url}}"],
-              "path": ["api", "dashboard", "top-agents"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "top-agents"
+              ]
             },
             "description": "Top 4 delivery agents by deliveries completed today.\n\n**Logic:** Count orders per `delivery_agent_id` where `status = 3` and `DATE(updated_at) = today`, ordered DESC, limit 4.\n\n**Success (200) `data`:** array of:\n- `rank`, `delivery_agent_id` (UUID)\n- `name`, `city` (`cities.name_ar` from order address)\n- `avatar_url`, `shipments_today`"
           }
@@ -1627,12 +2645,21 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/dashboard/collections-balance",
-              "host": ["{{base_url}}"],
-              "path": ["api", "dashboard", "collections-balance"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "collections-balance"
+              ]
             },
             "description": "Pending cash balance owed to shipping companies.\n\n**Success (200) `data`:**\n- `total_pending` — `SUM(balance)` where `shipping_companies.balance > 0`\n- `currency` — localized (e.g. ج.م)\n- `company_count` — count of companies with `balance > 0`"
           }
@@ -1642,12 +2669,21 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/dashboard/delivery-performance",
-              "host": ["{{base_url}}"],
-              "path": ["api", "dashboard", "delivery-performance"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "delivery-performance"
+              ]
             },
             "description": "All-time delivery success metrics.\n\n**Success (200) `data`:**\n- `success_count` — `status = 3`\n- `failed_count` — `status IN (5, 6)`\n- `pending_count` — `status IN (1, 2, 4)`\n- `success_rate` — `success / (success + failed) × 100`, 1 decimal (`null` if denominator is 0)"
           }
@@ -1657,12 +2693,21 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/dashboard/avg-delivery-time",
-              "host": ["{{base_url}}"],
-              "path": ["api", "dashboard", "avg-delivery-time"]
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "avg-delivery-time"
+              ]
             },
             "description": "Average hours from order `created_at` to `updated_at` for delivered orders (`status = 3`) in the current ISO week, compared to last week.\n\n**Success (200) `data`:**\n- `avg_hours` — rounded to 1 decimal\n- `change_percent` — absolute % vs last week (`null` if no prior-week data)\n- `change_direction` — `improvement` | `regression` | `unchanged` (lower hours = improvement)\n- `comparison_label` — localized string (e.g. أسرع بـ 18% من الأسبوع الماضي)"
           }
@@ -1672,22 +2717,158 @@
           "request": {
             "method": "GET",
             "header": [
-              { "key": "Accept", "value": "application/json" }
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
             ],
             "url": {
               "raw": "{{base_url}}/api/dashboard/recent-orders?per_page=15&page=1&status=&search=&sort_by=created_at&sort_dir=desc",
-              "host": ["{{base_url}}"],
-              "path": ["api", "dashboard", "recent-orders"],
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "dashboard",
+                "recent-orders"
+              ],
               "query": [
-                { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
-                { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
-                { "key": "status", "value": "", "description": "Filter by `orders.status`: 1 pending · 2 in delivery · 3 delivered · 4 postponed · 5 failed · 6 rejected" },
-                { "key": "search", "value": "", "description": "LIKE on `internal_code`, `customer_name`, `customer_phone`" },
-                { "key": "sort_by", "value": "created_at", "description": "created_at | updated_at | internal_code | status" },
-                { "key": "sort_dir", "value": "desc", "description": "asc | desc" }
+                {
+                  "key": "per_page",
+                  "value": "15",
+                  "description": "Items per page (1–100, default 15)"
+                },
+                {
+                  "key": "page",
+                  "value": "1",
+                  "description": "Page number (≥ 1)"
+                },
+                {
+                  "key": "status",
+                  "value": "",
+                  "description": "Filter by `orders.status`: 1 pending · 2 in delivery · 3 delivered · 4 postponed · 5 failed · 6 rejected"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "LIKE on `internal_code`, `customer_name`, `customer_phone`"
+                },
+                {
+                  "key": "sort_by",
+                  "value": "created_at",
+                  "description": "created_at | updated_at | internal_code | status"
+                },
+                {
+                  "key": "sort_dir",
+                  "value": "desc",
+                  "description": "asc | desc"
+                }
               ]
             },
             "description": "Paginated recent orders for the dashboard table — **not cached**.\n\n**Eager loads:** customer info, financials, agent + user, shipping company, address + governorate + city.\n\n**Each `data[]` item:**\n- `order_id`, `internal_code`, `reference_code` (maps to `reference_no`)\n- `customer_name`, `customer_phone`\n- `region` — `governorate.name_ar / city.name_ar`\n- `company_name`, `agent_name`, `agent_avatar_url`\n- `original_amount`, `collected_amount`\n- `status`, `status_label_ar`, `created_at` (ISO 8601)\n\n**Pagination:** `meta` is a **sibling** of `data` (not nested inside `data`):\n- `current_page`, `per_page`, `total`, `last_page`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": [ ... ], \"meta\": { ... } }`\n\n**422:** invalid `status`, `sort_by`, or `sort_dir`."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Admin — Settings",
+      "description": "Manage system settings including platform identity (logo, name) and organization info. Permission: settings.view and settings.update.",
+      "item": [
+        {
+          "name": "Get Settings",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "settings"
+              ]
+            },
+            "description": "Permission: settings.view\n\nReturns settings grouped by identity and organization."
+          }
+        },
+        {
+          "name": "Update Settings",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "platform_name",
+                  "value": "مرسال",
+                  "type": "text",
+                  "description": "optional"
+                },
+                {
+                  "key": "logo_url",
+                  "type": "file",
+                  "src": [],
+                  "description": "optional image file"
+                },
+                {
+                  "key": "org_name",
+                  "value": "مرسال للخدمات اللوجستية",
+                  "type": "text",
+                  "description": "optional"
+                },
+                {
+                  "key": "commercial_reg",
+                  "value": "1010234567",
+                  "type": "text",
+                  "description": "optional"
+                },
+                {
+                  "key": "official_email",
+                  "value": "ops@mursal.sa",
+                  "type": "text",
+                  "description": "optional"
+                },
+                {
+                  "key": "contact_phone",
+                  "value": "0112345678",
+                  "type": "text",
+                  "description": "optional"
+                },
+                {
+                  "key": "address",
+                  "value": "الرياض، حي العليا، طريق الملك فهد",
+                  "type": "text",
+                  "description": "optional"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/settings",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "settings"
+              ]
+            },
+            "description": "Permission: settings.update\n\nUpdates system settings. Uses POST to support multipart/form-data for file uploads like logo_url."
           }
         }
       ]
