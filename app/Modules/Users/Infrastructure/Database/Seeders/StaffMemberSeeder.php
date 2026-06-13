@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Infrastructure\Database\Seeders;
 
 use App\Modules\Departments\Infrastructure\Database\Models\Department;
+use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -117,6 +118,7 @@ class StaffMemberSeeder extends Seeder
             $user = User::query()->create([
                 ...$data['user'],
                 'password' => Hash::make('Password@123'),
+                'account_type' => AccountTypeEnum::StaffMember->value,
             ]);
 
             $deptId = $departmentMap->get($data['staff']['department_name']);

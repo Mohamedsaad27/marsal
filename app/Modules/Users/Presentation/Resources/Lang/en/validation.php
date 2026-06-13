@@ -8,6 +8,8 @@ return [
         'password' => 'password',
         'password_confirmation' => 'password confirmation',
         'account_type' => 'account type',
+        'type' => 'account type',
+        'role' => 'role',
         'roles' => 'roles',
         'roles.*' => 'role',
         'profile' => 'profile data',
@@ -55,6 +57,14 @@ return [
         'account_type.required' => 'Account type is required.',
         'account_type.string' => 'Account type is invalid.',
         'account_type.in' => 'Account type must be super admin, staff member, shipping company, or delivery agent.',
+
+        'type.required' => 'Account type is required.',
+        'type.string' => 'Account type is invalid.',
+        'type.in' => 'Account type must be super admin, staff member, shipping company, or delivery agent.',
+
+        'role.required' => 'Role is required.',
+        'role.string' => 'Role must be text.',
+        'role.max' => 'Role name is too long (maximum 100 characters).',
 
         'roles.required' => 'At least one role is required.',
         'roles.array' => 'Roles must be sent as a list.',

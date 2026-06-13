@@ -2,11 +2,14 @@
 
 namespace App\Modules\Users\Application\DTOs;
 
+use App\Modules\Users\Domain\Enums\AccountTypeEnum;
+
 readonly class GetUsersDTO
 {
     public function __construct(
         public ?string $search = null,
         public ?string $role = null,
+        public ?AccountTypeEnum $accountType = null,
         public ?int $isActive = null,
         public ?string $departmentId = null,
         public ?string $cityId = null,
@@ -20,6 +23,9 @@ readonly class GetUsersDTO
         return new self(
             search: $data['search'] ?? null,
             role: $data['role'] ?? null,
+            accountType: isset($data['type'])
+                ? AccountTypeEnum::fromCode($data['type'])
+                : null,
             isActive: isset($data['is_active']) ? (int) $data['is_active'] : null,
             departmentId: $data['department_id'] ?? null,
             cityId: $data['city_id'] ?? null,
@@ -34,6 +40,22 @@ readonly class GetUsersDTO
         return new self(
             search: $this->search,
             role: $role,
+            accountType: $this->accountType,
+            isActive: $this->isActive,
+            departmentId: $this->departmentId,
+            cityId: $this->cityId,
+            commissionType: $this->commissionType,
+            perPage: $this->perPage,
+            page: $this->page,
+        );
+    }
+
+    public function withAccountType(AccountTypeEnum $accountType): self
+    {
+        return new self(
+            search: $this->search,
+            role: $this->role,
+            accountType: $accountType,
             isActive: $this->isActive,
             departmentId: $this->departmentId,
             cityId: $this->cityId,

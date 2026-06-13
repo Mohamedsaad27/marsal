@@ -4,6 +4,7 @@ namespace App\Modules\Users\Infrastructure\Persistence;
 
 use App\Modules\Users\Application\DTOs\GetUsersDTO;
 use App\Modules\Users\Application\DTOs\ImportUserRowDTO;
+use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Domain\Interfaces\UserRepositoryInterface;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
@@ -27,6 +28,13 @@ class UserRepository implements UserRepositoryInterface
     public function createUserWithRole(ImportUserRowDTO $dto, string $plainPassword): array
     {
         return DB::transaction(function () use ($dto, $plainPassword) {
+            $accountType = match ($dto->role) {
+                'delivery_agent' => AccountTypeEnum::DeliveryAgent,
+                'shipping_company' => AccountTypeEnum::ShippingCompany,
+                'staff_member' => AccountTypeEnum::StaffMember,
+                default => AccountTypeEnum::StaffMember,
+            };
+
             $user = User::query()->create([
                 'name' => $dto->name,
                 'email' => $dto->email,
@@ -34,6 +42,7 @@ class UserRepository implements UserRepositoryInterface
                 'gender' => $dto->gender,
                 'password' => $plainPassword,
                 'is_active' => true,
+                'account_type' => $accountType->value,
             ]);
 
             $user->assignRole($dto->role);
@@ -115,6 +124,10 @@ class UserRepository implements UserRepositoryInterface
 
         if ($dto->role !== null) {
             $query->whereHas('roles', fn ($q) => $q->where('name', $dto->role));
+        }
+
+        if ($dto->accountType !== null) {
+            $query->where('account_type', $dto->accountType->value);
         }
 
         if ($dto->isActive !== null) {

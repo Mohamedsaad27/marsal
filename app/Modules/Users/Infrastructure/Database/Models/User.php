@@ -42,6 +42,7 @@ class User extends Authenticatable implements JWTSubject
         'avatar',
         'gender',
         'is_active',
+        'account_type',
         'fcm_token',
         'last_login_at',
     ];
@@ -59,11 +60,16 @@ class User extends Authenticatable implements JWTSubject
             'last_login_at' => 'datetime',
             'password' => 'hashed',
             'is_active' => 'boolean',
+            'account_type' => AccountTypeEnum::class,
         ];
     }
 
     public function resolveAccountType(): ?AccountTypeEnum
     {
+        if ($this->account_type !== null) {
+            return $this->account_type;
+        }
+
         if ($this->hasRole('super_admin')) {
             return AccountTypeEnum::SuperAdmin;
         }
@@ -103,7 +109,7 @@ class User extends Authenticatable implements JWTSubject
     public function getJWTCustomClaims(): array
     {
         return [
-            'account_type' => $this->resolveAccountType()?->code(),
+            'account_type' => $this->account_type?->code(),
             'roles' => $this->getRoleNames()->values()->all(),
             'permissions' => $this->getAllPermissions()->pluck('name')->values()->all(),
         ];

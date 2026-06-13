@@ -25,14 +25,13 @@ class CreateUserRequest extends BaseFormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
             'password' => ['required', 'string', 'min:8'],
-            'account_type' => ['required', 'string', Rule::in(AccountTypeEnum::codes())],
-            'roles' => ['required', 'array', 'min:1'],
-            'roles.*' => ['required', 'string', 'max:100'],
+            'type' => ['required', 'string', Rule::in(AccountTypeEnum::codes())],
+            'role' => ['required', 'string', 'max:100'],
             'profile' => ['nullable', 'array'],
-            'profile.company_name' => ['required_if:account_type,shipping_company', 'string', 'max:200'],
+            'profile.company_name' => ['required_if:type,shipping_company', 'string', 'max:200'],
             'profile.commercial_reg' => ['nullable', 'string', 'max:100'],
             'profile.department_id' => ['nullable', 'uuid', 'exists:departments,department_id'],
             'profile.job_title' => ['nullable', 'string', 'max:150'],
@@ -41,7 +40,7 @@ class CreateUserRequest extends BaseFormRequest
             'profile.vehicle_type' => ['nullable', 'integer', 'min:1', 'max:5'],
             'profile.vehicle_plate_number' => ['nullable', 'string', 'max:30'],
             'profile.supervisor_agent_id' => ['nullable', 'uuid', 'exists:delivery_agents,delivery_agent_id'],
-            ...$this->addressRules(required: $this->string('account_type')->toString() !== 'super_admin'),
+            ...$this->addressRules(required: $this->string('type')->toString() !== 'super_admin'),
         ];
     }
 
@@ -49,11 +48,11 @@ class CreateUserRequest extends BaseFormRequest
     {
         return new CreateUserDTO(
             name: $this->string('name')->toString(),
-            email: $this->string('email')->toString(),
+            email: $this->filled('email') ? $this->string('email')->toString() : null,
             phone: $this->string('phone')->toString(),
             password: $this->string('password')->toString(),
-            accountType: AccountTypeEnum::fromCode($this->string('account_type')->toString()),
-            roles: $this->input('roles', []),
+            accountType: AccountTypeEnum::fromCode($this->string('type')->toString()),
+            roles: [$this->string('role')->toString()],
             profile: $this->input('profile', []),
             address: $this->input('address', []),
         );

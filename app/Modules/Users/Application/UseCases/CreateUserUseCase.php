@@ -34,6 +34,7 @@ class CreateUserUseCase
                 'phone' => $dto->phone,
                 'password' => $dto->password,
                 'is_active' => true,
+                'account_type' => $dto->accountType->value,
             ]);
 
             $user->syncRoles($dto->roles);

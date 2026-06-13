@@ -22,11 +22,10 @@ class StoreStaffMemberRequest extends BaseFormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'email', 'max:255', 'unique:users,email'],
+            'email' => ['nullable', 'email', 'max:255', 'unique:users,email'],
             'phone' => ['required', 'string', 'max:20', 'unique:users,phone'],
             'password' => ['required', 'string', 'min:8'],
-            'roles' => ['nullable', 'array', 'min:1'],
-            'roles.*' => ['required', 'string', 'max:100'],
+            'role' => ['required', 'string', 'max:100'],
             'profile' => ['nullable', 'array'],
             'profile.department_id' => ['nullable', 'uuid', 'exists:departments,department_id'],
             'profile.job_title' => ['nullable', 'string', 'max:150'],

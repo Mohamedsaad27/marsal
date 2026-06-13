@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users\Infrastructure\Database\Seeders;
 
+use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\StaffMember;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Database\Seeder;
@@ -24,6 +25,7 @@ class SuperAdminSeeder extends Seeder
             'phone' => '01098001021',
             'password' => Hash::make($password),
             'is_active' => true,
+            'account_type' => AccountTypeEnum::SuperAdmin->value,
         ]);
 
         StaffMember::query()->create([

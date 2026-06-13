@@ -30,10 +30,13 @@ class WhatsAppWelcomeTest extends TestCase
                 'email' => 'wauser@example.com',
                 'phone' => '01077778888',
                 'password' => 'TempPass@123',
-                'roles' => ['staff_member'],
+                'role' => 'staff_member',
                 'profile' => [
                     'department' => 'ops',
                     'job_title' => 'Coordinator',
+                ],
+                'address' => [
+                    'address_line' => '5 WhatsApp St',
                 ],
             ]);
 

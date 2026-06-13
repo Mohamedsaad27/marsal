@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users\Infrastructure\Database\Seeders;
 
+use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Database\Seeder;
@@ -112,6 +113,7 @@ class ShippingCompanySeeder extends Seeder
             $user = User::query()->create([
                 ...$data['user'],
                 'password' => Hash::make('Password@123'),
+                'account_type' => AccountTypeEnum::ShippingCompany->value,
             ]);
 
             ShippingCompany::query()->create([

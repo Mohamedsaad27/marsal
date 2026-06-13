@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Audit Logs, Dashboard (admin home KPIs).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent`",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Audit Logs, Dashboard (admin home KPIs).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -144,7 +144,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "login"]
             },
-            "description": "Authenticate with email **or** phone in `identifier` field. Returns JWT `access_token` and user (`account_type`, `roles[]`, optional `staff_member` / `shipping_company` / `delivery_agent`).\n\nRecords audit event `login` (code 5) on `users` — view via **Admin — Audit Logs**."
+            "description": "Authenticate with email **or** phone in `identifier` field. Returns JWT `access_token` and user (`account_type` from `users.account_type`, `roles[]`, optional `staff_member` / `shipping_company` / `delivery_agent`).\n\nRecords audit event `login` (code 5) on `users` — view via **Admin — Audit Logs**."
           }
         },
         {
@@ -221,7 +221,7 @@
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "auth", "me"]
             },
-            "description": "Current user profile: `account_type` (from roles/profiles), `roles[]`, optional `staff_member`, `shipping_company`, `delivery_agent` (includes `supervisor_agent_id`, `is_supervisor`)."
+            "description": "Current user profile: `account_type` (from `users.account_type`), `roles[]`, optional `staff_member`, `shipping_company`, `delivery_agent` (includes `supervisor_agent_id`, `is_supervisor`)."
           }
         },
         {
@@ -1020,7 +1020,7 @@
     },
     {
       "name": "Admin — Users",
-      "description": "Super-admin provisions accounts. Assign Spatie `roles[]` on create. No public registration.\n\n**Users CRUD:** `GET /users` — all roles (`users.view`); dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters; `GET /delivery-agents/supervisors` — lightweight supervisor dropdown (`delivery_agents.view`). `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Address on create & update:** All create endpoints accept an `address` object. Required for `staff_member`, `shipping_company`, and `delivery_agent`; optional for `super_admin`. `PUT /users/{userId}` accepts the same `address` object (optional partial update) — updates the user's default address, or creates one if missing. Persists to `addresses` (FK `user_id`, optional `city_id`). Create/update responses return `addresses[]` (with nested `city` when loaded).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
+      "description": "Super-admin provisions accounts. Assign a Spatie `role` on create (single role string). No public registration.\n\n**Create body shapes:**\n- `POST /users` — `{ type, role, name, email, phone, password, profile?, address? }`\n- `POST /staff-members`, `/shipping-companies`, `/delivery-agents` — `{ role, name, email, phone, password, profile?, address? }` (`type` inferred from route)\n\n**Users CRUD:** `GET /users` — all account types (`users.view`); filter by `type` or `role`; dedicated list pages: `GET /staff-members`, `GET /shipping-companies`, `GET /delivery-agents` with role-specific filters; `GET /delivery-agents/supervisors` — lightweight supervisor dropdown (`delivery_agents.view`). `PUT` update (`users.update`), `PATCH …/toggle-status` (`users.toggle`), `DELETE` (`users.delete`).\n\n**Address on create & update:** All create endpoints accept an `address` object. Required for `staff_member`, `shipping_company`, and `delivery_agent`; optional for `super_admin`. `PUT /users/{userId}` accepts the same `address` object (optional partial update) — updates the user's default address, or creates one if missing. Persists to `addresses` (FK `user_id`, optional `city_id`). Create/update responses return `addresses[]` (with nested `city` when loaded).\n\n**Welcome email:** Queued to user's email with credentials (`APP_LOGIN_URL`).\n\n**Welcome WhatsApp (no API):** Response includes `welcome_whatsapp_url` — open in browser/WhatsApp to send pre-filled message to the user's phone. Support line uses `PLATFORM_PHONE` in `.env`. Passwords: `TempPass@123` style.\n\n**Admin password reset:** `PUT users/{userId}/change-password` — bypasses OTP/email; requires `users.change_password` permission.",
       "item": [
         {
           "name": "List Users",
@@ -1047,18 +1047,19 @@
               { "key": "Accept", "value": "application/json" }
             ],
             "url": {
-              "raw": "{{base_url}}/api/v1/admin/users?per_page=15&page=1&search=&role=&is_active=",
+              "raw": "{{base_url}}/api/v1/admin/users?per_page=15&page=1&search=&type=&role=&is_active=",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "users"],
               "query": [
                 { "key": "per_page", "value": "15", "description": "Items per page (1–100, default 15)" },
                 { "key": "page", "value": "1", "description": "Page number (≥ 1)" },
                 { "key": "search", "value": "", "description": "LIKE match on name, email, phone" },
-                { "key": "role", "value": "", "description": "super_admin | staff_member | shipping_company | delivery_agent (omit for all)" },
+                { "key": "type", "value": "", "description": "super_admin | staff_member | shipping_company | delivery_agent — filters users.account_type (omit for all)" },
+                { "key": "role", "value": "", "description": "Spatie role name filter (omit for all)" },
                 { "key": "is_active", "value": "", "description": "1 = active, 0 = inactive (omit for all)" }
               ]
             },
-            "description": "Permission: `users.view`\n\nPaginated users list for the admin dashboard (`/admin/users`).\n\n**Query:** `search`, `role`, `is_active` (0|1), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource`: `id`, `name`, `email`, `phone`, `gender`, `avatar`, `is_active`, `last_login_at`, `created_at`, `role` (`name`, `label`), `staff_member`, `shipping_company`, `delivery_agent`, `addresses`\n- `counts` — `total`, `super_admin`, `staff_member`, `shipping_company`, `delivery_agent` (global totals, not filtered)\n- `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`\n\n**422:** invalid `role` or `is_active`.\n\nSaves first `items[].id` to `{{user_id}}`."
+            "description": "Permission: `users.view`\n\nPaginated users list for the admin dashboard (`/admin/users`).\n\n**Query:** `search`, `type` (account type on `users.account_type`), `role` (Spatie role name), `is_active` (0|1), `per_page`, `page`.\n\n**Response `data`:**\n- `items[]` — `UserListResource`: `id`, `name`, `email`, `phone`, `gender`, `avatar`, `is_active`, `last_login_at`, `created_at`, `role` (`name`, `label`), `staff_member`, `shipping_company`, `delivery_agent`, `addresses`\n- `counts` — `total`, `super_admin`, `staff_member`, `shipping_company`, `delivery_agent` (global totals, not filtered)\n- `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\n**Success (200):** `{ \"isSuccess\": true, \"message\": \"...\", \"data\": { ... } }`\n\n**422:** invalid `type`, `role`, or `is_active`.\n\nSaves first `items[].id` to `{{user_id}}`."
           }
         },
         {
@@ -1181,14 +1182,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff2@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"account_type\": \"staff_member\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department_id\": \"{{department_id}}\",\n    \"job_title\": \"Operations Lead\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"is_default\": true\n  }\n}"
+              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff2@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"type\": \"staff_member\",\n  \"role\": \"staff_member\",\n  \"profile\": {\n    \"department_id\": \"{{department_id}}\",\n    \"job_title\": \"Operations Lead\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/users",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "users"]
             },
-            "description": "Permission: `users.create`\n\nSends **welcome email** + returns **`welcome_whatsapp_url`** (wa.me link for admin to click and send).\n\n`account_type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` (drives which profile row is created — not stored on `users`).\n\n- `super_admin` → role only (full access via `super_admin` role); `address` optional\n- `staff_member` → creates `staff_members` (`profile.department_id` UUID, `profile.job_title`, `profile.notes`); **`address` required**\n- `shipping_company` → creates `shipping_companies`; **`address` required**\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional); **`address` required**\n\n**`address` object** (stored in `addresses` table):\n- `address.city_id` — optional UUID (`exists:cities`); use `{{city_id}}` from **Locations — Reference**\n- `address.address_line` — required when `address` is sent\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number` — optional\n- `address.is_default` — optional boolean (defaults to `true` on create)\n\n**Success (201):** `UserResource` includes `addresses[]` with nested `city` when provided.\n\n`roles`: array of existing role names (required).\n\n`password`: min 8, upper + lower + number + symbol."
+            "description": "Permission: `users.create`\n\nSends **welcome email** + returns **`welcome_whatsapp_url`** (wa.me link for admin to click and send).\n\n**Body:** `type` + `role` (both required). `type` is persisted on `users.account_type` and drives which profile row is created.\n\n`type`: `super_admin` | `staff_member` | `shipping_company` | `delivery_agent`\n\n- `super_admin` → role only (full access via `super_admin` role); `address` optional\n- `staff_member` → creates `staff_members` (`profile.department_id` UUID, `profile.job_title`, `profile.notes`); **`address` required**\n- `shipping_company` → creates `shipping_companies`; **`address` required**\n- `delivery_agent` → creates `delivery_agents` (`profile.supervisor_agent_id` optional); **`address` required**\n\n**`address` object** (stored in `addresses` table):\n- `address.city_id` — optional UUID (`exists:cities`); use `{{city_id}}` from **Locations — Reference**\n- `address.address_line` — required when `address` is sent\n- `address.landmark`, `street`, `building_number`, `floor_number`, `apartment_number` — optional\n- `address.is_default` — optional boolean (defaults to `true` on create)\n\n**Success (201):** `UserResource` includes `account_type` and `addresses[]` with nested `city` when provided.\n\n`role`: single existing Spatie role name (required).\n\n`password`: min 8, upper + lower + number + symbol."
           }
         },
         {
@@ -1240,14 +1241,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"staff_member\"],\n  \"profile\": {\n    \"department_id\": \"{{department_id}}\",\n    \"job_title\": \"Operations Manager\",\n    \"notes\": \"Internal staff account\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"floor_number\": \"3\",\n    \"apartment_number\": \"12\",\n    \"is_default\": true\n  }\n}"
+              "raw": "{\n  \"name\": \"Staff User\",\n  \"email\": \"staff@marsal.com\",\n  \"phone\": \"01033334444\",\n  \"password\": \"TempPass@123\",\n  \"role\": \"staff_member\",\n  \"profile\": {\n    \"department_id\": \"{{department_id}}\",\n    \"job_title\": \"Operations Manager\",\n    \"notes\": \"Internal staff account\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"15 Tahrir St, Downtown\",\n    \"landmark\": \"Near metro station\",\n    \"street\": \"Tahrir St\",\n    \"building_number\": \"15\",\n    \"floor_number\": \"3\",\n    \"apartment_number\": \"12\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/staff-members",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "staff-members"]
             },
-            "description": "Permission: `users.create`\n\nCreates `users` + `staff_members` + `addresses` row (same transaction). Sends welcome email. Default role `staff_member` if `roles` omitted.\n\n**`address`:** required — `address_line` required; `city_id` optional UUID (`{{city_id}}` from **Locations — Reference**).\n\n**Success (201):** `UserResource` with `account_type`: `staff_member` and `addresses[]`."
+            "description": "Permission: `users.create`\n\nCreates `users` + `staff_members` + `addresses` row (same transaction). Account type `staff_member` is set automatically. Sends welcome email.\n\n**Body:** `role` (required) — single Spatie role name, e.g. `\"staff_member\"` or a custom role.\n\n**`address`:** required — `address_line` required; `city_id` optional UUID (`{{city_id}}` from **Locations — Reference**).\n\n**Success (201):** `UserResource` with `account_type`: `staff_member` and `addresses[]`."
           }
         },
         {
@@ -1299,14 +1300,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Acme Logistics\",\n  \"email\": \"ops@acme.com\",\n  \"phone\": \"01011111111\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"shipping_company\"],\n  \"profile\": {\n    \"company_name\": \"Acme Logistics\",\n    \"commercial_reg\": \"CR-123456\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"Industrial Zone, Block 7\",\n    \"landmark\": \"Gate 3\",\n    \"street\": \"Ring Road\",\n    \"building_number\": \"7\",\n    \"is_default\": true\n  }\n}"
+              "raw": "{\n  \"name\": \"Acme Logistics\",\n  \"email\": \"ops@acme.com\",\n  \"phone\": \"01011111111\",\n  \"password\": \"TempPass@123\",\n  \"role\": \"shipping_company\",\n  \"profile\": {\n    \"company_name\": \"Acme Logistics\",\n    \"commercial_reg\": \"CR-123456\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"Industrial Zone, Block 7\",\n    \"landmark\": \"Gate 3\",\n    \"street\": \"Ring Road\",\n    \"building_number\": \"7\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/shipping-companies",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "shipping-companies"]
             },
-            "description": "Permission: `shipping_companies.create`\n\nCreates `users` + `shipping_companies` + `addresses` row (same transaction). Sends welcome email. Default role `shipping_company` if `roles` omitted.\n\n**`address`:** required — used for company location and `city_id` list filter on **List Shipping Companies**. `address_line` required; `city_id` optional UUID (`{{city_id}}`).\n\n**Success (201):** `UserResource` with `shipping_company` and `addresses[]` (nested `city` when `city_id` set)."
+            "description": "Permission: `shipping_companies.create`\n\nCreates `users` + `shipping_companies` + `addresses` row (same transaction). Account type `shipping_company` is set automatically. Sends welcome email.\n\n**Body:** `role` (required) — single Spatie role name, typically `\"shipping_company\"`.\n\n**`address`:** required — used for company location and `city_id` list filter on **List Shipping Companies**. `address_line` required; `city_id` optional UUID (`{{city_id}}`).\n\n**Success (201):** `UserResource` with `shipping_company` and `addresses[]` (nested `city` when `city_id` set)."
           }
         },
         {
@@ -1421,14 +1422,14 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Supervisor Agent\",\n  \"email\": \"supervisor@marsal.com\",\n  \"phone\": \"01022222222\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"national_id\": \"29001011234567\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"ABC 1234\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"22 Nasr St, Nasr City\",\n    \"landmark\": \"Opposite City Stars\",\n    \"street\": \"Nasr St\",\n    \"building_number\": \"22\",\n    \"is_default\": true\n  }\n}"
+              "raw": "{\n  \"name\": \"Supervisor Agent\",\n  \"email\": \"supervisor@marsal.com\",\n  \"phone\": \"01022222222\",\n  \"password\": \"TempPass@123\",\n  \"role\": \"delivery_agent\",\n  \"profile\": {\n    \"national_id\": \"29001011234567\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"ABC 1234\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"22 Nasr St, Nasr City\",\n    \"landmark\": \"Opposite City Stars\",\n    \"street\": \"Nasr St\",\n    \"building_number\": \"22\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
               "host": ["{{base_url}}"],
               "path": ["api", "v1", "admin", "delivery-agents"]
             },
-            "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` + `addresses` row (same transaction). Sends welcome email. Omit `profile.supervisor_agent_id` to create a **supervisor** (`is_supervisor: true`). Save `delivery_agent_id` from the response into collection variable `supervisor_agent_id` for subordinate requests.\n\n**`address`:** required — `address_line` required; `city_id` optional UUID (`{{city_id}}`).\n\n`vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\n**Success (201):** `UserResource` with `delivery_agent` and `addresses[]`.\n\nCan assign custom roles e.g. `[\"field_lead\"]` if role exists."
+            "description": "Permission: `delivery_agents.create`\n\nCreates `users` + `delivery_agents` + `addresses` row (same transaction). Account type `delivery_agent` is set automatically. Sends welcome email. Omit `profile.supervisor_agent_id` to create a **supervisor** (`is_supervisor: true`). Save `delivery_agent_id` from the response into collection variable `supervisor_agent_id` for subordinate requests.\n\n**Body:** `role` (required) — single Spatie role name, typically `\"delivery_agent\"` or a custom role like `\"field_lead\"`.\n\n**`address`:** required — `address_line` required; `city_id` optional UUID (`{{city_id}}`).\n\n`vehicle_type`: 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot.\n\n**Success (201):** `UserResource` with `delivery_agent` and `addresses[]`."
           }
         },
         {
@@ -1441,7 +1442,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Agent One\",\n  \"email\": \"agent1@marsal.com\",\n  \"phone\": \"01033335555\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"delivery_agent\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\",\n    \"national_id\": \"29001019876543\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"XYZ 5678\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"8 El Haram St, Giza\",\n    \"landmark\": \"Near pyramid road\",\n    \"is_default\": true\n  }\n}"
+              "raw": "{\n  \"name\": \"Agent One\",\n  \"email\": \"agent1@marsal.com\",\n  \"phone\": \"01033335555\",\n  \"password\": \"TempPass@123\",\n  \"role\": \"delivery_agent\",\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\",\n    \"national_id\": \"29001019876543\",\n    \"vehicle_type\": 1,\n    \"vehicle_plate_number\": \"XYZ 5678\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"8 El Haram St, Giza\",\n    \"landmark\": \"Near pyramid road\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",
@@ -1461,7 +1462,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"name\": \"Field Lead Agent\",\n  \"email\": \"lead@marsal.com\",\n  \"phone\": \"01055556666\",\n  \"password\": \"TempPass@123\",\n  \"roles\": [\"field_lead\"],\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"5 October City, District 12\",\n    \"is_default\": true\n  }\n}"
+              "raw": "{\n  \"name\": \"Field Lead Agent\",\n  \"email\": \"lead@marsal.com\",\n  \"phone\": \"01055556666\",\n  \"password\": \"TempPass@123\",\n  \"role\": \"field_lead\",\n  \"profile\": {\n    \"supervisor_agent_id\": \"{{supervisor_agent_id}}\"\n  },\n  \"address\": {\n    \"city_id\": \"{{city_id}}\",\n    \"address_line\": \"5 October City, District 12\",\n    \"is_default\": true\n  }\n}"
             },
             "url": {
               "raw": "{{base_url}}/api/v1/admin/delivery-agents",

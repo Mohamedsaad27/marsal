@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users\Infrastructure\Database\Seeders;
 
+use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Database\Seeder;
@@ -70,6 +71,7 @@ class DeliveryAgentSeeder extends Seeder
             $user = User::query()->create([
                 ...$data['user'],
                 'password' => Hash::make('Password@123'),
+                'account_type' => AccountTypeEnum::DeliveryAgent->value,
             ]);
 
             $agent = DeliveryAgent::query()->create([
@@ -243,6 +245,7 @@ class DeliveryAgentSeeder extends Seeder
             $user = User::query()->create([
                 ...$data['user'],
                 'password' => Hash::make('Password@123'),
+                'account_type' => AccountTypeEnum::DeliveryAgent->value,
             ]);
 
             DeliveryAgent::query()->create([

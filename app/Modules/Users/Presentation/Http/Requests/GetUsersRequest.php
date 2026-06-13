@@ -15,6 +15,7 @@ class GetUsersRequest extends FormRequest
     {
         return [
             'search' => ['nullable', 'string', 'max:100'],
+            'type' => ['nullable', 'string', 'in:super_admin,staff_member,shipping_company,delivery_agent'],
             'role' => ['nullable', 'string', 'in:super_admin,staff_member,shipping_company,delivery_agent'],
             'is_active' => ['nullable', 'integer', 'in:0,1'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],

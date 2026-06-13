@@ -124,11 +124,11 @@ class AdminUserController extends Controller
     {
         $dto = new CreateUserDTO(
             name: $request->string('name')->toString(),
-            email: $request->string('email')->toString(),
+            email: $request->filled('email') ? $request->string('email')->toString() : null,
             phone: $request->string('phone')->toString(),
             password: $request->string('password')->toString(),
             accountType: AccountTypeEnum::ShippingCompany,
-            roles: $request->input('roles', ['shipping_company']),
+            roles: [$request->string('role')->toString()],
             profile: $request->input('profile', []),
             address: $request->input('address', []),
         );
@@ -142,11 +142,11 @@ class AdminUserController extends Controller
     {
         $dto = new CreateUserDTO(
             name: $request->string('name')->toString(),
-            email: $request->string('email')->toString(),
+            email: $request->filled('email') ? $request->string('email')->toString() : null,
             phone: $request->string('phone')->toString(),
             password: $request->string('password')->toString(),
             accountType: AccountTypeEnum::DeliveryAgent,
-            roles: $request->input('roles', ['delivery_agent']),
+            roles: [$request->string('role')->toString()],
             profile: $request->input('profile', []),
             address: $request->input('address', []),
         );
@@ -160,11 +160,11 @@ class AdminUserController extends Controller
     {
         $dto = new CreateUserDTO(
             name: $request->string('name')->toString(),
-            email: $request->string('email')->toString(),
+            email: $request->filled('email') ? $request->string('email')->toString() : null,
             phone: $request->string('phone')->toString(),
             password: $request->string('password')->toString(),
             accountType: AccountTypeEnum::StaffMember,
-            roles: $request->input('roles', ['staff_member']),
+            roles: [$request->string('role')->toString()],
             profile: $request->input('profile', []),
             address: $request->input('address', []),
         );

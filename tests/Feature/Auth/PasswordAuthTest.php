@@ -151,11 +151,14 @@ class PasswordAuthTest extends TestCase
                 'email' => 'mailtest@example.com',
                 'phone' => '01055556666',
                 'password' => 'TempPass@123',
-                'account_type' => 'staff_member',
-                'roles' => ['staff_member'],
+                'type' => 'staff_member',
+                'role' => 'staff_member',
                 'profile' => [
                     'department' => 'IT',
                     'job_title' => 'Tester',
+                ],
+                'address' => [
+                    'address_line' => '10 Test St',
                 ],
             ])
             ->assertCreated();

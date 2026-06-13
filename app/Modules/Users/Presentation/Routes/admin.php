@@ -36,6 +36,7 @@ Route::prefix('api/v1/admin')
 
         Route::post('users', [AdminUserController::class, 'store'])
             ->middleware('permission:users.create');
+            // Body: { type, role, name, email, phone, password, profile?, address? }
 
         Route::put('users/{userId}', [AdminUserController::class, 'update'])
             ->middleware('permission:users.update')
@@ -51,12 +52,15 @@ Route::prefix('api/v1/admin')
 
         Route::post('shipping-companies', [AdminUserController::class, 'storeShippingCompany'])
             ->middleware('permission:shipping_companies.create');
+            // Body: { role, name, email, phone, password, profile?, address? }
 
         Route::post('delivery-agents', [AdminUserController::class, 'storeDeliveryAgent'])
             ->middleware('permission:delivery_agents.create');
+            // Body: { role, name, email, phone, password, profile?, address? }
 
         Route::post('staff-members', [AdminUserController::class, 'storeStaffMember'])
             ->middleware('permission:users.create');
+            // Body: { role, name, email, phone, password, profile?, address? }
 
         Route::put('users/{userId}/change-password', [AdminUserController::class, 'changePassword'])
             ->middleware('permission:users.change_password')

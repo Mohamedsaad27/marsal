@@ -51,9 +51,12 @@ class AdminRbacTest extends TestCase
             'email' => 'acme@example.com',
             'phone' => '01011111111',
             'password' => 'password123',
-            'roles' => ['shipping_company'],
+            'role' => 'shipping_company',
             'profile' => [
                 'company_name' => 'Acme Logistics',
+            ],
+            'address' => [
+                'address_line' => 'Industrial Zone, Block 7',
             ],
         ]);
 
@@ -69,10 +72,13 @@ class AdminRbacTest extends TestCase
             'email' => 'staff@marsal.com',
             'phone' => '01044444444',
             'password' => 'password123',
-            'roles' => ['staff_member'],
+            'role' => 'staff_member',
             'profile' => [
                 'department' => 'operations',
                 'job_title' => 'Operations Coordinator',
+            ],
+            'address' => [
+                'address_line' => '15 Tahrir St',
             ],
         ]);
 
@@ -91,8 +97,11 @@ class AdminRbacTest extends TestCase
             'email' => 'agent1@example.com',
             'phone' => '01022222222',
             'password' => 'password123',
-            'roles' => ['field_lead'],
+            'role' => 'field_lead',
             'profile' => [],
+            'address' => [
+                'address_line' => '22 Nasr St',
+            ],
         ]);
 
         $response->assertCreated()
