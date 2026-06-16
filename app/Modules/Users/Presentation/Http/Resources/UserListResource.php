@@ -19,6 +19,10 @@ class UserListResource extends JsonResource
             'phone' => $this->phone,
             'gender' => $this->gender,
             'avatar' => $this->avatar,
+            'welcome_whatsapp_url' => $this->when(
+                ! empty($this->welcome_whatsapp_url),
+                $this->welcome_whatsapp_url
+            ),
             'is_active' => (bool) $this->is_active,
             'last_login_at' => $this->last_login_at?->toIso8601String(),
             'created_at' => $this->created_at?->toIso8601String(),
