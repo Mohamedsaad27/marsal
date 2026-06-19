@@ -5,6 +5,8 @@ namespace App\Modules\Notifications\Presentation\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Core\Infrastructure\Helpers\ApiResponse;
 use App\Modules\Core\Infrastructure\Helpers\PaginationMeta;
+use App\Modules\Notifications\Application\UseCases\DeleteReadNotificationsUseCase;
+use App\Modules\Notifications\Application\UseCases\GetNotificationKpisUseCase;
 use App\Modules\Notifications\Application\UseCases\GetUnreadCountUseCase;
 use App\Modules\Notifications\Application\UseCases\GetUserNotificationsUseCase;
 use App\Modules\Notifications\Application\UseCases\MarkAllNotificationsReadUseCase;
@@ -17,9 +19,11 @@ class NotificationController extends Controller
 {
     public function __construct(
         private GetUserNotificationsUseCase    $getUserNotifications,
+        private GetNotificationKpisUseCase     $getNotificationKpis,
         private GetUnreadCountUseCase          $getUnreadCount,
         private MarkNotificationReadUseCase    $markRead,
         private MarkAllNotificationsReadUseCase $markAllRead,
+        private DeleteReadNotificationsUseCase  $deleteRead,
     ) {}
 
     /**
@@ -37,6 +41,7 @@ class NotificationController extends Controller
 
         return ApiResponse::success(
             array_merge(
+                ['kpis' => $this->getNotificationKpis->execute(auth()->id())],
                 ['items' => NotificationResource::collection($notifications->items())],
                 PaginationMeta::getMeta($notifications),
             ),
@@ -83,6 +88,20 @@ class NotificationController extends Controller
         return ApiResponse::success(
             data:    ['updated_count' => $updated],
             message: __('notifications::messages.all_marked_read'),
+        );
+    }
+
+    /**
+     * DELETE /api/v1/notifications/read
+     * حذف جميع الإشعارات المقروءة
+     */
+    public function deleteRead(): JsonResponse
+    {
+        $deleted = $this->deleteRead->execute(auth()->id());
+
+        return ApiResponse::success(
+            data:    ['deleted_count' => $deleted],
+            message: __('notifications::messages.read_deleted'),
         );
     }
 }

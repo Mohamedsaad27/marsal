@@ -6,6 +6,7 @@ return [
     'unread_count_success'=> 'تم جلب عدد الإشعارات غير المقروءة بنجاح',
     'marked_read'         => 'تم تحديد الإشعار كمقروء',
     'all_marked_read'     => 'تم تحديد جميع الإشعارات كمقروءة',
+    'read_deleted'        => 'تم حذف الإشعارات المقروءة',
     'not_found'           => 'الإشعار غير موجود أو لا يخصك',
 
     // Notification titles (for reference — actual titles come from NotificationTemplateService)

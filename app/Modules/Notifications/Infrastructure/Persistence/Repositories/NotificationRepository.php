@@ -2,6 +2,7 @@
 
 namespace App\Modules\Notifications\Infrastructure\Persistence\Repositories;
 
+use App\Modules\Notifications\Domain\Enums\NotificationTypeEnum;
 use App\Modules\Notifications\Domain\Interfaces\NotificationRepositoryInterface;
 use App\Modules\Notifications\Infrastructure\Database\Models\Notification;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -61,5 +62,40 @@ class NotificationRepository implements NotificationRepositoryInterface
             ->first();
 
         return $notification?->toArray();
+    }
+
+    public function deleteReadForUser(string $userId): int
+    {
+        return Notification::query()
+            ->where('user_id', $userId)
+            ->where('is_read', 1)
+            ->delete();
+    }
+
+    public function getKpisForUser(string $userId): array
+    {
+        $countsByType = Notification::query()
+            ->where('user_id', $userId)
+            ->where('is_read', 0)
+            ->selectRaw('notification_type, COUNT(*) as aggregate')
+            ->groupBy('notification_type')
+            ->pluck('aggregate', 'notification_type');
+
+        $kpis = [
+            'approvals'   => 0,
+            'collections' => 0,
+            'shipments'   => 0,
+            'unread'      => 0,
+        ];
+
+        foreach ($countsByType as $typeValue => $count) {
+            $count = (int) $count;
+            $kpis['unread'] += $count;
+
+            $category = NotificationTypeEnum::from((int) $typeValue)->kpiCategory();
+            $kpis[$category->value] += $count;
+        }
+
+        return $kpis;
     }
 }

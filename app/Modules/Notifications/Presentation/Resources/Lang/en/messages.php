@@ -6,6 +6,7 @@ return [
     'unread_count_success' => 'Unread notification count retrieved successfully',
     'marked_read'          => 'Notification marked as read',
     'all_marked_read'      => 'All notifications marked as read',
+    'read_deleted'         => 'Read notifications deleted',
     'not_found'            => 'Notification not found or does not belong to you',
 
     // Notification titles (for reference — actual titles come from NotificationTemplateService)

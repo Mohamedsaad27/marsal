@@ -39,4 +39,22 @@ interface NotificationRepositoryInterface
      * Returns null if not found or does not belong to the user.
      */
     public function findForUser(string $notificationId, string $userId): ?array;
+
+    /**
+     * Permanently delete all read notifications for the user.
+     * Returns the number of rows deleted.
+     */
+    public function deleteReadForUser(string $userId): int;
+
+    /**
+     * Unread counts grouped by dashboard KPI category for the user.
+     *
+     * @return array{
+     *     approvals: int,
+     *     collections: int,
+     *     shipments: int,
+     *     unread: int
+     * }
+     */
+    public function getKpisForUser(string $userId): array;
 }

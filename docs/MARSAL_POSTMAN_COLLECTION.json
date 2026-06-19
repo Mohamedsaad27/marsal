@@ -2997,7 +2997,7 @@
                 }
               ]
             },
-            "description": "قائمة الإشعارات — paginated, newest first.\n\nAuth: Bearer token required.\n\n**Query:** `per_page` (default 15).\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"type\": { \"code\": 1, \"label\": \"طلب توصيل جديد\" },\n  \"title_ar\": \"📦 طلب توصيل جديد\",\n  \"body_ar\": \"تم تعيين الطلب رقم MRS-0042 إليك — يرجى المراجعة والتحرك فوراً\",\n  \"data\": { \"order_id\": \"uuid\" },\n  \"is_read\": false,\n  \"sent_via_fcm\": true,\n  \"created_at\": \"2026-06-16T09:30:00.000000Z\"\n}\n```\n\nSaves first unread `notification_id` to collection variable."
+            "description": "قائمة الإشعارات — paginated, newest first.\n\nAuth: Bearer token required.\n\n**Query:** `per_page` (default 15).\n\n**Response `data.kpis`** — unread counts for dashboard cards (excludes push/FCM):\n- `approvals` — types 3, 4, 5 (approval request, timer start/expired)\n- `collections` — type 6 (new message)\n- `shipments` — types 1, 2, 7, 8 (new order, status change, phone updated, postponed reminder)\n- `unread` — total unread across all types\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"type\": { \"code\": 1, \"label\": \"طلب توصيل جديد\" },\n  \"title_ar\": \"📦 طلب توصيل جديد\",\n  \"body_ar\": \"تم تعيين الطلب رقم MRS-0042 إليك — يرجى المراجعة والتحرك فوراً\",\n  \"data\": { \"order_id\": \"uuid\" },\n  \"is_read\": false,\n  \"sent_via_fcm\": true,\n  \"created_at\": \"2026-06-16T09:30:00.000000Z\"\n}\n```\n\n**Full response shape:**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم جلب الإشعارات بنجاح\",\n  \"data\": {\n    \"kpis\": {\n      \"approvals\": 2,\n      \"collections\": 2,\n      \"shipments\": 3,\n      \"unread\": 7\n    },\n    \"items\": [],\n    \"type\": \"length_aware\",\n    \"current_page\": 1,\n    \"total\": 7\n  }\n}\n```\n\nSaves first unread `notification_id` to collection variable."
           }
         },
         {
@@ -3074,6 +3074,31 @@
               ]
             },
             "description": "تحديد جميع إشعارات المستخدم الحالي كمقروءة في عملية واحدة.\n\nAuth: Bearer token required.\n\n**Response (200):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم تحديد جميع الإشعارات كمقروءة\",\n  \"data\": { \"updated_count\": 7 }\n}\n```\n\n`updated_count` — number of notifications that were actually updated (0 if already all read)."
+          }
+        },
+        {
+          "name": "Delete Read Notifications",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/read",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "read"
+              ]
+            },
+            "description": "حذف جميع الإشعارات المقروءة للمستخدم الحالي.\n\nAuth: Bearer token required.\n\nOnly notifications with `is_read = true` are removed. Unread notifications are kept.\n\n**Response (200):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم حذف الإشعارات المقروءة\",\n  \"data\": { \"deleted_count\": 4 }\n}\n```\n\n`deleted_count` — number of read notifications permanently deleted (0 if none were read)."
           }
         }
       ]

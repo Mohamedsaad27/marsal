@@ -48,4 +48,21 @@ enum NotificationTypeEnum: int
             self::PostponedReminder => 'delivery_agent',
         };
     }
+
+    /**
+     * Dashboard KPI bucket for filtering unread notification counts.
+     */
+    public function kpiCategory(): NotificationKpiCategoryEnum
+    {
+        return match ($this) {
+            self::NewOrder,
+            self::StatusChange,
+            self::PostponedReminder,
+            self::PhoneUpdated      => NotificationKpiCategoryEnum::Shipments,
+            self::ApprovalRequest,
+            self::TimerStart,
+            self::TimerExpired      => NotificationKpiCategoryEnum::Approvals,
+            self::NewMessage        => NotificationKpiCategoryEnum::Collections,
+        };
+    }
 }

@@ -27,6 +27,12 @@ Route::prefix('api/v1')
             [NotificationController::class, 'markAllRead']
         )->name('notifications.read-all');
 
+        // حذف جميع الإشعارات المقروءة — يجب أن يأتي قبل {notificationId}
+        Route::delete(
+            'notifications/read',
+            [NotificationController::class, 'deleteRead']
+        )->name('notifications.delete-read');
+
         // قائمة الإشعارات المرقّمة
         Route::get(
             'notifications',
