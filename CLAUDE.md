@@ -1,7 +1,7 @@
 # Mersal — Claude AI Rules (Master File)
 
 > **Read this file completely before starting any task.**
-> Marsal is a B2B logistics and delivery management system built on Laravel + Flutter.
+> Mersal is a B2B logistics and delivery management system built on Laravel + Flutter.
 > Every rule here is mandatory. No exceptions unless explicitly stated per-task.
 > The system connects shipping companies ↔ admin ↔ delivery agents.
 
@@ -14,40 +14,43 @@
 | Product | Mersal |
 | Market | Egyptian B2B logistics market |
 | Backend | Laravel 13 — REST API |
-| FrontEnd Dashboard Admin | React |
-| Mobile App | Flutter (Android + iOS) |
+| Frontend Dashboard | React (Admin web panel) |
+| Mobile App | Flutter (Android + iOS — delivery agents) |
 | Architecture | Modular Monolith — Module-based Clean Architecture |
-| Auth | JWT (`tymon/jwt-auth`) — guards: `api` |
-| Authorization | Role-Based Access Control |
-| Primary Keys | `UUIDs ` no auto-increment|
-| Language | Arabic (primary UI) + English (code & comments) - Always Add Readable Human Messages | 
-| Realtime | Laravel + Firbase (chat + notifications) |
-| Push | Firebase Cloud Messaging (FCM) |
-| Storage | Locale Storage (proof photos, attachments) |
+| Auth | JWT (`tymon/jwt-auth ^2.3`) — guard: `api` |
+| Authorization | Role-Based Access Control via `spatie/laravel-permission` (roles embedded in JWT claims) |
+| Primary Keys | **UUID strings** — domain tables use named PKs (`user_id`, `order_id`, `notification_id`, etc.) via `HasUuid` trait |
+| Language | Arabic (primary UI) + English (code & comments) — always add readable human messages |
+| Realtime | Firebase (chat + notifications) |
+| Push | Firebase Cloud Messaging (FCM) — custom HTTP implementation via `Illuminate\Support\Facades\Http`, no Composer FCM package |
+| File Storage | Local storage (proof photos, attachments) via `media_files` table |
 | Database | MySQL 8.0.30+ — single database, no multi-tenancy |
 
 ---
 
-## 2. The Three System Users — Never Confuse Them
+## 2. System Users — Never Confuse Them
 
-| Role ID | Role Code | Who They Are | Interface |
-|---------|-----------|--------------|-----------|
-| 1 | `super_admin` | Internal admin team | Web Dashboard | Full Access 
-| 2 | `shipping_company` | Client companies that send orders | Web Portal |
-| 3 | `delivery_agent` | Field delivery personnel | Flutter Mobile App |
+| Account Type | Role Code | Who They Are | Interface |
+|--------------|-----------|--------------|-----------|
+| admin | `super_admin` | Internal admin team | Web Dashboard — Full Access |
+| company | `shipping_company` | Client companies that send orders | Flutter Mobile App |
+| agent | `delivery_agent` | Field delivery personnel | Flutter Mobile App |
+| staff | `staff_member` | Internal company employees (sub-accounts) | Web Dashboard — Limited Access |
+
+> **`account_type`** is a `TINYINT` column on the `users` table that determines which profile table to join for the extended data (`shipping_companies`, `delivery_agents`, `staff_members`).
 
 ### Business Flow (Read Before Every Task)
 
 ```
-Shipping Company → sends orders
+Shipping Company → creates orders via Flutter Mobile App
         ↓
-Super Admin → receives, reviews, assigns to agents
+Super Admin → receives, reviews, assigns to delivery agents
         ↓
-Delivery Agent → attempts delivery → updates status
+Delivery Agent → attempts delivery → updates status via mobile app
         ↓
-Agent collects cash (when applicable)
+Agent collects cash (COD, shipping fee, or partial) when applicable
         ↓
-Admin receives collections from agent
+Admin receives cash collections from agent
         ↓
 Admin settles (transfers net amount) to shipping company
 ```
@@ -56,128 +59,105 @@ Admin settles (transfers net amount) to shipping company
 
 ## 3. Directory Structure
 
+### Actual Modules (what exists today)
+
 ```
 app/
-├── Modules/
-│   ├── Core/                    ← Shared base classes, traits, helpers
-│   │   ├── Application/
-│   │   │   └── Helpers/
-│   │   │       ├── ApiResponse.php
-│   │   │       └── PaginationMeta.php
-│   │   ├── Infrastructure/
-│   │   │   └── Traits/
-│   │   │       └── HasFormattedDates.php
-│   │   └── Presentation/
-│   │       └── Resources/
-│   │           └── lang/
-│   │               ├── ar/messages.php
-│   │               └── en/messages.php
-│   │
-│   ├── Auth/                    ← Login, logout, token refresh
-│   ├── Users/                   ← User management (all 3 roles)
-│   ├── ShippingCompanies/       ← Company profiles & addresses
-│   ├── DeliveryAgents/          ← Agent profiles & zones
-│   ├── Orders/                  ← Core order lifecycle
-│   │   └── Domain/
-│   │       └── Enums/
-│   │           ├── OrderStatusEnum.php
-│   │           ├── CollectionTypeEnum.php
-│   │           ├── ApprovalTypeEnum.php
-│   │           └── ApprovalStatusEnum.php
-│   ├── Collections/             ← Cash collection records
-│   ├── Returns/                 ← Return goods tracking
-│   ├── Settlements/             ← Financial clearance
-│   ├── ApprovalRequests/        ← Price/fee change approvals
-│   ├── RefusalTimer/            ← 5-min refusal timer logic
-│   ├── Chat/                    ← Conversations & messages
-│   ├── Notifications/           ← FCM push + in-app notifications
-│   ├── GpsCheckpoints/          ← Spot GPS capture (NOT live tracking)
-│   ├── PostponedSchedules/      ← Agent postponement calendar
-│   └── SystemSettings/          ← Runtime config key-value store
-
-database/
-└── migrations/
-    └── 2024_01_01_XXXXXX_create_{table}_table.php
+└── Modules/
+    ├── Core/              ← Shared base classes, traits, helpers, module loader
+    ├── Auth/              ← JWT login, logout, token refresh, OTP password reset
+    ├── Users/             ← All user types: admin, companies, agents, staff
+    │                        (includes shipping_companies, delivery_agents, staff_members tables)
+    ├── Roles/             ← Spatie permissions wrapper — roles & permissions CRUD
+    ├── Locations/         ← Governorates, cities, addresses
+    ├── Departments/       ← Internal department management for staff
+    ├── AuditLog/          ← Action audit trail (who did what, when)
+    ├── Settings/          ← Runtime config key-value store (system_settings table)
+    ├── Notifications/     ← FCM push + in-app notifications (fully built)
+    ├── Dashboard/         ← Stats, charts, order models (Order model lives here temporarily)
+    └── Orders/            ← Core order lifecycle (DB tables migrated, module is a stub — routes empty)
 ```
 
-Each module follows this **Clean Architecture** internal structure:
+### DB Tables with No Module Yet (planned — migrations exist)
 
 ```
-Modules/Orders/
+Finance:       collections, returns, settlements, approval_requests
+Timer:         refusal_timer_logs
+Chat:          conversations, conversation_participants, messages, message_reads
+Schedule:      postponed_schedules
+GPS:           (gps_checkpoints — planned, migration not yet created)
+```
+
+### Module Discovery
+
+`CoreServiceProvider` registers `ModuleServiceProvider`, which auto-discovers modules by scanning `app/Modules/*/Infrastructure/Providers/{ModuleName}ServiceProvider.php`. Modules with a `module.json` file can declare extra providers to register.
+
+### Internal Structure of Each Module (Clean Architecture)
+
+```
+Modules/{Name}/
 │
 ├── Application/
 │   ├── DTOs/
-│   │   ├── CreateOrderDTO.php
-│   │   └── UpdateOrderDTO.php
 │   ├── Exceptions/
-│   │   └── OrderNotFoundException.php
+│   ├── Listeners/         ← Event listeners (if module handles domain events)
 │   └── UseCases/
-│       ├── CreateOrderUseCase.php
-│       ├── AssignOrderUseCase.php
-│       ├── UpdateOrderStatusUseCase.php
-│       └── GetOrdersUseCase.php
 │
 ├── Domain/
-│   ├── Enums/
-│   │   ├── OrderStatusEnum.php
-│   │   └── CollectionTypeEnum.php
-│   ├── Interfaces/
-│   │   └── OrderRepositoryInterface.php
-│   └── Services/
-│       └── OrderDomainService.php
+│   ├── DTOs/              ← Value objects passed across layer boundaries
+│   ├── Enums/             ← IntBackedEnum for all TINYINT coded columns
+│   ├── Events/            ← Domain events (fired by Use Cases)
+│   ├── Interfaces/        ← Repository interfaces
+│   └── Services/          ← Pure domain logic
 │
 ├── Infrastructure/
+│   ├── Config/            ← Module-specific config files
 │   ├── Database/
-│   │   ├── Migrations/
+│   │   ├── Migrations/    ← Module-owned migrations (not all modules use this)
 │   │   ├── Seeders/
-│   │   └── Models/
-│   │       ├── Order.php
-│   │       ├── OrderCustomerInfo.php
-│   │       ├── OrderAddress.php
-│   │       ├── OrderFinancial.php
-│   │       ├── OrderItem.php
-│   │       ├── OrderSchedule.php
-│   │       └── OrderApproval.php
+│   │   └── Models/        ← Eloquent models
+│   ├── ExternalServices/  ← HTTP clients, FCM, WhatsApp, etc.
+│   ├── Jobs/              ← Queue jobs
 │   ├── Persistence/
-│   │   └── OrderRepository.php
+│   │   └── Repositories/  ← Eloquent repository implementations
 │   └── Providers/
-│       └── OrderServiceProvider.php
+│       ├── {Name}ServiceProvider.php
+│       ├── RepositoryServiceProvider.php  ← binds interface → implementation
+│       └── RouteServiceProvider.php
 │
 └── Presentation/
     ├── Http/
     │   ├── Controllers/
-    │   │   └── OrderController.php
     │   ├── Requests/
-    │   │   ├── StoreOrderRequest.php
-    │   │   └── UpdateOrderStatusRequest.php
     │   └── Resources/
-    │       └── OrderResource.php
     ├── Resources/
-    │   └── lang/
-    │       ├── ar/orders.php
-    │       └── en/orders.php
+    │   └── Lang/
+    │       ├── ar/
+    │       └── en/
     └── Routes/
-        └── api.php
+        ├── api.php         ← public/shared API routes
+        └── admin.php       ← admin-only routes (where applicable)
 ```
 
-### Namespace Map
+### Namespace Map (using Notifications as example)
 
 | Layer | Namespace |
 |-------|-----------|
-| Use Cases | `App\Modules\Orders\Application\UseCases` |
-| DTOs | `App\Modules\Orders\Application\DTOs` |
-| Exceptions | `App\Modules\Orders\Application\Exceptions` |
-| Domain Enums | `App\Modules\Orders\Domain\Enums` |
-| Domain Interfaces | `App\Modules\Orders\Domain\Interfaces` |
-| Domain Services | `App\Modules\Orders\Domain\Services` |
-| Eloquent Models | `App\Modules\Orders\Infrastructure\Database\Models` |
-| Repository | `App\Modules\Orders\Infrastructure\Persistence` |
-| Service Provider | `App\Modules\Orders\Infrastructure\Providers` |
-| Controller | `App\Modules\Orders\Presentation\Http\Controllers` |
-| Form Requests | `App\Modules\Orders\Presentation\Http\Requests` |
-| API Resources | `App\Modules\Orders\Presentation\Http\Resources` |
-| Lang | `App\Modules\Orders\Presentation\Resources\lang\` |
-| Routes | `App\Modules\Orders\Presentation\Routes` |
+| Use Cases | `App\Modules\Notifications\Application\UseCases` |
+| DTOs | `App\Modules\Notifications\Application\DTOs` |
+| Exceptions | `App\Modules\Notifications\Application\Exceptions` |
+| Listeners | `App\Modules\Notifications\Application\Listeners` |
+| Domain Events | `App\Modules\Notifications\Domain\Events` |
+| Domain Enums | `App\Modules\Notifications\Domain\Enums` |
+| Domain Interfaces | `App\Modules\Notifications\Domain\Interfaces` |
+| Eloquent Models | `App\Modules\Notifications\Infrastructure\Database\Models` |
+| Repository | `App\Modules\Notifications\Infrastructure\Persistence\Repositories` |
+| Service Provider | `App\Modules\Notifications\Infrastructure\Providers` |
+| Controller | `App\Modules\Notifications\Presentation\Http\Controllers` |
+| Form Requests | `App\Modules\Notifications\Presentation\Http\Requests` |
+| API Resources | `App\Modules\Notifications\Presentation\Http\Resources` |
+| Lang | `App\Modules\Notifications\Presentation\Resources\Lang` |
+| Routes | `App\Modules\Notifications\Presentation\Routes` |
 
 ---
 
@@ -187,30 +167,40 @@ Modules/Orders/
 - **Single database** — no multi-tenancy, no tenant scoping needed.
 - **No ENUM columns** — all coded values are `TINYINT UNSIGNED`.
 - **Laravel IntBackedEnum classes** handle all ENUM logic — value map documented in column `COMMENT`.
-- **Normalized to 3NF** — the `orders` table is split into 7 focused child tables.
-- **Financial columns** — always `DECIMAL(15,2)` for amounts, `DECIMAL(10,4)` for commission rates. Never `float` or `double`.
+- **UUID primary keys** — domain entities use named UUID PKs (`user_id`, `order_id`, etc.), not auto-increment `id`. The `HasUuid` trait in `Core` generates UUID v4 automatically on model creation. Infrastructure/pivot tables (jobs, permissions, audit_logs) use BIGINT `id`.
+- **Normalized to 3NF** — the `orders` table is split into 6 focused child tables.
+- **Financial columns** — always `DECIMAL(12,2)` for amounts, `DECIMAL(10,4)` for commission rates. Never `float` or `double`.
 
-### Table Inventory (29 tables)
+### Table Inventory
 
 ```
 Auth & Users:
-  roles, users, personal_access_tokens
+  users                       ← all account types via account_type TINYINT
+  password_reset_otps         ← OTP-based password reset
+  personal_access_tokens      ← Sanctum (secondary; JWT is primary)
 
-Companies & Agents:
+Spatie RBAC:
+  permissions, roles
+  model_has_permissions, model_has_roles, role_has_permissions
+
+User Profiles (sub-tables of users):
   shipping_companies, shipping_company_addresses
   delivery_agents, agent_zones
+  staff_members, departments
+
+Locations:
+  governorates, cities, addresses
 
 Orders (3NF split):
-  order_statuses (seeded — 17 statuses)
-  orders                  ← identity & assignment only
-  order_customer_info     ← customer name & phones
-  order_addresses         ← delivery address
-  order_financials        ← all money fields
-  order_items             ← quantities
-  order_schedules         ← expected & postponed dates
-  order_approvals         ← approval flags
-  order_status_history    ← immutable audit log
-  order_proofs            ← delivery proof uploads
+  orders                      ← identity & assignment only
+  order_customer_info         ← customer name & phones
+  order_addresses             ← delivery address
+  order_financials            ← all money fields
+  order_items                 ← quantities & description
+  order_schedules             ← expected & postponed dates
+  order_approvals             ← approval flags
+  order_status_history        ← immutable audit log
+  order_proofs                ← delivery proof uploads
 
 Finance:
   collections
@@ -223,12 +213,19 @@ Chat:
   conversations
   conversation_participants
   messages
+  message_reads
 
 System:
   notifications
-  gps_checkpoints
   postponed_schedules
-  system_settings         ← seeded with 9 default values
+  system_settings             ← seeded with default values
+  media_files                 ← file attachments metadata
+  audit_logs                  ← user action audit trail
+
+Queue & Cache (Laravel infra):
+  jobs, job_batches, failed_jobs
+  cache, cache_locks
+  sessions
 ```
 
 ### TINYINT Enum Maps
@@ -237,6 +234,7 @@ Every `TINYINT` coded column has its map in the `COMMENT` and a corresponding La
 
 | Column | Table | Map |
 |--------|-------|-----|
+| `account_type` | users | 1=admin, 2=company, 3=agent, 4=staff |
 | `commission_type` | shipping_companies, delivery_agents | 1=percentage, 2=fixed |
 | `vehicle_type` | delivery_agents | 1=motorcycle, 2=car, 3=van, 4=bicycle, 5=on_foot |
 | `file_type` | order_proofs | 1=image, 2=pdf, 3=other |
@@ -249,7 +247,6 @@ Every `TINYINT` coded column has its map in the `COMMENT` and a corresponding La
 | `resolution` | refusal_timer_logs | 1=delivered, 2=refused_paid, 3=refused_no_pay, 4=expired |
 | `message_type` | messages | 1=text, 2=image, 3=attachment |
 | `notification_type` | notifications | 1=new_order, 2=status_change, 3=approval_request, 4=timer_start, 5=timer_expired, 6=new_message, 7=phone_updated, 8=postponed_reminder |
-| `event_type` | gps_checkpoints | 1=delivery_confirmation, 2=refusal_start, 3=refusal_check, 4=refusal_end, 5=unsafe_area, 6=no_answer |
 | `data_type` | system_settings | 1=string, 2=integer, 3=decimal, 4=boolean, 5=json |
 
 ### Order Statuses (seeded, never modify manually)
@@ -288,57 +285,114 @@ Every `TINYINT` coded column has its map in the `COMMENT` and a corresponding La
 | DTO | Verb + Noun + DTO | `CreateOrderDTO`, `UpdateOrderStatusDTO` |
 | Repository Interface | Noun + RepositoryInterface | `OrderRepositoryInterface` |
 | Repository | Noun + Repository | `OrderRepository` |
-| Service | Noun + DomainService | `OrderDomainService` |
+| Domain Service | Noun + DomainService | `OrderDomainService` |
 | Form Request | Store/Update + Noun + Request | `StoreOrderRequest`, `UpdateOrderStatusRequest` |
-| API Resource | Noun + Resource | `OrderResource`, `AgentResource` |
+| API Resource | Noun + Resource | `OrderResource`, `NotificationResource` |
 | Exception | Descriptive + Exception | `OrderNotFoundException`, `TimerExpiredException` |
-| Job | Verb + Noun + Job | `SendRefusalTimerNotificationJob` |
-| Event | PastTense | `OrderAssigned`, `CollectionRecorded` |
-| Enum | Noun + Enum | `OrderStatusEnum`, `CollectionTypeEnum` |
+| Job | Verb + Noun + Job | `SendFcmNotificationJob` |
+| Event | PastTense noun | `OrderAssigned`, `NewMessageSent` |
+| Listener | Handle + EventName | `HandleOrderAssigned`, `HandleNewMessageSent` |
+| Enum | Noun + Enum | `OrderStatusEnum`, `NotificationTypeEnum` |
 
 ### Database
 
 | Type | Convention | Example |
 |------|-----------|---------|
 | Table | `snake_case` plural | `orders`, `delivery_agents`, `order_financials` |
-| Primary Key | `id` BIGINT UNSIGNED | `id` |
+| Domain PK | `{entity_singular}_id` UUID string | `user_id`, `order_id`, `notification_id` |
+| Infra/pivot PK | `id` BIGINT UNSIGNED auto-increment | `audit_logs.id`, `roles.id` |
 | Foreign Key | `{referenced_singular}_id` | `order_id`, `agent_id`, `company_id` |
-| Boolean | `is_{state}` or `has_{feature}` | `is_active`, `is_settled`, `is_available` |
-| Coded value | `TINYINT UNSIGNED` | `commission_type`, `return_status` |
+| Boolean | `is_{state}` or `has_{feature}` | `is_active`, `is_settled`, `is_read` |
+| Coded value | `TINYINT UNSIGNED` with COMMENT | `commission_type`, `notification_type` |
 | Financial | `DECIMAL(12,2)` amounts, `DECIMAL(10,4)` rates | `collected_amount`, `commission_value` |
 | GPS coords | `DECIMAL(10,7)` | `gps_lat`, `gps_lng` |
-| Timestamp columns | `created_at`, `updated_at` | standard Laravel |
-| Soft delete | `deleted_at` | optional per model |
+| Timestamps | `created_at`, `updated_at` | standard Laravel |
+| Soft delete | `deleted_at` | on real-world entity models |
 
 ### Routes
 
 ```
-/api/v1/auth/login         → Login (public)
-/api/v1/auth/forgot-password, /reset-password → OTP email reset (public)
+/api/v1/auth/login                     → Login (public)
+/api/v1/auth/forgot-password           → OTP request (public)
+/api/v1/auth/reset-password            → OTP verification + password reset (public)
 /api/v1/auth/me, /logout, /refresh, /change-password → JWT required
-/api/v1/admin/...          → Super admin routes
-/api/v1/company/...        → Shipping company routes
-/api/v1/agent/...          → Delivery agent mobile routes
+/api/v1/admin/...                      → Super admin routes
+/api/v1/locations/...                  → Location lookups (mostly public)
+/api/v1/notifications/...              → Notifications (auth:api)
+/api/dashboard/...                     → Dashboard stats (auth:api)
 ```
 
 ### Variable & Method Names
 
 - Variables: `camelCase`
-- Methods: `camelCase`, verb-first: `assignOrder()`, `recordCollection()`, `startRefusalTimer()`
+- Methods: `camelCase`, verb-first: `assignOrder()`, `markAsRead()`, `sendNotification()`
 - Constants: `UPPER_SNAKE_CASE`
 - Config keys: `snake_case`
 - Enum cases: `PascalCase` — `OrderStatusEnum::Delivered`
 
 ---
 
-## 6. Laravel Enum Classes (IntBackedEnum)
+## 6. UUID Primary Keys
+
+**All domain entity tables use UUID string PKs** with named columns, not auto-increment `id`.
+
+```php
+// The HasUuid trait (app/Modules/Core/Infrastructure/Traits/HasUuid.php)
+// auto-generates a UUID v4 on the 'creating' model event.
+
+class Notification extends Model
+{
+    use HasUuid;
+
+    protected $primaryKey   = 'notification_id';
+    public    $incrementing = false;
+    protected $keyType      = 'string';
+
+    protected $fillable = [
+        'notification_id',
+        'user_id',
+        'notification_type',
+        'title_ar',
+        'body_ar',
+        'data',
+        'is_read',
+        'read_at',
+        'sent_via_fcm',
+        'fcm_message_id',
+    ];
+
+    protected $casts = [
+        'notification_type' => NotificationTypeEnum::class,
+        'data'              => 'array',
+        'is_read'           => 'boolean',
+        'sent_via_fcm'      => 'boolean',
+        'read_at'           => 'datetime',
+    ];
+}
+```
+
+**UUID FK migrations** reference the named UUID PK column:
+
+```php
+// Correct — FK to a UUID PK column
+$table->string('user_id', 36)->index();
+$table->foreign('user_id', 'fk_notif_user')
+      ->references('user_id')
+      ->on('users')
+      ->cascadeOnDelete();
+
+// Infra/pivot tables that do NOT represent domain entities still use BIGINT:
+$table->id(); // fine for audit_logs, roles, permissions, jobs, etc.
+```
+
+---
+
+## 7. Laravel Enum Classes (IntBackedEnum)
 
 **All TINYINT coded columns must have a corresponding IntBackedEnum in the module's `Domain/Enums/` folder.**
 
 ```php
 <?php
-// app/Modules/Orders/Domain/Enums/OrderStatusEnum.php
-
 namespace App\Modules\Orders\Domain\Enums;
 
 enum OrderStatusEnum: int
@@ -397,12 +451,12 @@ enum OrderStatusEnum: int
             self::RefusedNoPayment      => 'رفض وعدم دفع رسوم الشحن',
             self::CustomerCancelled     => 'ألغى العميل',
             self::NoAnswer              => 'لا يوجد رد',
-            self::PhoneOff             => 'الهاتف مغلق',
-            self::CustomerEvading      => 'تهرّب / مختفي',
-            self::UnsafeArea           => 'منطقة غير آمنة',
-            self::Postponed            => 'مؤجل',
-            self::OutsideGovernorate   => 'خارج المحافظة',
-            self::WrongPhone           => 'رقم هاتف خاطئ',
+            self::PhoneOff              => 'الهاتف مغلق',
+            self::CustomerEvading       => 'تهرّب / مختفي',
+            self::UnsafeArea            => 'منطقة غير آمنة',
+            self::Postponed             => 'مؤجل',
+            self::OutsideGovernorate    => 'خارج المحافظة',
+            self::WrongPhone            => 'رقم هاتف خاطئ',
         };
     }
 }
@@ -412,179 +466,159 @@ Cast every coded column in its model:
 
 ```php
 protected $casts = [
-    'status_id'      => OrderStatusEnum::class,
-    'return_status'  => ReturnStatusEnum::class,
-    'message_type'   => MessageTypeEnum::class,
+    'notification_type' => NotificationTypeEnum::class,
+    'message_type'      => MessageTypeEnum::class,
 ];
 ```
 
 ---
 
-## 7. Model Rules
+## 8. Model Rules
 
 ```php
 <?php
 
-namespace App\Modules\Orders\Infrastructure\Database\Models;
+namespace App\Modules\Notifications\Infrastructure\Database\Models;
 
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\HasOne;
-use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
+use App\Modules\Core\Infrastructure\Traits\HasUuid;
+use App\Modules\Notifications\Domain\Enums\NotificationTypeEnum;
+use App\Modules\Users\Infrastructure\Database\Models\User;
 
-class Order extends Model
+class Notification extends Model
 {
-    protected $table = 'orders';
+    use HasUuid;
+
+    protected $table        = 'notifications';
+    protected $primaryKey   = 'notification_id';
+    public    $incrementing = false;
+    protected $keyType      = 'string';
 
     protected $fillable = [
-        'reference_no',
-        'internal_code',
-        'shipping_company_id',
-        'delivery_agent_id',
-        'status_id',
-        'assigned_at',
-        'delivered_at',
+        'user_id',
+        'notification_type',
+        'title_ar',
+        'body_ar',
+        'data',
+        'is_read',
+        'read_at',
+        'sent_via_fcm',
+        'fcm_message_id',
     ];
 
     protected $casts = [
-        'status_id'   => OrderStatusEnum::class,
-        'assigned_at' => 'datetime',
-        'delivered_at'=> 'datetime',
-        'created_at'  => 'datetime',
-        'updated_at'  => 'datetime',
+        'notification_type' => NotificationTypeEnum::class,
+        'data'              => 'array',
+        'is_read'           => 'boolean',
+        'sent_via_fcm'      => 'boolean',
+        'read_at'           => 'datetime',
     ];
 
-    // ── 3NF Child relationships ─────────────────────────────
-    public function customerInfo(): HasOne
+    public function user(): \Illuminate\Database\Eloquent\Relations\BelongsTo
     {
-        return $this->hasOne(OrderCustomerInfo::class, 'order_id');
-    }
-
-    public function address(): HasOne
-    {
-        return $this->hasOne(OrderAddress::class, 'order_id');
-    }
-
-    public function financials(): HasOne
-    {
-        return $this->hasOne(OrderFinancial::class, 'order_id');
-    }
-
-    public function items(): HasOne
-    {
-        return $this->hasOne(OrderItem::class, 'order_id');
-    }
-
-    public function schedule(): HasOne
-    {
-        return $this->hasOne(OrderSchedule::class, 'order_id');
-    }
-
-    public function approval(): HasOne
-    {
-        return $this->hasOne(OrderApproval::class, 'order_id');
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 }
 ```
 
 ### Model Rules Checklist
+- [ ] Use `HasUuid` trait — set `$primaryKey`, `$incrementing = false`, `$keyType = 'string'`
 - [ ] Always use `$fillable` — never `$guarded = []`
 - [ ] Cast every TINYINT coded column to its IntBackedEnum
 - [ ] Cast all timestamps to `'datetime'`
 - [ ] Cast financial columns: `'decimal:2'`
+- [ ] Cast boolean TINYINT columns to `'boolean'`
+- [ ] Cast JSON columns to `'array'`
 - [ ] Use `softDeletes()` on models representing real-world entities
 - [ ] Place model in `Infrastructure/Database/Models/` inside its module only
+- [ ] BelongsTo FK and referenced PK must both be specified explicitly (UUID named PKs)
 
 ---
 
-## 8. Controller Rules
+## 9. Controller Rules
 
 Controllers are **thin wrappers** only. Zero business logic inside.
 
 ```php
 <?php
 
-namespace App\Modules\Orders\Presentation\Http\Controllers;
+namespace App\Modules\Notifications\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Core\Application\Helpers\ApiResponse;
-use App\Modules\Orders\Application\UseCases\CreateOrderUseCase;
-use App\Modules\Orders\Application\UseCases\AssignOrderUseCase;
-use App\Modules\Orders\Application\UseCases\GetOrdersUseCase;
-use App\Modules\Orders\Presentation\Http\Requests\StoreOrderRequest;
-use App\Modules\Orders\Presentation\Http\Requests\AssignOrderRequest;
-use App\Modules\Orders\Presentation\Http\Resources\OrderResource;
+use App\Modules\Notifications\Application\UseCases\GetUserNotificationsUseCase;
+use App\Modules\Notifications\Application\UseCases\MarkNotificationReadUseCase;
+use App\Modules\Notifications\Application\UseCases\GetUnreadCountUseCase;
+use App\Modules\Notifications\Presentation\Http\Resources\NotificationResource;
+use Illuminate\Http\Request;
 
-class OrderController extends Controller
+class NotificationController extends Controller
 {
     public function __construct(
-        private CreateOrderUseCase $createOrder,
-        private AssignOrderUseCase $assignOrder,
-        private GetOrdersUseCase   $getOrders,
+        private GetUserNotificationsUseCase $getNotifications,
+        private MarkNotificationReadUseCase $markRead,
+        private GetUnreadCountUseCase       $getUnreadCount,
     ) {}
 
-    public function index(): \Illuminate\Http\JsonResponse
+    public function index(Request $request): \Illuminate\Http\JsonResponse
     {
-        $orders = $this->getOrders->execute();
-
-        return ApiResponse::paginated(OrderResource::collection($orders));
+        $notifications = $this->getNotifications->execute(auth()->id());
+        return ApiResponse::paginated(NotificationResource::collection($notifications));
     }
 
-    public function store(StoreOrderRequest $request): \Illuminate\Http\JsonResponse
+    public function markRead(string $id): \Illuminate\Http\JsonResponse
     {
-        $order = $this->createOrder->execute($request->validated());
-
-        return ApiResponse::success(
-            new OrderResource($order),
-            __('orders.created'),
-            201
-        );
+        $this->markRead->execute($id, auth()->id());
+        return ApiResponse::success(null, __('notifications.messages.marked_read'));
     }
 
-    public function assign(AssignOrderRequest $request, int $id): \Illuminate\Http\JsonResponse
+    public function unreadCount(): \Illuminate\Http\JsonResponse
     {
-        $order = $this->assignOrder->execute($id, $request->validated());
-
-        return ApiResponse::success(new OrderResource($order), __('orders.assigned'));
+        $count = $this->getUnreadCount->execute(auth()->id());
+        return ApiResponse::success(['count' => $count]);
     }
 }
 ```
 
 ---
 
-## 9. Use Case Rules
+## 10. Use Case Rules
 
 ```php
 <?php
 
-namespace App\Modules\Orders\Application\UseCases;
+namespace App\Modules\Notifications\Application\UseCases;
 
-use App\Modules\Orders\Application\DTOs\CreateOrderDTO;
-use App\Modules\Orders\Domain\Interfaces\OrderRepositoryInterface;
-use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
-use App\Modules\Notifications\Application\UseCases\SendNotificationUseCase;
-use Illuminate\Support\Facades\DB;
+use App\Modules\Notifications\Application\DTOs\SendNotificationDTO;
+use App\Modules\Notifications\Domain\Interfaces\NotificationRepositoryInterface;
+use App\Modules\Notifications\Infrastructure\Jobs\SendFcmNotificationJob;
 
-class CreateOrderUseCase
+class SendNotificationUseCase
 {
     public function __construct(
-        private OrderRepositoryInterface  $repository,
-        private SendNotificationUseCase   $sendNotification,
+        private NotificationRepositoryInterface $repository,
     ) {}
 
-    public function execute(array $data): array
+    public function execute(SendNotificationDTO $dto): void
     {
-        $dto = CreateOrderDTO::fromArray($data);
+        $notification = $this->repository->create([
+            'user_id'           => $dto->userId,
+            'notification_type' => $dto->type->value,
+            'title_ar'          => $dto->titleAr,
+            'body_ar'           => $dto->bodyAr,
+            'data'              => $dto->data,
+            'sent_via_fcm'      => (bool) $dto->fcmToken,
+        ]);
 
-        $order = DB::transaction(function () use ($dto) {
-            $order = $this->repository->create($dto);
-            // create child rows (financials, customer info, address, items, schedule)
-            $this->repository->createChildRecords($order->id, $dto);
-            return $order;
-        });
-
-        return $order->load([
-            'customerInfo', 'address', 'financials', 'items', 'schedule'
-        ])->toArray();
+        if ($dto->fcmToken) {
+            SendFcmNotificationJob::dispatch(
+                fcmToken:         $dto->fcmToken,
+                notificationType: $dto->type,
+                titleAr:          $dto->titleAr,
+                bodyAr:           $dto->bodyAr,
+                data:             $dto->data,
+            )->onQueue('notifications');
+        }
     }
 }
 ```
@@ -593,50 +627,50 @@ class CreateOrderUseCase
 - [ ] Inject all dependencies via constructor — never `new SomeClass()`
 - [ ] Wrap multi-step DB operations in `DB::transaction()`
 - [ ] Throw typed exceptions on business rule violations
-- [ ] Never access `Request` — receive plain array from controller
+- [ ] Never access `Request` — receive plain array or DTO from controller
 - [ ] Never return Eloquent Models — return array or DTO
 - [ ] Never couple to Laravel-specific classes (`Collection`, `Response`, etc.)
 - [ ] Never put validation logic here — that belongs in FormRequest
 
 ---
 
-## 10. DTO Rules
+## 11. DTO Rules
 
 ```php
 <?php
 
-namespace App\Modules\Orders\Application\DTOs;
+namespace App\Modules\Notifications\Application\DTOs;
 
-readonly class CreateOrderDTO
+use App\Modules\Notifications\Domain\Enums\NotificationTypeEnum;
+
+readonly class SendNotificationDTO
 {
     public function __construct(
-        public int     $shipping_company_id,
-        public string  $reference_no,
-        public string  $internal_code,
-        public string  $customer_name,
-        public string  $customer_phone,
-        public ?string $phone_alt,
-        public string  $address_line,
-        public ?string $governorate,
-        public ?string $city,
-        public ?string $area,
-        public float   $original_amount,
-        public int     $total_quantity,
-        public ?string $item_description    = null,
-        public ?string $expected_delivery_date = null,
-        public ?string $address_notes       = null,
+        public string               $userId,
+        public NotificationTypeEnum $type,
+        public string               $titleAr,
+        public string               $bodyAr,
+        public array                $data        = [],
+        public ?string              $fcmToken    = null,
     ) {}
 
     public static function fromArray(array $data): self
     {
-        return new self(...$data);
+        return new self(
+            userId:   $data['user_id'],
+            type:     $data['type'],
+            titleAr:  $data['title_ar'],
+            bodyAr:   $data['body_ar'],
+            data:     $data['data'] ?? [],
+            fcmToken: $data['fcm_token'] ?? null,
+        );
     }
 }
 ```
 
 ---
 
-## 11. API Response Structure
+## 12. API Response Structure
 
 **All responses must use this exact structure — no raw `json()` calls directly in controllers.**
 
@@ -703,7 +737,7 @@ class ApiResponse
 
 ---
 
-## 12. Migration Rules
+## 13. Migration Rules
 
 ```php
 <?php
@@ -716,33 +750,47 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('order_financials', function (Blueprint $table) {
-            $table->id();                                          // BIGINT UNSIGNED AUTO_INCREMENT
-            $table->foreignId('order_id')
-                  ->unique()
-                  ->constrained('orders', 'id', 'fk_of_order')
+        Schema::create('notifications', function (Blueprint $table) {
+            // UUID primary key — named after the entity
+            $table->string('notification_id', 36)->primary();
+
+            // UUID foreign key — references the named UUID PK of users
+            $table->string('user_id', 36)->index('idx_notif_user');
+            $table->foreign('user_id', 'fk_notif_user')
+                  ->references('user_id')
+                  ->on('users')
                   ->cascadeOnDelete();
 
-            $table->decimal('original_amount', 12, 2)->default(0);
-            $table->decimal('approved_amount', 12, 2)->nullable();
-            $table->decimal('collected_amount', 12, 2)->nullable();
-            $table->decimal('shipping_fee', 12, 2)->nullable();
-            $table->decimal('commission_amount', 12, 2)->nullable();
-            $table->decimal('net_due_company', 12, 2)->nullable();
-            $table->tinyInteger('is_settled')->default(0)->index('idx_of_settled');
+            $table->unsignedTinyInteger('notification_type')
+                  ->comment('1=new_order,2=status_change,3=approval_request,4=timer_start,5=timer_expired,6=new_message,7=phone_updated,8=postponed_reminder')
+                  ->index('idx_notif_type');
+
+            $table->string('title_ar');
+            $table->text('body_ar');
+            $table->json('data')->nullable();
+            $table->tinyInteger('is_read')->default(0);
+            $table->timestamp('read_at')->nullable();
+            $table->tinyInteger('sent_via_fcm')->default(0);
+            $table->string('fcm_message_id')->nullable();
+            $table->timestamps();
+
+            $table->index(['user_id', 'is_read'], 'idx_notif_user_read');
+            $table->index(['user_id', 'created_at'], 'idx_notif_user_created');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('order_financials');
+        Schema::dropIfExists('notifications');
     }
 };
 ```
 
 ### Migration Rules Checklist
-- [ ] PK: always `$table->id()` — BIGINT UNSIGNED
-- [ ] FK: use named constraints `constrained('table', 'id', 'fk_name')`
+- [ ] Domain entity PK: `$table->string('{entity}_id', 36)->primary()` — UUID string, NOT `$table->id()`
+- [ ] Infra/pivot PK: `$table->id()` — BIGINT, acceptable for non-domain tables
+- [ ] UUID FK: `$table->string('{entity}_id', 36)` + explicit `->foreign()` referencing named PK column
+- [ ] Always name FK constraints (`'fk_table_column'`) and indexes (`'idx_table_column'`)
 - [ ] Financial amounts: `decimal(12,2)` — never float or double
 - [ ] Commission/rate values: `decimal(10,4)`
 - [ ] GPS coordinates: `decimal(10,7)`
@@ -753,65 +801,48 @@ return new class extends Migration
 
 ---
 
-## 13. Resource Rules
+## 14. Resource Rules
 
 ```php
 <?php
 
-namespace App\Modules\Orders\Presentation\Http\Resources;
+namespace App\Modules\Notifications\Presentation\Http\Resources;
 
 use Illuminate\Http\Resources\Json\JsonResource;
 
-class OrderResource extends JsonResource
+class NotificationResource extends JsonResource
 {
     public function toArray($request): array
     {
         return [
-            'id'            => $this->id,
-            'reference_no'  => $this->reference_no,
-            'internal_code' => $this->internal_code,
-            'status'        => [
-                'code'    => $this->status_id->value,
-                'label'   => $this->status_id->labelAr(),
-                'terminal'=> $this->status_id->isTerminal(),
+            'id'                => $this->notification_id,
+            'type'              => [
+                'code'  => $this->notification_type->value,
+                'label' => $this->notification_type->name,
             ],
-            'company'       => [
-                'id'   => $this->shipping_company_id,
-                'name' => $this->shippingCompany?->company_name,
-            ],
-            'agent'         => $this->when(
-                $this->delivery_agent_id,
-                fn() => [
-                    'id'    => $this->delivery_agent_id,
-                    'name'  => $this->deliveryAgent?->user?->name,
-                    'phone' => $this->deliveryAgent?->user?->phone,
-                ]
-            ),
-            'customer'      => new OrderCustomerInfoResource($this->whenLoaded('customerInfo')),
-            'address'       => new OrderAddressResource($this->whenLoaded('address')),
-            'financials'    => new OrderFinancialResource($this->whenLoaded('financials')),
-            'items'         => new OrderItemResource($this->whenLoaded('items')),
-            'schedule'      => new OrderScheduleResource($this->whenLoaded('schedule')),
-            'assigned_at'   => $this->assigned_at?->toISOString(),
-            'delivered_at'  => $this->delivered_at?->toISOString(),
-            'created_at'    => $this->created_at?->toISOString(),
+            'title'             => $this->title_ar,
+            'body'              => $this->body_ar,
+            'data'              => $this->data,
+            'is_read'           => $this->is_read,
+            'read_at'           => $this->read_at?->toISOString(),
+            'created_at'        => $this->created_at?->toISOString(),
         ];
     }
 }
 ```
 
 ### Resource Rules Checklist
-- [ ] Always expose primary key as `id` — never as `order_id`
+- [ ] Always expose the UUID PK as `id` in the JSON output (map `user_id` → `id`, `notification_id` → `id`)
 - [ ] Always use `$this->whenLoaded('relation')` on relationships — never unconditional eager loads
 - [ ] Use `$this->when(condition, fn() => ...)` for optional fields
-- [ ] Format timestamps as ISO string or `diffForHumans()` — never raw
+- [ ] Format timestamps as ISO string or `diffForHumans()` — never raw Carbon
 - [ ] Expose the Enum label alongside its integer value
-- [ ] Never expose raw `role_id` integers — expose readable role name
-- [ ] Never expose `password`, `password_hash`, `fcm_token`, or `remember_token`
+- [ ] Never expose readable role strings from raw integers — use Enum `name` or `labelAr()`
+- [ ] Never expose `password`, `fcm_token`, or `remember_token`
 
 ---
 
-## 14. Form Request Rules
+## 15. Form Request Rules
 
 ```php
 <?php
@@ -825,7 +856,6 @@ class UpdateOrderStatusRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        // Agents can only update their own assigned orders
         return true; // fine-grained check done in Use Case
     }
 
@@ -834,12 +864,12 @@ class UpdateOrderStatusRequest extends FormRequest
         $validStatuses = implode(',', array_column(OrderStatusEnum::cases(), 'value'));
 
         return [
-            'status_id'         => ['required', 'integer', "in:{$validStatuses}"],
-            'gps_lat'           => ['required_if:status_id,5,8,9,14', 'numeric', 'between:-90,90'],
-            'gps_lng'           => ['required_if:status_id,5,8,9,14', 'numeric', 'between:-180,180'],
-            'postponed_date'    => ['required_if:status_id,15', 'date', 'after:today'],
-            'collected_amount'  => ['required_if:status_id,5,6,7,8', 'numeric', 'min:0'],
-            'notes'             => ['nullable', 'string', 'max:500'],
+            'status_id'        => ['required', 'integer', "in:{$validStatuses}"],
+            'gps_lat'          => ['required_if:status_id,5,8,9,14', 'numeric', 'between:-90,90'],
+            'gps_lng'          => ['required_if:status_id,5,8,9,14', 'numeric', 'between:-180,180'],
+            'postponed_date'   => ['required_if:status_id,15', 'date', 'after:today'],
+            'collected_amount' => ['required_if:status_id,5,6,7,8', 'numeric', 'min:0'],
+            'notes'            => ['nullable', 'string', 'max:500'],
         ];
     }
 }
@@ -847,7 +877,7 @@ class UpdateOrderStatusRequest extends FormRequest
 
 ---
 
-## 15. Business Logic — Critical Rules
+## 16. Business Logic — Critical Rules
 
 ### Financial Calculation
 
@@ -864,7 +894,7 @@ $netDue = $collectedAmount - $commissionAmount;
 ### GPS Rules
 - **No live tracking** — GPS is captured only at specific events
 - Events that require GPS: `delivery_confirmation`, `refusal_start/end/check`, `unsafe_area`, `no_answer`
-- Store in `gps_checkpoints` table with `event_type` TINYINT
+- Store in `gps_checkpoints` table with `event_type` TINYINT (migration not yet created)
 - During refusal timer: validate agent stays within `system_settings.refusal_gps_radius_meters` (default 200m)
 
 ### Refusal Timer Rules
@@ -880,16 +910,18 @@ $netDue = $collectedAmount - $commissionAmount;
 - Never flatten child data back into `orders` table
 
 ### Settlement Rules
-- `settlement_type=1` (agent): `reference_entity_id` = `delivery_agents.id`
-- `settlement_type=2` (company): `reference_entity_id` = `shipping_companies.id`
+- `settlement_type=1` (agent): `reference_entity_id` = `delivery_agents.agent_id`
+- `settlement_type=2` (company): `reference_entity_id` = `shipping_companies.company_id`
 - After settlement is `paid` (status=3): update linked `collections.settlement_id`
 - Update `delivery_agents.balance` or `shipping_companies.balance` after settlement
 
 ---
 
-## 16. Notification Rules
+## 17. Notification Rules
 
 ### FCM Push (Mobile Agent App)
+
+FCM is implemented via a custom `FcmService` using `Illuminate\Support\Facades\Http` with the legacy FCM HTTP endpoint. There is **no Composer Firebase/FCM package** — the `FCM_SERVER_KEY` env variable holds the server key.
 
 ```php
 // Always dispatch to queue — never send synchronously
@@ -898,19 +930,11 @@ SendFcmNotificationJob::dispatch(
     notificationType: NotificationTypeEnum::NewOrder,
     titleAr:          'طلب جديد',
     bodyAr:           "تم تعيين طلب #{$order->internal_code} لك",
-    data:             ['order_id' => $order->id],
+    data:             ['order_id' => $order->order_id],
 )->onQueue('notifications');
-
-// Always log to notifications table
-Notification::create([
-    'user_id'           => $agent->user_id,
-    'notification_type' => NotificationTypeEnum::NewOrder->value,
-    'title_ar'          => 'طلب جديد',
-    'body_ar'           => "تم تعيين طلب #{$order->internal_code} لك",
-    'data'              => json_encode(['order_id' => $order->id]),
-    'sent_via_fcm'      => 1,
-]);
 ```
+
+The `SendNotificationUseCase` handles both DB persistence and FCM dispatch together — use it as the single entry point for all notification sending.
 
 ### Notification Events
 
@@ -927,40 +951,44 @@ Notification::create([
 
 ---
 
-## 17. Chat System Rules
+## 18. Chat System Rules
+
+Chat tables (`conversations`, `conversation_participants`, `messages`, `message_reads`) are **migrated** but the Chat module business logic is not yet built.
 
 ```php
+// When building the Chat module:
+
 // Creating a conversation linked to an order
 $conversation = Conversation::create([
-    'order_id' => $order->id,
+    'order_id' => $order->order_id,
     'subject'  => "طلب #{$order->internal_code}",
 ]);
 
 // Adding participants
 ConversationParticipant::insert([
-    ['conversation_id' => $conversation->id, 'user_id' => $adminUserId],
-    ['conversation_id' => $conversation->id, 'user_id' => $agentUserId],
+    ['conversation_id' => $conversation->conversation_id, 'user_id' => $adminUserId],
+    ['conversation_id' => $conversation->conversation_id, 'user_id' => $agentUserId],
 ]);
 
 // Creating a message
 Message::create([
-    'conversation_id' => $conversation->id,
+    'conversation_id' => $conversation->conversation_id,
     'sender_id'       => auth()->id(),
     'message_type'    => MessageTypeEnum::Text->value,
     'body'            => $messageText,
 ]);
 
-// Broadcast via WebSocket after creating
+// Broadcast via Firebase Realtime/WebSocket after creating
 broadcast(new NewMessageEvent($message))->toOthers();
 ```
 
-- Realtime via Laravel WebSockets or Pusher — never polling
-- File uploads stored in S3/R2 — store URL in `file_url`, original name in `file_name`
+- Realtime via Firebase — never polling
 - Update `conversation_participants.last_read_at` when user opens the conversation
+- File uploads stored locally via `media_files` table — store path + original name
 
 ---
 
-## 18. Queue Rules
+## 19. Queue Rules
 
 ```php
 // Queues used in this project
@@ -977,23 +1005,29 @@ const QUEUES = [
 // 2. use the correct queue name
 // 3. define $tries and $timeout
 
-class RefusalTimerExpiredJob implements ShouldQueue
+class SendFcmNotificationJob implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public int $tries   = 3;
-    public int $timeout = 60;
+    public int $timeout = 120;
 
     public function __construct(
-        private int $orderId,
-        private int $timerLogId,
+        private string               $fcmToken,
+        private NotificationTypeEnum $notificationType,
+        private string               $titleAr,
+        private string               $bodyAr,
+        private array                $data = [],
     ) {}
 
-    public function handle(): void
+    public function handle(FcmService $fcmService): void
     {
-        // check if already resolved — idempotent
-        // auto-close order to refused_no_payment
-        // notify all parties
+        $fcmService->send(
+            token:   $this->fcmToken,
+            title:   $this->titleAr,
+            body:    $this->bodyAr,
+            data:    array_merge($this->data, ['type' => $this->notificationType->value]),
+        );
     }
 }
 ```
@@ -1004,6 +1038,8 @@ class RefusalTimerExpiredJob implements ShouldQueue
 
 - ❌ Never use `ENUM` columns in migrations — always `TINYINT UNSIGNED`
 - ❌ Never hardcode order status integers in business logic — always use `OrderStatusEnum::Delivered->value`
+- ❌ Never use `$table->id()` for domain entity PKs — domain tables use `$table->string('{entity}_id', 36)->primary()`
+- ❌ Never use `foreignId()` to reference a UUID PK — always use `$table->string('{entity}_id', 36)` + explicit `->foreign()`
 - ❌ Never query without loading child relations when returning order data — always eager load all 6 child tables
 - ❌ Never put Eloquent queries in Use Cases — Use Cases call Repositories via interface
 - ❌ Never put logic in controllers — controllers call Use Cases only
@@ -1015,55 +1051,61 @@ class RefusalTimerExpiredJob implements ShouldQueue
 - ❌ Never do live GPS tracking — GPS only at specific documented events
 - ❌ Never skip `DB::transaction()` when creating an order (must create all 6 child rows atomically)
 - ❌ Never calculate commission client-side — always compute server-side
-- ❌ Never expose `password_hash`, `fcm_token`, or `remember_token` in API responses
+- ❌ Never expose `password`, `fcm_token`, or `remember_token` in API responses
 - ❌ Never instantiate Use Cases or Repositories with `new` — always inject via constructor
 - ❌ Never skip `->whenLoaded()` on Resource relationships — always use conditional loading
-- ❌ Never use `auto_increment` UUIDs — this project uses BIGINT auto-increment
-- ❌ Never write a migration without adding indexes on FK columns and WHERE-clause columns
+- ❌ Never write a migration without adding named indexes on FK columns and WHERE-clause columns
 - ❌ Never skip writing the TINYINT map in the column `COMMENT`
 - ❌ Never bypass the `ApiResponse` helper — never return `response()->json()` directly
-- ❌ Never use `Contact::all()` or any un-scoped query — always filter by relevant IDs
+- ❌ Never use unscoped queries like `Model::all()` — always filter by relevant user/entity IDs
 - ❌ Never create a Use Case that depends on `Request` — dependency on HTTP layer is forbidden
 - ❌ Never put business rules in the Domain layer that depend on Laravel facades
+- ❌ Never add a Composer FCM package — FCM is custom HTTP via `FcmService`
 
 ---
 
-## 21. Module Build Order (Phased)
+## 21. Current Build Status
 
-| Phase | Modules | Priority |
-|-------|---------|----------|
-| **P0 — Foundation** | Core (ApiResponse, base traits), Auth (JWT login), Users, Roles | Week 1 |
-| **P1 — Parties** | ShippingCompanies, DeliveryAgents, agent_zones | Week 2 |
-| **P2 — Orders** | Orders (all 7 tables), order_status_history, order_proofs | Weeks 3–4 |
-| **P3 — Finance** | Collections, Returns, Settlements, ApprovalRequests | Weeks 5–6 |
-| **P4 — Refusal Timer** | RefusalTimer (timer logic, GPS validation, queue job) | Week 7 |
-| **P5 — Chat** | Conversations, Messages, WebSocket broadcast | Week 8 |
-| **P6 — Notifications** | Notifications (FCM, in-app, all 8 event types) | Week 9 |
-| **P7 — GPS & Schedule** | GpsCheckpoints, PostponedSchedules, reminder cron | Week 10 |
-| **P8 — Reports & Polish** | Reports, SystemSettings UI, indexes, caching, API docs | Week 11+ |
+| Module | Status | Notes |
+|--------|--------|-------|
+| Core | ✅ Built | `HasUuid`, `ApiResponse`, `ModuleServiceProvider`, `MediaFile` |
+| Auth | ✅ Built | JWT login/logout/refresh, OTP password reset, WhatsApp welcome |
+| Users | ✅ Built | All account types (admin, company, agent, staff), import/export |
+| Roles | ✅ Built | Spatie permissions wrapper |
+| Locations | ✅ Built | Governorates, cities, addresses |
+| Departments | ✅ Built | Staff department management |
+| AuditLog | ✅ Built | Action audit trail |
+| Settings | ✅ Built | Key-value system settings |
+| Notifications | ✅ Built | FCM push + in-app, all 8 event types |
+| Dashboard | ✅ Partial | Stats/charts; holds Order model temporarily |
+| Orders | 🔧 Stub | DB tables migrated, routes empty, models not in module yet |
+| Collections | ❌ Not built | DB table exists |
+| Returns | ❌ Not built | DB table exists |
+| Settlements | ❌ Not built | DB table exists |
+| ApprovalRequests | ❌ Not built | DB table exists |
+| RefusalTimer | ❌ Not built | DB table exists |
+| Chat | ❌ Not built | DB tables exist (conversations, messages, message_reads) |
+| GpsCheckpoints | ❌ Not built | DB migration not yet created |
+| PostponedSchedules | ❌ Not built | DB table exists |
 
 ---
 
 ## 22. Module File Reference
 
-| Module | Location | Key Enum |
-|--------|----------|----------|
+| Module | Location | Key Enums |
+|--------|----------|-----------|
+| Core | `app/Modules/Core/` | — |
 | Auth | `app/Modules/Auth/` | — |
-| Users | `app/Modules/Users/` | `RoleEnum` |
-| ShippingCompanies | `app/Modules/ShippingCompanies/` | `CommissionTypeEnum` |
-| DeliveryAgents | `app/Modules/DeliveryAgents/` | `VehicleTypeEnum`, `CommissionTypeEnum` |
-| Orders | `app/Modules/Orders/` | `OrderStatusEnum`, `ApprovalTypeEnum`, `ApprovalStatusEnum` |
-| Collections | `app/Modules/Collections/` | `CollectionTypeEnum` |
-| Returns | `app/Modules/Returns/` | `ReturnStatusEnum` |
-| Settlements | `app/Modules/Settlements/` | `SettlementTypeEnum`, `SettlementStatusEnum` |
-| ApprovalRequests | `app/Modules/ApprovalRequests/` | `ApprovalTypeEnum`, `ApprovalStatusEnum` |
-| RefusalTimer | `app/Modules/RefusalTimer/` | `RefusalResolutionEnum` |
-| Chat | `app/Modules/Chat/` | `MessageTypeEnum` |
+| Users | `app/Modules/Users/` | `AccountTypeEnum`, `CommissionTypeEnum`, `VehicleTypeEnum` |
+| Roles | `app/Modules/Roles/` | — |
+| Locations | `app/Modules/Locations/` | — |
+| Departments | `app/Modules/Departments/` | — |
+| AuditLog | `app/Modules/AuditLog/` | — |
+| Settings | `app/Modules/Settings/` | `SettingDataTypeEnum` |
 | Notifications | `app/Modules/Notifications/` | `NotificationTypeEnum` |
-| GpsCheckpoints | `app/Modules/GpsCheckpoints/` | `GpsEventTypeEnum` |
-| PostponedSchedules | `app/Modules/PostponedSchedules/` | — |
-| SystemSettings | `app/Modules/SystemSettings/` | `SettingDataTypeEnum` |
+| Dashboard | `app/Modules/Dashboard/` | `OrderStatusEnum` (temporary home for Order model) |
+| Orders | `app/Modules/Orders/` | `OrderStatusEnum`, `ApprovalTypeEnum`, `ApprovalStatusEnum` |
 
 ---
 
-*Last updated: May 2026 — Mersal v1.0 — Egyptian B2B Logistics Platform*
+*Last updated: June 2026 — Mersal v1.0 — Egyptian B2B Logistics Platform*

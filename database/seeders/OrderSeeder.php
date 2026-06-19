@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Modules\Dashboard\Domain\Enums\OrderStatusEnum;
 use App\Modules\Locations\Infrastructure\Database\Models\City;
 use App\Modules\Locations\Infrastructure\Database\Models\Governorate;
+use App\Modules\Orders\Application\Services\ReferenceCodeGeneratorService;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use Carbon\Carbon;
@@ -16,6 +17,8 @@ use Illuminate\Support\Str;
 class OrderSeeder extends Seeder
 {
     private int $counter = 1;
+
+    private ReferenceCodeGeneratorService $codeGenerator;
 
     /** @var array<string> */
     private array $governorateIds = [];
@@ -55,6 +58,8 @@ class OrderSeeder extends Seeder
 
     public function run(): void
     {
+        $this->codeGenerator = app(ReferenceCodeGeneratorService::class);
+
         if (DB::table('orders')->count() > 0) {
             $this->command->info('Orders already seeded. Skipping.');
             return;
@@ -267,15 +272,21 @@ class OrderSeeder extends Seeder
         Carbon $updatedAt,
         ?Carbon $deliveredAt = null,
     ): void {
-        $orderId = Str::uuid()->toString();
-        $company = $this->companies->random();
-        $pad     = str_pad((string) $this->counter, 6, '0', STR_PAD_LEFT);
+        $orderId       = Str::uuid()->toString();
+        $company       = $this->companies->random();
+        $pad           = str_pad((string) $this->counter, 6, '0', STR_PAD_LEFT);
+        $referenceNo   = 'REF-' . $pad;
+        $referenceCode = $this->codeGenerator->generate(
+            companyName:    $company->company_name,
+            excelOrderCode: $referenceNo,
+            date:           $createdAt,
+        );
 
         // ── orders ───────────────────────────────────────────────────────────
         DB::table('orders')->insert([
             'order_id'            => $orderId,
-            'reference_no'        => 'REF-' . $pad,
-            'internal_code'       => 'MRS-' . $pad,
+            'reference_no'        => $referenceNo,
+            'reference_code'      => $referenceCode,
             'shipping_company_id' => $company->shipping_company_id,
             'delivery_agent_id'   => $agent?->delivery_agent_id,
             'status'              => $status,

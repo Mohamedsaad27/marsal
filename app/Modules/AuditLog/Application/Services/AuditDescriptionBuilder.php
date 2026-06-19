@@ -182,7 +182,7 @@ class AuditDescriptionBuilder
 
     private function subjectLabel(array $oldValues, array $newValues, array $metadata): string
     {
-        foreach (['name_ar', 'name_en', 'name', 'company_name', 'role_name', 'internal_code', 'code', 'email'] as $key) {
+        foreach (['name_ar', 'name_en', 'name', 'company_name', 'role_name', 'reference_code', 'code', 'email'] as $key) {
             foreach ([$metadata, $newValues, $oldValues] as $source) {
                 if (! empty($source[$key])) {
                     return $this->quote((string) $source[$key]);

@@ -23,9 +23,9 @@ class RecentOrderResource extends JsonResource
             : OrderStatusEnum::tryFrom((int) $this->status);
 
         return [
-            'order_id' => $this->order_id,
-            'internal_code' => $this->internal_code,
-            'reference_code' => $this->reference_no,
+            'order_id'       => $this->order_id,
+            'reference_code' => $this->reference_code,
+            'reference_no'   => $this->reference_no,
             'customer_name' => $this->customerInfo?->customer_name,
             'customer_phone' => $this->customerInfo?->customer_phone,
             'region' => $region,

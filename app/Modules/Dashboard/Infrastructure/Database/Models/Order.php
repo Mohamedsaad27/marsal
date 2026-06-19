@@ -24,10 +24,12 @@ class Order extends Model
 
     protected $fillable = [
         'reference_no',
-        'internal_code',
+        'reference_code',
         'shipping_company_id',
         'delivery_agent_id',
         'status',
+        'notes',
+        'display_company_name',
         'assigned_at',
         'delivered_at',
     ];

@@ -22,7 +22,7 @@ class RecentOrdersRequest extends FormRequest
             'page' => ['sometimes', 'integer', 'min:1'],
             'status' => ['sometimes', 'nullable', 'integer', Rule::in($validStatuses)],
             'search' => ['sometimes', 'nullable', 'string', 'max:200'],
-            'sort_by' => ['sometimes', 'string', Rule::in(['created_at', 'updated_at', 'internal_code', 'status'])],
+            'sort_by' => ['sometimes', 'string', Rule::in(['created_at', 'updated_at', 'reference_code', 'status'])],
             'sort_dir' => ['sometimes', 'string', Rule::in(['asc', 'desc'])],
         ];
     }

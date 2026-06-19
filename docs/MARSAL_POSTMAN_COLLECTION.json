@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Audit Logs, Dashboard (admin home KPIs).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import), Audit Logs, Dashboard (admin home KPIs).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -69,6 +69,18 @@
       "value": "",
       "type": "string",
       "description": "Primary key of the audited record (UUID or BIGINT as string). For users, use `{{user_id}}`. Set manually for orders and other entities."
+    },
+    {
+      "key": "notification_id",
+      "value": "",
+      "type": "string",
+      "description": "UUID of a notification (`notification_id`). Auto-set from Notifications — List response (first unread item)."
+    },
+    {
+      "key": "import_batch_id",
+      "value": "",
+      "type": "string",
+      "description": "UUID returned by Admin — Orders → Import Orders from Excel (`batch_id`). Use as `auditable_id` with `auditable_type=orders` to find the import audit log after the queue job completes."
     }
   ],
   "auth": {
@@ -2558,6 +2570,67 @@
       ]
     },
     {
+      "name": "Admin — Orders",
+      "description": "Bulk Excel order import for the admin dashboard.\n\n**Permission:** `orders.import` (seeded on `super_admin`).\n\n**Base path:** `/api/v1/admin/orders/*`\n\n**Excel format (`Book1_filled.xlsx` style):**\n- Sheet `Sheet1`, column headers on row 1, data from row 2\n- 12 columns — customer name, shipping agent, address, governorate, phone(s), quantity, COD total, company name, status hints, etc.\n- Shipping companies are looked up by name and **auto-created if missing** (using raw phone from column 9)\n- Governorates resolved from `governorates` database table by name\n\n**Processing:** upload returns **202** immediately; parsing + DB inserts run on the `reports` queue (`ProcessOrdersImportJob`). Run `php artisan queue:work --queue=reports` locally.\n\n**Audit:** after the job finishes, filter audit logs with `auditable_type=orders` and `auditable_id={{import_batch_id}}`.\n\n**Order status map (`orders.status_id`):** `1` pending · `3` out_for_delivery · `5` delivered · `9` refused_no_payment · `11` no_answer",
+      "item": [
+        {
+          "name": "Import Orders from Excel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 202) {",
+                  "  const json = pm.response.json();",
+                  "  if (json.data && json.data.batch_id) {",
+                  "    pm.collectionVariables.set('import_batch_id', json.data.batch_id);",
+                  "    pm.collectionVariables.set('auditable_type', 'orders');",
+                  "    pm.collectionVariables.set('auditable_id', json.data.batch_id);",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": "",
+                  "description": "xlsx or xls — max 10 MB. Excel template Book1_filled format: headers row 1, data from row 2."
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/orders/import",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "admin",
+                "orders",
+                "import"
+              ]
+            },
+            "description": "Permission: `orders.import`\n\nUploads an Excel file and queues background import. Creates one order per valid row across the 3NF order tables (`orders`, `order_customer_info`, `order_addresses`, `order_financials`, `order_items`, `order_schedules`, `order_approvals`, `order_status_history`).\n\n**Multipart:** `file` (required) — `.xlsx` or `.xls`, max 10 MB\n\n**Column mapping (0-based indices, data from Excel row 2+):**\n| Col | Header (AR) | DB field |\n|-----|-------------|----------|\n| 0 | م | row number — skip |\n| 1 | اسم العميل | `order_customer_info.customer_name` |\n| 2 | مندوب الشحن | shipping agent name — auto-create if missing |\n| 3 | العنوان | `order_addresses.address_line` |\n| 4 | المحافظة | governorate lookup → `order_addresses.governorate_id` |\n| 5 | رقم العميل | `order_customer_info.phones` (normalized array) |\n| 6 | العدد | `order_items.quantity` |\n| 7 | الاجمالي | `order_financials.cod_amount` |\n| 8 | اسم الشركة | company name lookup → `orders.company_id` (auto-create if missing) |\n| 9 | رقم تليفون الشركة | company phone — used only when auto-creating company |\n| 10 | اسم الراسل | sender name → `order_items.description` |\n| 11 | موقف العميل | status hint → `orders.status_id` via `ImportStatusHintEnum` |\n\n**Status hints (col 11):** `تم التسليم`→delivered(5) · `قيد التوصيل`→out_for_delivery(3) · `في انتظار العميل`→no_answer(11) · `مرتجع`→refused_no_payment(9) · empty/unrecognized→pending(1)\n\n**Success (202):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"جاري معالجة ملف الاستيراد في الخلفية\",\n  \"data\": { \"batch_id\": \"uuid-here\" }\n}\n```\n\nSaves `batch_id` to `{{import_batch_id}}` and sets audit trail variables.\n\n**422:** missing/invalid file.\n\n**401/403:** missing JWT or `orders.import` permission.\n\n**After job completes:** check **Admin — Audit Logs → Audit Trail — Subject** with `auditable_type=orders` and `auditable_id={{import_batch_id}}` for `imported` / `skipped` / per-row `errors` summary in `new_values`."
+          }
+        }
+      ]
+    },
+    {
       "name": "Dashboard",
       "description": "Admin dashboard home page APIs — summary cards, charts, KPIs, and recent orders.\n\n**Base path:** `/api/dashboard/*`\n\n**Auth:** JWT (`auth:api`) — run **Auth → Login** first. Permission checks are planned (`// TODO` in controller); `super_admin` can access all routes today.\n\n**Caching:** Endpoints 1–6 are cached for **60 seconds** (tag `dashboard`). **Recent Orders** is never cached.\n\n**Order status map (`orders.status`):** `1` pending · `2` in delivery · `3` delivered · `4` postponed · `5` failed · `6` rejected",
       "item": [
@@ -2869,6 +2942,138 @@
               ]
             },
             "description": "Permission: settings.update\n\nUpdates system settings. Uses POST to support multipart/form-data for file uploads like logo_url."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Notifications",
+      "description": "إشعارات النظام — in-app notifications (DB) + FCM push.\n\nAll endpoints require `auth:api` Bearer token.\nThe authenticated user only sees their own notifications — no cross-user access.\n\n**Notification types:**\n| Code | Label (AR) | Recipient |\n|------|-----------|-----------|\n| 1 | طلب توصيل جديد | delivery_agent |\n| 2 | تحديث حالة الطلب | shipping_company |\n| 3 | طلب موافقة على تغيير السعر | shipping_company |\n| 4 | بدأ توقيت رفض الاستلام | shipping_company |\n| 5 | انتهى وقت رفض الاستلام | shipping_company + delivery_agent |\n| 6 | رسالة جديدة | conversation recipient |\n| 7 | تم تحديث رقم الهاتف | delivery_agent |\n| 8 | تذكير بموعد تأجيل التسليم | delivery_agent |",
+      "item": [
+        {
+          "name": "List Notifications",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    const first = items.find(n => !n.is_read) || items[0];",
+                  "    if (first?.id) {",
+                  "        pm.collectionVariables.set('notification_id', first.id);",
+                  "        pm.test('notification_id saved', () => pm.expect(first.id).to.not.be.empty);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications?per_page=15",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications"
+              ],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "15",
+                  "description": "Items per page (default 15)"
+                }
+              ]
+            },
+            "description": "قائمة الإشعارات — paginated, newest first.\n\nAuth: Bearer token required.\n\n**Query:** `per_page` (default 15).\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"type\": { \"code\": 1, \"label\": \"طلب توصيل جديد\" },\n  \"title_ar\": \"📦 طلب توصيل جديد\",\n  \"body_ar\": \"تم تعيين الطلب رقم MRS-0042 إليك — يرجى المراجعة والتحرك فوراً\",\n  \"data\": { \"order_id\": \"uuid\" },\n  \"is_read\": false,\n  \"sent_via_fcm\": true,\n  \"created_at\": \"2026-06-16T09:30:00.000000Z\"\n}\n```\n\nSaves first unread `notification_id` to collection variable."
+          }
+        },
+        {
+          "name": "Get Unread Count",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/unread-count",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "unread-count"
+              ]
+            },
+            "description": "عدد الإشعارات غير المقروءة — for badge indicator on mobile and web.\n\nAuth: Bearer token required.\n\n**Response:**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم جلب عدد الإشعارات غير المقروءة بنجاح\",\n  \"data\": { \"unread_count\": 5 }\n}\n```"
+          }
+        },
+        {
+          "name": "Mark One Notification Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/{{notification_id}}/read",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "{{notification_id}}",
+                "read"
+              ]
+            },
+            "description": "تحديد إشعار واحد كمقروء.\n\nAuth: Bearer token required.\n\n`{{notification_id}}` — UUID of the notification. Auto-set from List Notifications response.\n\nReturns 404 if the notification does not exist or does not belong to the authenticated user.\n\n**Response (200):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم تحديد الإشعار كمقروء\",\n  \"data\": {\n    \"id\": \"uuid\",\n    \"is_read\": true,\n    \"type\": { \"code\": 1, \"label\": \"طلب توصيل جديد\" }\n  }\n}\n```"
+          }
+        },
+        {
+          "name": "Mark All Notifications Read",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/notifications/read-all",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "notifications",
+                "read-all"
+              ]
+            },
+            "description": "تحديد جميع إشعارات المستخدم الحالي كمقروءة في عملية واحدة.\n\nAuth: Bearer token required.\n\n**Response (200):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم تحديد جميع الإشعارات كمقروءة\",\n  \"data\": { \"updated_count\": 7 }\n}\n```\n\n`updated_count` — number of notifications that were actually updated (0 if already all read)."
           }
         }
       ]

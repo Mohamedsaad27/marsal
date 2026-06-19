@@ -10,7 +10,7 @@ class GetRecentOrdersQuery
     private const ALLOWED_SORT_COLUMNS = [
         'created_at',
         'updated_at',
-        'internal_code',
+        'reference_code',
         'status',
     ];
 
@@ -41,7 +41,7 @@ class GetRecentOrdersQuery
         if ($search !== null && $search !== '') {
             $term = '%'.$search.'%';
             $query->where(function ($builder) use ($term) {
-                $builder->where('internal_code', 'like', $term)
+                $builder->where('reference_code', 'like', $term)
                     ->orWhereHas('customerInfo', function ($customerQuery) use ($term) {
                         $customerQuery->where('customer_name', 'like', $term)
                             ->orWhere('customer_phone', 'like', $term);
