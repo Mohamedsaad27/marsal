@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('order_proofs', function (Blueprint $table) {
             $table->uuid('order_proof_id')->primary();
-            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->onDelete('set null');
+            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->cascadeOnDelete();
             $table->foreignUuid('uploaded_by')->nullable()->references('user_id')->on('users')->onDelete('set null');
             $table->tinyInteger('file_type')->default(1)->comment('1=image|2=pdf|3=other — ProofFileTypeEnum');
             $table->string('file_url', 500);

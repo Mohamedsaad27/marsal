@@ -7,6 +7,7 @@ use App\Modules\Orders\Application\Services\ReferenceCodeGeneratorService;
 use App\Modules\Orders\Application\Validators\OrderRowValidator;
 use App\Modules\Orders\Domain\Enums\ImportStatusHintEnum;
 use App\Modules\Orders\Infrastructure\Imports\OrdersImport;
+use App\Modules\Notifications\Domain\Events\OrderAssigned;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use App\Modules\Users\Infrastructure\Database\Models\User;
@@ -46,7 +47,8 @@ class ImportOrdersFromExcelUseCase
             ->join('users as u', 'u.user_id', '=', 'da.user_id')
             ->whereNull('da.deleted_at')
             ->whereNull('u.deleted_at')
-            ->pluck('da.delivery_agent_id', 'u.name');
+            ->get(['da.delivery_agent_id', 'da.user_id', 'u.name'])
+            ->keyBy('name');
 
         $results = [
             'imported'          => 0,
@@ -91,7 +93,7 @@ class ImportOrdersFromExcelUseCase
                 results:      $results,
             );
 
-            [$deliveryAgentId, $assignedAt] = $this->resolveAgent(
+            [$deliveryAgentId, $assignedAt, $agentUserId] = $this->resolveAgent(
                 dto:        $dto,
                 hint:       $hint,
                 agentCache: $agentCache,
@@ -106,8 +108,11 @@ class ImportOrdersFromExcelUseCase
             // Resolve company name for reference_code generation (before transaction).
             $companyNameForCode = $dto->companyName;
 
+            $orderId       = null;
+            $referenceCode = null;
+
             try {
-                DB::transaction(function () use ($dto, $hint, $shippingCompanyId, $governorateId, $rowNumber, $deliveryAgentId, $assignedAt, $companyNameForCode) {
+                DB::transaction(function () use ($dto, $hint, $shippingCompanyId, $governorateId, $rowNumber, $deliveryAgentId, $assignedAt, $companyNameForCode, &$orderId, &$referenceCode) {
                     $orderId = (string) Str::uuid();
                     $now     = now();
 
@@ -126,6 +131,13 @@ class ImportOrdersFromExcelUseCase
                     $hasCollection = $hint?->hasCollection() ?? false;
                     $isTerminal    = $hint?->isTerminal() ?? false;
 
+                    // If the sheet gave no explicit status (→ pending/1) but an agent
+                    // is present, the order must be at least "assigned" (2).
+                    $resolvedStatus = $dto->statusId;
+                    if ($resolvedStatus === 1 && $deliveryAgentId !== null) {
+                        $resolvedStatus = 2; // assigned
+                    }
+
                     // ── orders ─────────────────────────────────────────────
                     DB::table('orders')->insert([
                         'order_id'             => $orderId,
@@ -133,7 +145,7 @@ class ImportOrdersFromExcelUseCase
                         'reference_code'       => $referenceCode,
                         'shipping_company_id'  => $shippingCompanyId,
                         'delivery_agent_id'    => $deliveryAgentId,
-                        'status'               => $dto->statusId,
+                        'status'               => $resolvedStatus,
                         'notes'                => $dto->itemDescription ?: null,
                         'display_company_name' => $dto->displayCompanyName ?: null,
                         'assigned_at'          => $assignedAt,
@@ -229,7 +241,7 @@ class ImportOrdersFromExcelUseCase
                         'order_status_history_id' => (string) Str::uuid(),
                         'order_id'                => $orderId,
                         'from_status_id'          => null,
-                        'to_status_id'            => $dto->statusId,
+                        'to_status_id'            => $resolvedStatus,
                         'changed_by'              => null,
                         'notes'                   => 'مستورد من ملف Excel',
                         'created_at'              => $now,
@@ -238,6 +250,14 @@ class ImportOrdersFromExcelUseCase
                 });
 
                 $results['imported']++;
+
+                if ($deliveryAgentId !== null && $agentUserId !== null && $orderId !== null && $referenceCode !== null) {
+                    event(new OrderAssigned(
+                        agentUserId: $agentUserId,
+                        orderCode:   $referenceCode,
+                        orderId:     $orderId,
+                    ));
+                }
 
             } catch (\Throwable $e) {
                 $errMsg = "Row {$rowNumber}: فشل الحفظ — {$e->getMessage()}";
@@ -299,9 +319,9 @@ class ImportOrdersFromExcelUseCase
     }
 
     /**
-     * Resolve delivery agent by user name (column 2 — مندوب الشحن).
+     * Resolve delivery agent by user name (column 10 — اسم المندوب).
      *
-     * @return array{0: ?string, 1: ?\Illuminate\Support\Carbon}|false
+     * @return array{0: ?string, 1: ?\Illuminate\Support\Carbon, 2: ?string}|false
      *         false = row should be skipped (error already logged)
      */
     private function resolveAgent(
@@ -312,12 +332,12 @@ class ImportOrdersFromExcelUseCase
         array &$results,
     ): array|false {
         if ($dto->agentName === '') {
-            return [null, null];
+            return [null, null, null];
         }
 
-        $deliveryAgentId = $agentCache->get($dto->agentName);
+        $agent = $agentCache->get($dto->agentName);
 
-        if (! $deliveryAgentId) {
+        if (! $agent) {
             $errMsg = "Row {$rowNumber}: مندوب غير معروف: {$dto->agentName}";
             $results['errors'][] = $errMsg;
             $results['skipped']++;
@@ -329,7 +349,7 @@ class ImportOrdersFromExcelUseCase
             return false;
         }
 
-        return [$deliveryAgentId, now()];
+        return [$agent->delivery_agent_id, now(), $agent->user_id];
     }
 
     private function resolveOrCreateCompany(

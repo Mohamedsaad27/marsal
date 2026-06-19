@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('order_financials', function (Blueprint $table) {
             $table->uuid('order_financial_id')->primary();
-            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->onDelete('set null');
+            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->cascadeOnDelete();
             $table->decimal('original_amount', 15, 2)->default(0)
                   ->comment('Amount stated by shipping company at creation');
             $table->decimal('approved_amount', 15, 2)->nullable()

@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('order_addresses', function (Blueprint $table) {
             $table->uuid('order_address_id')->primary();
-            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->onDelete('set null');
+            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->cascadeOnDelete();
             $table->foreignUuid('governorate_id')->nullable()->references('governorate_id')->on('governorates')->onDelete('set null');
             $table->foreignUuid('city_id')->nullable()->references('city_id')->on('cities')->onDelete('set null');
             $table->text('address_line');

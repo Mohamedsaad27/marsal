@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('order_approvals', function (Blueprint $table) {
             $table->uuid('order_approval_id')->primary();
-            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->onDelete('set null');
+            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->cascadeOnDelete();
             $table->boolean('requires_approval')->default(true);
             $table->tinyInteger('approval_granted')->nullable()
                   ->comment('NULL=pending | 1=approved | 0=rejected');

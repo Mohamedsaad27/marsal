@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('order_customer_info', function (Blueprint $table) {
             $table->uuid('order_customer_info_id')->primary();
-            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->onDelete('set null');
+            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->cascadeOnDelete();
             $table->string('customer_name', 200);
             $table->string('customer_phone', 20);
             $table->string('phone_alt', 20)->nullable();

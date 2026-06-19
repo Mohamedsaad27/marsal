@@ -35,7 +35,9 @@ class SendNotificationUseCase
                 userId:         $dto->userId,
                 titleAr:        $dto->titleAr,
                 bodyAr:         $dto->bodyAr,
-                data:           $dto->data,
+                data:           array_merge($dto->data, [
+                    'type' => (string) $dto->notificationType->value,
+                ]),
             )->onQueue('notifications');
         }
 

@@ -4,6 +4,7 @@ namespace App\Modules\Notifications\Presentation\Http\Controllers;
 
 use App\Http\Controllers\Controller;
 use App\Modules\Core\Infrastructure\Helpers\ApiResponse;
+use App\Modules\Core\Infrastructure\Helpers\PaginationMeta;
 use App\Modules\Notifications\Application\UseCases\GetUnreadCountUseCase;
 use App\Modules\Notifications\Application\UseCases\GetUserNotificationsUseCase;
 use App\Modules\Notifications\Application\UseCases\MarkAllNotificationsReadUseCase;
@@ -34,8 +35,11 @@ class NotificationController extends Controller
             perPage: $perPage,
         );
 
-        return ApiResponse::paginated(
-            NotificationResource::collection($notifications),
+        return ApiResponse::success(
+            array_merge(
+                ['items' => NotificationResource::collection($notifications->items())],
+                PaginationMeta::getMeta($notifications),
+            ),
             __('notifications::messages.list_success'),
         );
     }
