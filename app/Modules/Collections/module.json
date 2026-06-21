@@ -1,0 +1,13 @@
+{
+    "name": "Collections",
+    "alias": "Collections",
+    "description": "Collections module",
+    "keywords": [
+        "Collections"
+    ],
+    "priority": 0,
+    "providers": [
+        "App\\Modules\\Collections\\Infrastructure\\Providers\\CollectionsServiceProvider"
+    ],
+    "files": []
+}

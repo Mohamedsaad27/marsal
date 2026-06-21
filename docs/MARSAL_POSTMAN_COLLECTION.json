@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import), Audit Logs, Dashboard (admin home KPIs).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import), Agent Mobile (Phase 1 orders + Phase 2 collections), Audit Logs, Dashboard (admin home KPIs), Notifications.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections endpoints. Requires Spatie role `delivery_agent`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -81,6 +81,18 @@
       "value": "",
       "type": "string",
       "description": "UUID returned by Admin — Orders → Import Orders from Excel (`batch_id`). Use as `auditable_id` with `auditable_type=orders` to find the import audit log after the queue job completes."
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string",
+      "description": "UUID of an order (`order_id`). Auto-set from Agent — Orders → List Agent Orders (first item). Use for detail, status update, and proof upload."
+    },
+    {
+      "key": "collection_id",
+      "value": "",
+      "type": "string",
+      "description": "UUID of a collection (`collection_id`). Auto-set from Agent — Collections → List Agent Collections (first item)."
     }
   ],
   "auth": {
@@ -2942,6 +2954,537 @@
               ]
             },
             "description": "Permission: settings.update\n\nUpdates system settings. Uses POST to support multipart/form-data for file uploads like logo_url."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agent — Orders",
+      "description": "Delivery agent mobile app APIs (Phase 1 — core order flow).\n\n**Base path:** `/api/v1/agent/*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Login as Delivery Agent** first (or **Auth → Login** with an agent account).\n\nOrders are scoped to the authenticated agent's `delivery_agent_id` — agents never see other agents' orders.\n\n**Order status map (`orders.status`):** `1` pending · `2` assigned · `3` out_for_delivery · `4` awaiting_approval · `5` delivered · `6` delivered_price_changed · `7` partial_delivery · `8` refused_paid_shipping · `9` refused_no_payment · `10` customer_cancelled · `11` no_answer · `12` phone_off · `13` customer_evading · `14` unsafe_area · `15` postponed · `16` outside_governorate · `17` wrong_phone\n\n**List filter `status`:** `all` (default) · `new` (1,2) · `in_delivery` (3) · `postponed` (15)\n\n**Collection type (`collection_type`):** `1` COD · `2` shipping_fee · `3` partial\n\n**Proof file type (`file_type`):** `1` image · `2` pdf · `3` other",
+      "item": [
+        {
+          "name": "Login as Delivery Agent",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.data && json.data.access_token) {",
+                  "        pm.collectionVariables.set('access_token', json.data.access_token);",
+                  "        pm.test('Agent token saved', function () {",
+                  "            pm.expect(pm.collectionVariables.get('access_token')).to.not.be.empty;",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"identifier\": \"agent1@marsal.com\",\n  \"password\": \"TempPass@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "auth",
+                "login"
+              ]
+            },
+            "description": "Authenticate as a delivery agent. Default credentials match **Admin — Users → Create Delivery Agent (Subordinate)** example.\n\nSaves JWT to `{{access_token}}` for all Agent — Orders requests.\n\n**403:** user exists but lacks `delivery_agent` role."
+          }
+        },
+        {
+          "name": "Get Agent Dashboard",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/dashboard",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "dashboard"
+              ]
+            },
+            "description": "Home screen data for the agent mobile app.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Success (200) `data`:**\n- `agent` — `name`, `fcm_token_registered`\n- `today` — `orders_count`, `collected_amount`, `delivered_count`, `pending_count`\n- `performance` — `delivery_rate_percent`, `week_label`\n- `upcoming_orders[]` — max 5 active orders (`status` 2, 3, 4): `order_id`, `reference_code`, `status_id`, `status_label`, `customer_name`, `city`, `governorate`, `cod_amount`"
+          }
+        },
+        {
+          "name": "List Agent Orders",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    const first = items[0];",
+                  "    const orderId = first?.order_id || first?.id;",
+                  "    if (orderId) {",
+                  "        pm.collectionVariables.set('order_id', orderId);",
+                  "        pm.test('order_id saved', () => pm.expect(orderId).to.not.be.empty);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/orders?status=all&search=&page=1&per_page=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "orders"
+              ],
+              "query": [
+                {
+                  "key": "status",
+                  "value": "all",
+                  "description": "all | new | in_delivery | postponed"
+                },
+                {
+                  "key": "search",
+                  "value": "",
+                  "description": "Order code, customer name, or phone"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Max 100"
+                }
+              ]
+            },
+            "description": "Paginated order list for **طلباتي** screen.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Response `data.items[]`:**\n- `id`, `order_id`, `reference_code`, `internal_code` (alias for reference_code)\n- `status` — `{ id, label, color }`\n- `customer_name`, `customer_phone`, `city`, `governorate`, `cod_amount`, `expected_delivery_date`\n\n**Pagination** (inside `data`): `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\nSaves first item's `order_id` to `{{order_id}}`."
+          }
+        },
+        {
+          "name": "Get Order Detail",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "orders",
+                "{{order_id}}"
+              ]
+            },
+            "description": "Full order detail for the agent order screen.\n\nAuth: Bearer + `delivery_agent` role. Order must belong to the authenticated agent.\n\n**Success (200) `data`:**\n- `order_id`, `reference_code`, `reference_no`, `company_name`\n- `status` — `{ id, label }`\n- `customer` — `name`, `phone_1`, `phone_2`\n- `address` — `governorate`, `city`, `address_line`\n- `financials` — `cod_amount`, `shipping_fee`, `collected_amount`, `total_due`\n- `items`, `schedule`, `approvals`, `status_history[]`, `proof_photos[]`\n- `available_actions[]` — server-computed action keys (e.g. `start_delivery`, `confirm_delivery`, `postpone`, `call_customer`)\n\n**404:** order not found. **403:** order assigned to another agent."
+          }
+        },
+        {
+          "name": "Start Delivery",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": 3,\n  \"notes\": \"\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            },
+            "description": "Mark order as **out for delivery** (`status_id: 3`).\n\nValid from `assigned (2)` only.\n\n**Body:** `status_id` (required), `notes` (optional)\n\n**Success (200) `data`:** `order_id`, `new_status`, `collection_created` (false)\n\nFires `OrderStatusChanged` notification to shipping company."
+          }
+        },
+        {
+          "name": "Confirm Delivery",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": 5,\n  \"collected_amount\": 850.00,\n  \"collection_type\": 1,\n  \"notes\": \"تم التسليم بنجاح\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            },
+            "description": "Confirm delivery (`status_id: 5`) with COD collection.\n\nValid from `out_for_delivery (3)`.\n\n**Body:**\n- `status_id` — `5` delivered · `7` partial · `8` refused_paid_shipping (all require collection fields)\n- `collected_amount` — required for collection statuses\n- `collection_type` — `1` COD · `2` shipping_fee · `3` partial\n- `notes` — optional\n\nCreates a `collections` row and updates agent balance. Sets `delivered_at`.\n\n**Success (200) `data.collection_created`:** `true` when a collection row was created."
+          }
+        },
+        {
+          "name": "Request Price Change",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": 6,\n  \"new_cod_amount\": 720.00,\n  \"collected_amount\": 720.00,\n  \"collection_type\": 1,\n  \"notes\": \"العميل وافق على سعر جديد\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            },
+            "description": "Request delivery with price change (`status_id: 6`).\n\nCreates `approval_requests` (type 1, pending) and sets order to **awaiting_approval (4)** until company approves.\n\n**Body:** `status_id: 6`, `new_cod_amount` (required), `collected_amount`, `collection_type`, `notes`\n\nFires `ApprovalRequested` notification to shipping company — no collection until approved."
+          }
+        },
+        {
+          "name": "Postpone Order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": 15,\n  \"postponed_date\": \"2026-06-25\",\n  \"notes\": \"العميل طلب التأجيل\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            },
+            "description": "Postpone delivery (`status_id: 15`).\n\nValid from `assigned (2)` or `out_for_delivery (3)`.\n\n**Body:**\n- `status_id` — `15`\n- `postponed_date` — required, must be after today (Y-m-d)\n- `notes` — optional\n\nUpdates `order_schedules.postponed_date` and inserts `postponed_schedules`."
+          }
+        },
+        {
+          "name": "Mark No Answer",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status_id\": 11,\n  \"notes\": \"لا يوجد رد من العميل\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/status",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "orders",
+                "{{order_id}}",
+                "status"
+              ]
+            },
+            "description": "Set status to **no_answer (11)** from `out_for_delivery (3)`.\n\nNo collection required. Non-terminal — order stays on agent's active list."
+          }
+        },
+        {
+          "name": "Upload Delivery Proof",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": [],
+                  "description": "jpg, jpeg, png, or pdf — max 5 MB"
+                },
+                {
+                  "key": "file_type",
+                  "value": "1",
+                  "type": "text",
+                  "description": "1=image · 2=pdf · 3=other"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/proof",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "orders",
+                "{{order_id}}",
+                "proof"
+              ]
+            },
+            "description": "Upload delivery proof photo/PDF for an order.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Multipart:**\n- `photo` (required) — image or PDF, max 5 MB\n- `file_type` (required) — `1` image · `2` pdf · `3` other\n\nStored on public disk: `proofs/{delivery_agent_id}/{order_id}/`\n\n**Success (200) `data`:** `proof_id`, `file_url`, `file_type`"
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agent — Collections",
+      "description": "Delivery agent mobile app APIs (Phase 2 — collections & finance).\n\n**Base path:** `/api/v1/agent/collections*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Agent — Orders → Login as Delivery Agent** first.\n\nCollections are scoped to the authenticated agent's `delivery_agent_id`. Unsettled collections have `settlement_id IS NULL` and contribute to `delivery_agents.balance`.\n\n**Collection type (`collection_type`):** `1` COD · `2` shipping_fee · `3` partial\n\n**List filter `settled`:** `false` (default, unsettled / held by agent) · `true` (already linked to a settlement)",
+      "item": [
+        {
+          "name": "Get Agent Collections Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/collections/summary",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "collections",
+                "summary"
+              ]
+            },
+            "description": "Header stats for the **تحصيلاتي** screen.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Success (200) `data`:**\n- `total_unsettled` — sum of `collected_amount` where `settlement_id IS NULL`\n- `unsettled_count` — count of unsettled collections\n- `breakdown` — `{ cod, shipping_fee, partial }` totals by `collection_type`\n- `last_settlement_date` — date of last paid agent settlement (`Y-m-d`) or `null`\n- `agent_balance` — current `delivery_agents.balance` (should match `total_unsettled`)\n\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم تحميل ملخص التحصيلات بنجاح\",\n  \"data\": {\n    \"total_unsettled\": 1250.00,\n    \"unsettled_count\": 3,\n    \"breakdown\": {\n      \"cod\": 1100.00,\n      \"shipping_fee\": 100.00,\n      \"partial\": 50.00\n    },\n    \"last_settlement_date\": \"2026-06-15\",\n    \"agent_balance\": 1250.00\n  }\n}\n```"
+          }
+        },
+        {
+          "name": "List Agent Collections",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    const items = json.data?.items || [];",
+                  "    const first = items[0];",
+                  "    const collectionId = first?.collection_id || first?.id;",
+                  "    if (collectionId) {",
+                  "        pm.collectionVariables.set('collection_id', collectionId);",
+                  "        pm.test('collection_id saved', () => pm.expect(collectionId).to.not.be.empty);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/collections?settled=false&page=1&per_page=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "collections"
+              ],
+              "query": [
+                {
+                  "key": "settled",
+                  "value": "false",
+                  "description": "false = unsettled (default) · true = settled"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Max 100"
+                }
+              ]
+            },
+            "description": "Paginated list of agent collections for **تحصيلاتي** screen.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Query:**\n- `settled` — `false` (default, money still held by agent) · `true` (linked to a settlement)\n- `page`, `per_page` (max 100)\n\n**Response `data.items[]`:**\n- `id`, `collection_id`, `order_id`, `internal_code`\n- `customer_name`\n- `collection_type` — `{ id, label }`\n- `collected_amount`, `is_settled`, `settlement_id`, `collected_at` (ISO 8601)\n\n**Pagination** (inside `data`): `type`, `current_page`, `last_page`, `per_page`, `total`, `from`, `to`, `has_more`\n\nSaves first item's `collection_id` to `{{collection_id}}`.\n\n**Tip:** run **Confirm Delivery** on an order first to create an unsettled collection row."
+          }
+        },
+        {
+          "name": "List Settled Collections",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/collections?settled=true&page=1&per_page=20",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "collections"
+              ],
+              "query": [
+                {
+                  "key": "settled",
+                  "value": "true",
+                  "description": "Only collections linked to a settlement"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "per_page",
+                  "value": "20",
+                  "description": "Max 100"
+                }
+              ]
+            },
+            "description": "Same as **List Agent Collections** but filtered to settled rows (`settlement_id IS NOT NULL`).\n\nUseful for viewing historical handovers after admin creates and pays an agent settlement."
           }
         }
       ]

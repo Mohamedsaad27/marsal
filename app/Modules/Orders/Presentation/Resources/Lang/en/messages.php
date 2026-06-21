@@ -1,5 +1,9 @@
 <?php
 
 return [
-    //
+    'dashboard_success' => 'Agent dashboard loaded successfully',
+    'orders_list_success' => 'Orders list loaded successfully',
+    'order_detail_success' => 'Order details loaded successfully',
+    'status_updated' => 'Order status updated successfully',
+    'proof_uploaded' => 'Delivery proof uploaded successfully',
 ];

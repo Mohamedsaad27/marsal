@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('order_schedules', function (Blueprint $table) {
             $table->uuid('order_schedule_id')->primary();
-            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->cascadeOnDelete();
+            $table->foreignUuid('order_id')->unique()->references('order_id')->on('orders')->cascadeOnDelete();
             $table->date('expected_delivery_date')->nullable();
             $table->date('postponed_date')->nullable()->comment('Filled by agent when status = postponed');
             $table->text('schedule_notes')->nullable();
