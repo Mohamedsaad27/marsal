@@ -17,7 +17,6 @@ class AgentCollectionListResource extends JsonResource
             : CollectionTypeEnum::tryFrom((int) $this->collection_type);
 
         return [
-            'id' => $this->collection_id,
             'collection_id' => $this->collection_id,
             'order_id' => $this->order_id,
             'internal_code' => $this->whenLoaded(

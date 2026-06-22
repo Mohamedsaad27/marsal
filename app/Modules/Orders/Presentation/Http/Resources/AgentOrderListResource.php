@@ -17,9 +17,7 @@ class AgentOrderListResource extends JsonResource
             : OrderStatusEnum::tryFrom((int) $this->status);
 
         return [
-            'id' => $this->order_id,
             'order_id' => $this->order_id,
-            'reference_code' => $this->reference_code,
             'internal_code' => $this->reference_code,
             'status' => [
                 'id' => $status?->value,

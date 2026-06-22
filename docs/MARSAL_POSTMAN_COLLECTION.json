@@ -2959,8 +2959,75 @@
       ]
     },
     {
+      "name": "Agent — Reference",
+      "description": "Static reference data for the delivery agent mobile app — order statuses, collection types, proof file types, list filters, and refusal resolution codes.\n\n**Base path:** `/api/v1/agent/definitions`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Agent — Orders → Login as Delivery Agent** first.\n\nValues are generated from server enums (`OrderStatusEnum`, `CollectionTypeEnum`, etc.) — always use this endpoint instead of hardcoding IDs in the mobile app.",
+      "item": [
+        {
+          "name": "Get Status & Type Definitions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/definitions",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "definitions"
+              ]
+            },
+            "description": "Returns all coded status/type definitions used by the agent app.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Success (200) `data` sections:**\n\n---\n\n### `order_statuses[]` — all 17 order statuses (`orders.status`)\n| Field | Description |\n|-------|-------------|\n| `id` | TINYINT value sent as `status_id` in PATCH status |\n| `code` | snake_case key (e.g. `out_for_delivery`) |\n| `label_ar` | Arabic UI label |\n| `is_terminal` | Order leaves active list when `true` |\n| `requires_collection` | PATCH status requires `collected_amount` + `collection_type` |\n| `badge_color` | UI badge: `blue` · `green` · `red` · `orange` · `gray` |\n| `available_actions[]` | Server-computed action keys for order detail screen |\n\n| id | code | label_ar | terminal | collection |\n|----|------|----------|----------|------------|\n| 1 | pending | بانتظار التوزيع | — | — |\n| 2 | assigned | تم التعيين | — | — |\n| 3 | out_for_delivery | قيد التوصيل | — | — |\n| 4 | awaiting_approval | بانتظار الموافقة | — | — |\n| 5 | delivered | تم التسليم | ✓ | ✓ |\n| 6 | delivered_price_changed | تم التسليم بتغيير سعر | ✓ | ✓ |\n| 7 | partial_delivery | تسليم جزئي | ✓ | ✓ |\n| 8 | refused_paid_shipping | رفض + دفع رسوم الشحن | ✓ | ✓ |\n| 9 | refused_no_payment | رفض وعدم دفع رسوم الشحن | ✓ | — |\n| 10 | customer_cancelled | ألغى العميل | ✓ | — |\n| 11 | no_answer | لا يوجد رد | — | — |\n| 12 | phone_off | الهاتف مغلق | — | — |\n| 13 | customer_evading | تهرّب / مختفي | — | — |\n| 14 | unsafe_area | منطقة غير آمنة | — | — |\n| 15 | postponed | مؤجل | — | — |\n| 16 | outside_governorate | خارج المحافظة | — | — |\n| 17 | wrong_phone | رقم هاتف خاطئ | — | — |\n\n---\n\n### `collection_types[]` — `collections.collection_type`\n| id | code | label_ar |\n|----|------|----------|\n| 1 | cod | مبلغ الاستلام (COD) |\n| 2 | shipping_fee | رسوم الشحن |\n| 3 | partial | تحصيل جزئي |\n\n---\n\n### `proof_file_types[]` — `order_proofs.file_type`\n| id | code | label_ar |\n|----|------|----------|\n| 1 | image | صورة |\n| 2 | pdf | ملف PDF |\n| 3 | other | أخرى |\n\n---\n\n### `order_list_filters[]` — `GET /agent/orders?status=`\n| key | label_ar | status_ids |\n|-----|----------|------------|\n| all | الكل | 1,2,3,4,11,12,13,14,15,16,17 |\n| new | جديد | 1, 2 |\n| in_delivery | قيد التوصيل | 3 |\n| postponed | مؤجل | 15 |\n\n---\n\n### `collection_settled_filters[]` — `GET /agent/collections?settled=`\n| key | query_value | label_ar |\n|-----|-------------|----------|\n| unsettled | false | غير مسوّاة |\n| settled | true | مسوّاة |\n\n---\n\n### `refusal_resolutions[]` — `POST /agent/orders/{id}/refusal/resolve` (Phase 4)\n| id | code | label_ar | result_status_id | requires_collection |\n|----|------|----------|------------------|---------------------|\n| 1 | delivered | وافق العميل أثناء المؤقت | 5 | ✓ |\n| 2 | refused_paid | رفض ودفع رسوم الشحن | 8 | ✓ |\n| 3 | refused_no_pay | رفض وعدم الدفع | 9 | — |\n| 4 | expired | انتهى المؤقت بدون حل | 9 | — |\n\nSee **Examples** tab for the full live JSON response."
+          },
+          "response": [
+            {
+              "name": "200 OK — All definitions",
+              "originalRequest": {
+                "method": "GET",
+                "header": [
+                  {
+                    "key": "Accept",
+                    "value": "application/json"
+                  }
+                ],
+                "url": {
+                  "raw": "{{base_url}}/api/v1/agent/definitions",
+                  "host": [
+                    "{{base_url}}"
+                  ],
+                  "path": [
+                    "api",
+                    "v1",
+                    "agent",
+                    "definitions"
+                  ]
+                }
+              },
+              "status": "OK",
+              "code": 200,
+              "_postman_previewlanguage": "json",
+              "header": [
+                {
+                  "key": "Content-Type",
+                  "value": "application/json"
+                }
+              ],
+              "body": "{\n  \"isSuccess\": true,\n  \"message\": \"تم تحميل تعريفات الحالات والأنواع بنجاح\",\n  \"data\": {\n    \"order_statuses\": [\n      { \"id\": 1, \"code\": \"pending\", \"label_ar\": \"بانتظار التوزيع\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"gray\", \"available_actions\": [] },\n      { \"id\": 2, \"code\": \"assigned\", \"label_ar\": \"تم التعيين\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"blue\", \"available_actions\": [\"start_delivery\", \"postpone\", \"call_customer\"] },\n      { \"id\": 3, \"code\": \"out_for_delivery\", \"label_ar\": \"قيد التوصيل\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"blue\", \"available_actions\": [\"confirm_delivery\", \"refuse\", \"no_answer\", \"phone_off\", \"postpone\", \"unsafe_area\", \"call_customer\"] },\n      { \"id\": 4, \"code\": \"awaiting_approval\", \"label_ar\": \"بانتظار الموافقة\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"blue\", \"available_actions\": [\"call_customer\"] },\n      { \"id\": 5, \"code\": \"delivered\", \"label_ar\": \"تم التسليم\", \"is_terminal\": true, \"requires_collection\": true, \"badge_color\": \"green\", \"available_actions\": [] },\n      { \"id\": 6, \"code\": \"delivered_price_changed\", \"label_ar\": \"تم التسليم بتغيير سعر\", \"is_terminal\": true, \"requires_collection\": true, \"badge_color\": \"green\", \"available_actions\": [] },\n      { \"id\": 7, \"code\": \"partial_delivery\", \"label_ar\": \"تسليم جزئي\", \"is_terminal\": true, \"requires_collection\": true, \"badge_color\": \"green\", \"available_actions\": [] },\n      { \"id\": 8, \"code\": \"refused_paid_shipping\", \"label_ar\": \"رفض + دفع رسوم الشحن\", \"is_terminal\": true, \"requires_collection\": true, \"badge_color\": \"red\", \"available_actions\": [] },\n      { \"id\": 9, \"code\": \"refused_no_payment\", \"label_ar\": \"رفض وعدم دفع رسوم الشحن\", \"is_terminal\": true, \"requires_collection\": false, \"badge_color\": \"red\", \"available_actions\": [] },\n      { \"id\": 10, \"code\": \"customer_cancelled\", \"label_ar\": \"ألغى العميل\", \"is_terminal\": true, \"requires_collection\": false, \"badge_color\": \"red\", \"available_actions\": [] },\n      { \"id\": 11, \"code\": \"no_answer\", \"label_ar\": \"لا يوجد رد\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"gray\", \"available_actions\": [] },\n      { \"id\": 12, \"code\": \"phone_off\", \"label_ar\": \"الهاتف مغلق\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"gray\", \"available_actions\": [] },\n      { \"id\": 13, \"code\": \"customer_evading\", \"label_ar\": \"تهرّب / مختفي\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"gray\", \"available_actions\": [] },\n      { \"id\": 14, \"code\": \"unsafe_area\", \"label_ar\": \"منطقة غير آمنة\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"gray\", \"available_actions\": [] },\n      { \"id\": 15, \"code\": \"postponed\", \"label_ar\": \"مؤجل\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"orange\", \"available_actions\": [] },\n      { \"id\": 16, \"code\": \"outside_governorate\", \"label_ar\": \"خارج المحافظة\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"gray\", \"available_actions\": [] },\n      { \"id\": 17, \"code\": \"wrong_phone\", \"label_ar\": \"رقم هاتف خاطئ\", \"is_terminal\": false, \"requires_collection\": false, \"badge_color\": \"gray\", \"available_actions\": [] }\n    ],\n    \"collection_types\": [\n      { \"id\": 1, \"code\": \"cod\", \"label_ar\": \"مبلغ الاستلام (COD)\" },\n      { \"id\": 2, \"code\": \"shipping_fee\", \"label_ar\": \"رسوم الشحن\" },\n      { \"id\": 3, \"code\": \"partial\", \"label_ar\": \"تحصيل جزئي\" }\n    ],\n    \"proof_file_types\": [\n      { \"id\": 1, \"code\": \"image\", \"label_ar\": \"صورة\" },\n      { \"id\": 2, \"code\": \"pdf\", \"label_ar\": \"ملف PDF\" },\n      { \"id\": 3, \"code\": \"other\", \"label_ar\": \"أخرى\" }\n    ],\n    \"order_list_filters\": [\n      { \"key\": \"all\", \"label_ar\": \"الكل\", \"status_ids\": [1, 2, 3, 4, 11, 12, 13, 14, 15, 16, 17] },\n      { \"key\": \"new\", \"label_ar\": \"جديد\", \"status_ids\": [1, 2] },\n      { \"key\": \"in_delivery\", \"label_ar\": \"قيد التوصيل\", \"status_ids\": [3] },\n      { \"key\": \"postponed\", \"label_ar\": \"مؤجل\", \"status_ids\": [15] }\n    ],\n    \"collection_settled_filters\": [\n      { \"key\": \"unsettled\", \"query_value\": \"false\", \"label_ar\": \"غير مسوّاة\", \"description_ar\": \"تحصيلات لم يتم تسليمها للإدارة بعد\" },\n      { \"key\": \"settled\", \"query_value\": \"true\", \"label_ar\": \"مسوّاة\", \"description_ar\": \"تحصيلات مرتبطة بتسوية مدفوعة\" }\n    ],\n    \"refusal_resolutions\": [\n      { \"id\": 1, \"code\": \"delivered\", \"label_ar\": \"وافق العميل أثناء المؤقت\", \"result_status_id\": 5, \"requires_collection\": true },\n      { \"id\": 2, \"code\": \"refused_paid\", \"label_ar\": \"رفض ودفع رسوم الشحن\", \"result_status_id\": 8, \"requires_collection\": true },\n      { \"id\": 3, \"code\": \"refused_no_pay\", \"label_ar\": \"رفض وعدم الدفع\", \"result_status_id\": 9, \"requires_collection\": false },\n      { \"id\": 4, \"code\": \"expired\", \"label_ar\": \"انتهى المؤقت بدون حل\", \"result_status_id\": 9, \"requires_collection\": false }\n    ]\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Agent — Orders",
-      "description": "Delivery agent mobile app APIs (Phase 1 — core order flow).\n\n**Base path:** `/api/v1/agent/*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Login as Delivery Agent** first (or **Auth → Login** with an agent account).\n\nOrders are scoped to the authenticated agent's `delivery_agent_id` — agents never see other agents' orders.\n\n**Order status map (`orders.status`):** `1` pending · `2` assigned · `3` out_for_delivery · `4` awaiting_approval · `5` delivered · `6` delivered_price_changed · `7` partial_delivery · `8` refused_paid_shipping · `9` refused_no_payment · `10` customer_cancelled · `11` no_answer · `12` phone_off · `13` customer_evading · `14` unsafe_area · `15` postponed · `16` outside_governorate · `17` wrong_phone\n\n**List filter `status`:** `all` (default) · `new` (1,2) · `in_delivery` (3) · `postponed` (15)\n\n**Collection type (`collection_type`):** `1` COD · `2` shipping_fee · `3` partial\n\n**Proof file type (`file_type`):** `1` image · `2` pdf · `3` other",
+      "description": "Delivery agent mobile app APIs (Phase 1 — core order flow).\n\n**Base path:** `/api/v1/agent/*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Login as Delivery Agent** first (or **Auth → Login** with an agent account).\n\nOrders are scoped to the authenticated agent's `delivery_agent_id` — agents never see other agents' orders.\n\n**Status & type maps:** see **Agent — Reference → Get Status & Type Definitions** for all order statuses, collection types, proof file types, list filters, and refusal resolution codes.\n\n**List filter `status`:** `all` (default) · `new` (1,2) · `in_delivery` (3) · `postponed` (15)",
       "item": [
         {
           "name": "Login as Delivery Agent",
@@ -3357,7 +3424,7 @@
     },
     {
       "name": "Agent — Collections",
-      "description": "Delivery agent mobile app APIs (Phase 2 — collections & finance).\n\n**Base path:** `/api/v1/agent/collections*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Agent — Orders → Login as Delivery Agent** first.\n\nCollections are scoped to the authenticated agent's `delivery_agent_id`. Unsettled collections have `settlement_id IS NULL` and contribute to `delivery_agents.balance`.\n\n**Collection type (`collection_type`):** `1` COD · `2` shipping_fee · `3` partial\n\n**List filter `settled`:** `false` (default, unsettled / held by agent) · `true` (already linked to a settlement)",
+      "description": "Delivery agent mobile app APIs (Phase 2 — collections & finance).\n\n**Base path:** `/api/v1/agent/collections*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Agent — Orders → Login as Delivery Agent** first.\n\nCollections are scoped to the authenticated agent's `delivery_agent_id`. Unsettled collections have `settlement_id IS NULL` and contribute to `delivery_agents.balance`.\n\n**Collection type & settled filter maps:** see **Agent — Reference → Get Status & Type Definitions**.",
       "item": [
         {
           "name": "Get Agent Collections Summary",

@@ -24,11 +24,8 @@ class AgentOrderDetailResource extends JsonResource
         $shippingFee = $financials?->shipping_fee !== null ? (float) $financials->shipping_fee : 0.0;
 
         return [
-            'id' => $this->order_id,
             'order_id' => $this->order_id,
             'reference_code' => $this->reference_code,
-            'reference_no' => $this->reference_no,
-            'internal_code' => $this->reference_code,
             'company_name' => $this->display_company_name ?: $this->shippingCompany?->company_name,
             'status' => [
                 'id' => $status->value,

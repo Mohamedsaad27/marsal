@@ -12,7 +12,6 @@ class AgentUpcomingOrderResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->order_id,
             'order_id' => $this->order_id,
             'reference_code' => $this->reference_code,
             'status_id' => $this->status->value,

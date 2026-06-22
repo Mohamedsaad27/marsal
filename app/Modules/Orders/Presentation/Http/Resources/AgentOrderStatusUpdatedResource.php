@@ -10,7 +10,6 @@ class AgentOrderStatusUpdatedResource extends JsonResource
     public function toArray(Request $request): array
     {
         return [
-            'id' => $this->resource['order_id'],
             'order_id' => $this->resource['order_id'],
             'new_status' => [
                 'id' => $this->resource['new_status']['id'],

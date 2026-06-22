@@ -1,6 +1,7 @@
 <?php
 
 use App\Modules\Orders\Presentation\Http\Controllers\AgentDashboardController;
+use App\Modules\Orders\Presentation\Http\Controllers\AgentDefinitionsController;
 use App\Modules\Orders\Presentation\Http\Controllers\AgentOrderController;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +18,9 @@ Route::prefix('api/v1/agent')
     ->group(function () {
         Route::get('dashboard', [AgentDashboardController::class, 'index'])
             ->name('agent.dashboard');
+
+        Route::get('definitions', [AgentDefinitionsController::class, 'index'])
+            ->name('agent.definitions');
 
         Route::get('orders', [AgentOrderController::class, 'index'])
             ->name('agent.orders.index');

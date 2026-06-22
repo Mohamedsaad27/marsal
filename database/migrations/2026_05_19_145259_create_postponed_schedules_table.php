@@ -10,7 +10,7 @@ return new class extends Migration
     {
         Schema::create('postponed_schedules', function (Blueprint $table) {
             $table->uuid('postponed_schedule_id')->primary();
-            $table->foreignUuid('order_id')->nullable()->references('order_id')->on('orders')->onDelete('set null');
+            $table->foreignUuid('order_id')->references('order_id')->on('orders')->cascadeOnDelete();
             $table->foreignUuid('delivery_agent_id')->nullable()->references('delivery_agent_id')->on('delivery_agents')->onDelete('set null');
             $table->date('scheduled_date')->comment('New delivery date chosen by agent');
             $table->text('reason')->nullable();
