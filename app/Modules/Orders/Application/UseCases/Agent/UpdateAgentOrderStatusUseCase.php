@@ -204,7 +204,7 @@ class UpdateAgentOrderStatusUseCase
             ->firstOrFail(['commission_type', 'commission_value']);
 
         return [
-            'commission_type' => (int) $agent->commission_type,
+            'commission_type' => $agent->commission_type->value,
             'commission_value' => (float) $agent->commission_value,
         ];
     }

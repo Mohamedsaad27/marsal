@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import), Agent Mobile (Phase 1 orders · Phase 2 collections · Phase 3 schedule), Audit Logs, Dashboard (admin home KPIs), Notifications.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections/schedule endpoints. Requires Spatie role `delivery_agent`.",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import), Agent Mobile (Phases 1–3 orders/collections/schedule · Phase 5 profile), Audit Logs, Dashboard (admin home KPIs), Notifications.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections/schedule/profile endpoints. Requires Spatie role `delivery_agent`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -3697,6 +3697,70 @@
               ]
             },
             "description": "Change the postponed date for an order already in **postponed (15)** status.\n\nAuth: Bearer + `delivery_agent` role. Uses `{{order_id}}` from **List Agent Orders** or **List Postponed Orders**.\n\n**Body:**\n- `postponed_date` (required) — must be after today (`Y-m-d`)\n- `notes` (optional, max 500)\n\n**Side effects (DB transaction):**\n- Updates `order_schedules.postponed_date` + `schedule_notes`\n- Updates latest `postponed_schedules` row (resets `reminder_sent`)\n- Inserts `order_status_history` row (status 15 → 15 with note)\n\n**Success (200) `data`:** `order_id`, `postponed_date`, `status` `{ id, label }`\n\n**422:** order is not in postponed status."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agent — Profile",
+      "description": "Delivery agent mobile app APIs (Phase 5 — profile & settings).\n\n**Base path:** `/api/v1/agent/profile` · `/api/v1/agent/fcm-token`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Agent — Orders → Login as Delivery Agent** first.",
+      "item": [
+        {
+          "name": "Get Agent Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/profile",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "profile"
+              ]
+            },
+            "description": "Powers the **حسابي** (My Account) screen.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Success (200) `data`:**\n- `user_id`, `name`, `phone`, `avatar_initials`\n- `agent` — `agent_id`, `vehicle_type` `{ id, label }`, `vehicle_plate`, `national_id`, `commission_type` `{ id, label }`, `commission_value`, `balance`, `is_active`\n- `stats` — `total_delivered`, `average_rating` (null until ratings module), `active_since` (`Y-m-d`)\n- `zones[]` — `zone_id`, `city`, `governorate`, `is_primary`\n\n**403:** user has `delivery_agent` role but no `delivery_agents` profile row."
+          }
+        },
+        {
+          "name": "Update FCM Token",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fcm_token\": \"fcm_token_string_here\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/fcm-token",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "fcm-token"
+              ]
+            },
+            "description": "Register or refresh the device FCM token for push notifications.\n\nCall on app launch and whenever Firebase refreshes the token.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Body:** `fcm_token` (required, string, max 500)\n\nUpdates `users.fcm_token` for the authenticated user.\n\n**Success (200):** `data` is `null` with success message."
           }
         }
       ]

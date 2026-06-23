@@ -16,6 +16,8 @@ return [
     'delivery_agent_supervisors_fetched' => 'تم جلب المشرفين بنجاح.',
     'user_updated' => 'تم تحديث المستخدم بنجاح.',
     'profile_updated' => 'تم تحديث الملف الشخصي بنجاح',
+    'agent_profile_success' => 'تم تحميل الملف الشخصي بنجاح',
+    'fcm_token_updated' => 'تم تحديث رمز الإشعارات بنجاح',
     'user_status_toggled' => 'تم تحديث حالة المستخدم بنجاح.',
     'user_deleted' => 'تم حذف المستخدم بنجاح.',
     'action_forbidden' => 'غير مسموح لك بتنفيذ هذه العملية على هذا المستخدم.',

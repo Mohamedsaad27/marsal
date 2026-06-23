@@ -16,6 +16,8 @@ return [
     'delivery_agent_supervisors_fetched' => 'Delivery agent supervisors fetched successfully.',
     'user_updated' => 'User updated successfully.',
     'profile_updated' => 'Profile updated successfully.',
+    'agent_profile_success' => 'Agent profile loaded successfully.',
+    'fcm_token_updated' => 'FCM token updated successfully.',
     'user_status_toggled' => 'User status updated successfully.',
     'user_deleted' => 'User deleted successfully.',
     'action_forbidden' => 'You are not allowed to perform this action on this user.',

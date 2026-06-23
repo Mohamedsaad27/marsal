@@ -2,12 +2,15 @@
 
 namespace App\Modules\Users\Infrastructure\Database\Models;
 
-use App\Modules\AuditLog\Infrastructure\Traits\Auditable;
+use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
+use App\Modules\Users\Domain\Enums\VehicleTypeEnum;
 use App\Modules\Core\Infrastructure\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use App\Modules\AuditLog\Infrastructure\Traits\Auditable;
+
 
 class DeliveryAgent extends Model
 {
@@ -38,10 +41,20 @@ class DeliveryAgent extends Model
     protected function casts(): array
     {
         return [
+            'vehicle_type' => VehicleTypeEnum::class,
+            'commission_type' => CommissionTypeEnum::class,
             'commission_value' => 'decimal:4',
             'balance' => 'decimal:2',
             'is_available' => 'integer',
+            'created_at' => 'datetime',
+            'updated_at' => 'datetime',
+            'deleted_at' => 'datetime',
         ];
+    }
+
+    public function zones(): HasMany
+    {
+        return $this->hasMany(AgentZone::class, 'delivery_agent_id', 'delivery_agent_id');
     }
 
     public function user(): BelongsTo

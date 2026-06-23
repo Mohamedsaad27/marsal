@@ -2,6 +2,8 @@
 
 namespace App\Modules\Users\Presentation\Http\Resources;
 
+use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
+use App\Modules\Users\Domain\Enums\VehicleTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -34,16 +36,18 @@ class DeliveryAgentResource extends JsonResource
 
     private function formatVehicle(): ?array
     {
-        if ($this->vehicle_type === null) {
+        $vehicleType = $this->vehicle_type instanceof VehicleTypeEnum
+            ? $this->vehicle_type
+            : VehicleTypeEnum::tryFrom((int) $this->vehicle_type);
+
+        if ($vehicleType === null) {
             return null;
         }
 
-        $type = (int) $this->vehicle_type;
-
         return [
             'type' => [
-                'code' => $type,
-                'label' => __("users::vehicle_types.{$type}"),
+                'code' => $vehicleType->value,
+                'label' => $vehicleType->labelAr(),
             ],
             'plate_number' => $this->vehicle_plate_number,
         ];
@@ -51,12 +55,14 @@ class DeliveryAgentResource extends JsonResource
 
     private function formatCommission(): array
     {
-        $type = (int) $this->commission_type;
+        $commissionType = $this->commission_type instanceof CommissionTypeEnum
+            ? $this->commission_type
+            : CommissionTypeEnum::tryFrom((int) $this->commission_type);
 
         return [
             'type' => [
-                'code' => $type,
-                'label' => __("users::commission_types.{$type}"),
+                'code' => $commissionType?->value,
+                'label' => $commissionType?->labelAr(),
             ],
             'value' => $this->commission_value,
         ];

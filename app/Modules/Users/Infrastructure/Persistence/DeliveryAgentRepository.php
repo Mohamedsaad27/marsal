@@ -5,7 +5,9 @@ namespace App\Modules\Users\Infrastructure\Persistence;
 use App\Modules\Users\Application\DTOs\ListDeliveryAgentSupervisorsDTO;
 use App\Modules\Users\Domain\Interfaces\DeliveryAgentRepositoryInterface;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 
 class DeliveryAgentRepository implements DeliveryAgentRepositoryInterface
 {
@@ -35,5 +37,31 @@ class DeliveryAgentRepository implements DeliveryAgentRepositoryInterface
             ->with(['user' => fn ($q) => $q->select('user_id', 'name', 'phone', 'is_active')])
             ->orderBy('users.name')
             ->get();
+    }
+
+    public function findByUserIdForProfile(string $userId): ?DeliveryAgent
+    {
+        return DeliveryAgent::query()
+            ->with([
+                'user',
+                'zones.city',
+                'zones.governorate',
+            ])
+            ->where('user_id', $userId)
+            ->whereNull('deleted_at')
+            ->first();
+    }
+
+    public function countDeliveredOrders(string $deliveryAgentId): int
+    {
+        return (int) DB::table('orders')
+            ->where('delivery_agent_id', $deliveryAgentId)
+            ->whereNull('deleted_at')
+            ->whereIn('status', [
+                OrderStatusEnum::Delivered->value,
+                OrderStatusEnum::DeliveredPriceChanged->value,
+                OrderStatusEnum::PartialDelivery->value,
+            ])
+            ->count();
     }
 }

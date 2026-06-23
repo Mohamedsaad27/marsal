@@ -10,4 +10,8 @@ interface DeliveryAgentRepositoryInterface
 {
     /** @return Collection<int, DeliveryAgent> */
     public function listSupervisors(ListDeliveryAgentSupervisorsDTO $dto): Collection;
+
+    public function findByUserIdForProfile(string $userId): ?DeliveryAgent;
+
+    public function countDeliveredOrders(string $deliveryAgentId): int;
 }
