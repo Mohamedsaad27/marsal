@@ -1,0 +1,6 @@
+{
+    "name": "Returns",
+    "providers": [
+        "App\\Modules\\Returns\\Infrastructure\\Providers\\ReturnsServiceProvider"
+    ]
+}

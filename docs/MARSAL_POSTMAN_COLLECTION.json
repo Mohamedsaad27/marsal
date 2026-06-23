@@ -93,6 +93,18 @@
             "value": "",
             "type": "string",
             "description": "UUID of a collection (`collection_id`). Auto-set from Agent — Collections → List Agent Collections (first item)."
+        },
+        {
+            "key": "approval_request_id",
+            "value": "",
+            "type": "string",
+            "description": "UUID of an approval request (`approval_request_id`). Auto-set from Admin — Approval Requests → List Approval Requests (first pending item)."
+        },
+        {
+            "key": "return_id",
+            "value": "",
+            "type": "string",
+            "description": "UUID of a return record (`return_id`). Auto-set from Admin — Returns → List Returns (first pending item)."
         }
     ],
     "auth": {
@@ -3918,6 +3930,311 @@
                             ]
                         },
                         "description": "حذف جميع الإشعارات المقروءة للمستخدم الحالي.\n\nAuth: Bearer token required.\n\nOnly notifications with `is_read = true` are removed. Unread notifications are kept.\n\n**Response (200):**\n```json\n{\n  \"isSuccess\": true,\n  \"message\": \"تم حذف الإشعارات المقروءة\",\n  \"data\": { \"deleted_count\": 4 }\n}\n```\n\n`deleted_count` — number of read notifications permanently deleted (0 if none were read)."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Orders (Shipments)",
+            "description": "Admin shipments dashboard — stats cards, paginated filterable order list, order detail, and agent assignment.\n\nAll routes: `auth:api` + `role:super_admin`.\n\n**Status filter values:** `all` | `pending` | `in_delivery` | `delivered` | `postponed_refused` | `returned` | or a raw numeric status ID (1–15).\n\n**Assign flow:** send `PATCH /orders/{orderId}/assign` with `agent_id` — transitions order to `Assigned (2)`, writes status history, dispatches FCM notification to agent.",
+            "item": [
+                {
+                    "name": "Order Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/stats",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "orders", "stats"]
+                        },
+                        "description": "الإحصائيات السريعة لصفحة الطلبات — 6 بطاقات.\n\n**Response `data`:**\n```json\n{\n  \"total\": 250,\n  \"pending\": 18,\n  \"in_delivery\": 42,\n  \"delivered\": 150,\n  \"postponed_refused\": 35,\n  \"returned\": 5\n}\n```\n\n- `pending` — status = 1 (بانتظار التعيين)\n- `in_delivery` — status IN (2, 3, 4) (تم التعيين + قيد التوصيل + بانتظار الموافقة)\n- `delivered` — status IN (5, 6, 7) (تم التسليم بأشكاله)\n- `postponed_refused` — status IN (8, 9, 10, 11, 12, 15)\n- `returned` — orders with a linked return record"
+                    }
+                },
+                {
+                    "name": "List Orders",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data && json.data.items;",
+                                    "    if (items && items.length > 0) {",
+                                    "        pm.collectionVariables.set('order_id', items[0].order_id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders?status=all&per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "orders"],
+                            "query": [
+                                { "key": "status", "value": "all", "description": "all | pending | in_delivery | delivered | postponed_refused | returned | or numeric status ID" },
+                                { "key": "company_id", "value": "", "description": "UUID of shipping company — filter by company", "disabled": true },
+                                { "key": "agent_id", "value": "", "description": "UUID of delivery agent — filter by agent", "disabled": true },
+                                { "key": "governorate_id", "value": "", "description": "UUID of governorate — filter by region", "disabled": true },
+                                { "key": "date_from", "value": "", "description": "YYYY-MM-DD — from date (inclusive)", "disabled": true },
+                                { "key": "date_to", "value": "", "description": "YYYY-MM-DD — to date (inclusive)", "disabled": true },
+                                { "key": "search", "value": "", "description": "Search by reference_code, reference_no, customer_name, or customer_phone", "disabled": true },
+                                { "key": "per_page", "value": "20", "description": "Items per page (max 100)" }
+                            ]
+                        },
+                        "description": "قائمة الطلبات للمشرف — مرشّحة وقابلة للصفحات.\n\nSaves `order_id` of the first result to collection variable.\n\n**Response `data.items[]`:**\n```json\n{\n  \"order_id\": \"uuid\",\n  \"reference_code\": \"MR-2841\",\n  \"reference_no\": \"REF-91204\",\n  \"display_company_name\": null,\n  \"status\": { \"id\": 1, \"label\": \"بانتظار التوزيع\", \"color\": \"gray\" },\n  \"customer\": { \"name\": \"أحمد عبدالله\", \"phone\": \"01005551024\", \"phone_alt\": null },\n  \"address\": { \"governorate\": \"القاهرة\", \"city\": \"مدينة نصر\", \"address_line\": \"شارع 9\" },\n  \"company\": { \"id\": \"uuid\", \"name\": \"أرامكس مصر\" },\n  \"agent\": null,\n  \"amount\": 275.00,\n  \"assigned_at\": null,\n  \"created_at\": \"2026-06-19T10:00:00.000000Z\"\n}\n```"
+                    }
+                },
+                {
+                    "name": "Get Order Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/{{order_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "orders", "{{order_id}}"]
+                        },
+                        "description": "تفاصيل طلب كاملة — تشمل 6 جداول فرعية وسجل الحالات والمستندات.\n\n`{{order_id}}` — UUID of the order. Auto-set from List Orders.\n\n**Response `data`** includes: `financials`, `items`, `schedule`, `company`, `agent`, `status_history[]`, `proofs[]`.\n\n**Returns 404** if order not found or soft-deleted."
+                    }
+                },
+                {
+                    "name": "Assign Agent to Order",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"agent_id\": \"{{supervisor_agent_id}}\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/{{order_id}}/assign",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "orders", "{{order_id}}", "assign"]
+                        },
+                        "description": "تعيين مندوب توصيل لطلب.\n\n- Transitions order status to `Assigned (2)` and sets `assigned_at`.\n- Creates an `order_status_history` record (changed_by = admin user_id).\n- Dispatches FCM notification to the assigned agent (type: `new_order`).\n- Can be called on already-assigned orders to **reassign** to a different agent.\n\n**Body:**\n```json\n{ \"agent_id\": \"uuid\" }\n```\n\n**Validation:**\n- `agent_id` required, must exist in `delivery_agents` table.\n\n**Returns 404** if order not found. **Returns 422** if agent_id invalid."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Approval Requests",
+            "description": "Admin approvals dashboard — stats cards, paginated list (pending sorted first by expiry), detail with embedded audit log, and approve/reject action.\n\nAll routes: `auth:api` + `role:super_admin`.\n\n**Approval types:** 1=تعديل سعر | 2=رسوم شحن | 3=تحصيل جزئي\n**Approval statuses:** 1=بانتظار الرد | 2=تمت الموافقة | 3=مرفوضة | 4=منتهية\n\n**Review side-effects (on approve):**\n- type=1 → order status → `DeliveredPriceChanged (6)`, updates `order_financials.approved_amount`\n- type=2 → order status → `RefusedPaidShipping (8)`, updates `approved_amount`\n- type=3 → order status → `PartialDelivery (7)`, updates `approved_amount`\n\n**On reject:** order status reverts to `OutForDelivery (3)`.",
+            "item": [
+                {
+                    "name": "Approval Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/approval-requests/stats",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "approval-requests", "stats"]
+                        },
+                        "description": "الإحصائيات السريعة لصفحة الموافقات — 5 بطاقات.\n\n**Response `data`:**\n```json\n{\n  \"awaiting\": 3,\n  \"urgent\": 1,\n  \"approved\": 2,\n  \"rejected\": 1,\n  \"expired\": 1\n}\n```\n\n- `urgent` — pending requests expiring within the next 30 minutes"
+                    }
+                },
+                {
+                    "name": "List Approval Requests",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data && json.data.items;",
+                                    "    if (items && items.length > 0) {",
+                                    "        const pending = items.find(i => i.approval_status && i.approval_status.id === 1);",
+                                    "        const target = pending || items[0];",
+                                    "        pm.collectionVariables.set('approval_request_id', target.id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/approval-requests?per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "approval-requests"],
+                            "query": [
+                                { "key": "status", "value": "1", "description": "1=بانتظار الرد | 2=تمت الموافقة | 3=مرفوضة | 4=منتهية", "disabled": true },
+                                { "key": "type", "value": "", "description": "1=تعديل سعر | 2=رسوم شحن | 3=تحصيل جزئي", "disabled": true },
+                                { "key": "agent_id", "value": "", "description": "UUID of delivery agent", "disabled": true },
+                                { "key": "per_page", "value": "20", "description": "Items per page (max 100)" }
+                            ]
+                        },
+                        "description": "قائمة طلبات الموافقة — pending items sorted by `expires_at ASC` first, then newest.\n\nSaves first pending `approval_request_id` to collection variable.\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"order_id\": \"uuid\",\n  \"order_code\": \"MR-2836\",\n  \"approval_type\": { \"id\": 1, \"label\": \"تعديل سعر\" },\n  \"approval_status\": { \"id\": 1, \"label\": \"بانتظار الرد\" },\n  \"original_amount\": 455.00,\n  \"requested_amount\": 395.00,\n  \"reason\": \"اتفق العميل مع الراسل على خصم\",\n  \"review_notes\": null,\n  \"expires_at\": \"2026-06-23T22:46:00.000000Z\",\n  \"expires_in_minutes\": 18,\n  \"requested_by\": { \"id\": \"uuid\", \"name\": \"خالد العتيبي\" },\n  \"reviewed_by\": null,\n  \"reviewed_at\": null,\n  \"order\": { \"reference_code\": \"MR-2836\", \"company_name\": \"...\", \"agent_name\": \"...\" },\n  \"created_at\": \"2026-06-23T21:00:00.000000Z\"\n}\n```"
+                    }
+                },
+                {
+                    "name": "Get Approval Request Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/approval-requests/{{approval_request_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "approval-requests", "{{approval_request_id}}"]
+                        },
+                        "description": "تفاصيل طلب موافقة — يشمل بيانات الطلب المرتبط، معلومات المندوب والشركة.\n\n`{{approval_request_id}}` — UUID. Auto-set from List Approval Requests.\n\nThe `order` object includes `customer_name`, `governorate`, `city`, `company_name`, and `agent_name` for quick context.\n\n**Returns 404** if not found."
+                    }
+                },
+                {
+                    "name": "Review Approval Request (Approve)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"action\": \"approve\",\n  \"review_notes\": \"تمت الموافقة على تعديل السعر بناءً على اتفاق العميل\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/approval-requests/{{approval_request_id}}/review",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "approval-requests", "{{approval_request_id}}", "review"]
+                        },
+                        "description": "الموافقة على طلب تعديل السعر أو رسوم الشحن أو التحصيل الجزئي.\n\n**Side effects (all in one DB transaction):**\n1. Sets `approval_status = 2`, `reviewed_by`, `reviewed_at`, `review_notes`.\n2. Updates `order_financials.approved_amount = requested_amount`.\n3. Transitions order status: type=1→6, type=2→8, type=3→7.\n4. Creates `order_status_history` record.\n5. Dispatches in-app notification to shipping company (`status_change`).\n\n**Returns 422** if approval is not in `Pending` status.\n**Returns 404** if not found."
+                    }
+                },
+                {
+                    "name": "Review Approval Request (Reject)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"action\": \"reject\",\n  \"review_notes\": \"المبلغ المطلوب لا يتوافق مع سياسة التسعير\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/approval-requests/{{approval_request_id}}/review",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "approval-requests", "{{approval_request_id}}", "review"]
+                        },
+                        "description": "رفض طلب الموافقة — يعيد الطلب إلى حالة قيد التوصيل.\n\n**Side effects (all in one DB transaction):**\n1. Sets `approval_status = 3`, `reviewed_by`, `reviewed_at`, `review_notes`.\n2. Reverts order status to `OutForDelivery (3)`.\n3. Creates `order_status_history` record.\n4. Dispatches in-app notification to shipping company.\n\n**Returns 422** if approval is not in `Pending` status."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Returns",
+            "description": "Admin returns dashboard — stats cards, paginated list, and two status-advance actions.\n\nAll routes: `auth:api` + `role:super_admin`.\n\n**Return status pipeline:** 1=بانتظار الاستلام → 2=تم الاستلام من المندوب → 3=تم التسليم للشركة\n\n**Workflow:**\n1. Agent marks an order as refused/partial → system creates a `returns` record (status=1).\n2. Admin physically collects items → calls `PATCH /returns/{id}/receive` (1→2).\n3. Admin hands items back to shipping company → calls `PATCH /returns/{id}/return-to-company` (2→3).",
+            "item": [
+                {
+                    "name": "Return Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/returns/stats",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "returns", "stats"]
+                        },
+                        "description": "الإحصائيات السريعة لصفحة المرتجعات — 4 بطاقات.\n\n**Response `data`:**\n```json\n{\n  \"total\": 6,\n  \"pending\": 2,\n  \"received_by_admin\": 2,\n  \"sent_to_company\": 2\n}\n```"
+                    }
+                },
+                {
+                    "name": "List Returns",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data && json.data.items;",
+                                    "    if (items && items.length > 0) {",
+                                    "        const pending = items.find(i => i.return_status && i.return_status.id === 1);",
+                                    "        const target = pending || items[0];",
+                                    "        pm.collectionVariables.set('return_id', target.id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/returns?per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "returns"],
+                            "query": [
+                                { "key": "status", "value": "1", "description": "1=بانتظار الاستلام | 2=تم الاستلام | 3=تم التسليم للشركة", "disabled": true },
+                                { "key": "company_id", "value": "", "description": "UUID of shipping company", "disabled": true },
+                                { "key": "agent_id", "value": "", "description": "UUID of delivery agent", "disabled": true },
+                                { "key": "per_page", "value": "20", "description": "Items per page (max 100)" }
+                            ]
+                        },
+                        "description": "قائمة المرتجعات للمشرف — مرشّحة وقابلة للصفحات، مرتبة بالأحدث أولاً.\n\nSaves first pending `return_id` to collection variable.\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"order_id\": \"uuid\",\n  \"return_status\": { \"id\": 1, \"label\": \"بانتظار الاستلام\", \"color\": \"orange\" },\n  \"returned_quantity\": 2,\n  \"return_reason\": \"رفض العميل بدون دفع\",\n  \"notes\": null,\n  \"agent\": { \"id\": \"uuid\", \"name\": \"خالد العتيبي\" },\n  \"company\": { \"id\": \"uuid\", \"name\": \"سمسا للشحن\" },\n  \"received_at\": null,\n  \"returned_to_company_at\": null,\n  \"created_at\": \"2026-06-22T08:00:00.000000Z\"\n}\n```"
+                    }
+                },
+                {
+                    "name": "Mark Return Received from Agent",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/returns/{{return_id}}/receive",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "returns", "{{return_id}}", "receive"]
+                        },
+                        "description": "تسجيل استلام المرتجع من المندوب — ينقل الحالة من `بانتظار الاستلام (1)` إلى `تم الاستلام (2)` ويسجّل `received_at`.\n\n`{{return_id}}` — UUID. Auto-set from List Returns.\n\n**Returns 422** if return is not in status 1 (Pending).\n**Returns 404** if not found."
+                    }
+                },
+                {
+                    "name": "Mark Return Sent to Company",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/returns/{{return_id}}/return-to-company",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "returns", "{{return_id}}", "return-to-company"]
+                        },
+                        "description": "تسجيل إعادة المرتجع لشركة الشحن — ينقل الحالة من `تم الاستلام (2)` إلى `تم التسليم للشركة (3)` ويسجّل `returned_to_company_at`.\n\n`{{return_id}}` — UUID. Auto-set from List Returns.\n\n**Returns 422** if return is not in status 2 (ReceivedByAdmin).\n**Returns 404** if not found."
                     }
                 }
             ]
