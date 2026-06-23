@@ -15,11 +15,7 @@ enum ImportStatusHintEnum: string
     case CustomerCancelled     = 'ألغى العميل';            // ألغى العميل الطلب مسبقاً
     case NoAnswer              = 'لا يوجد رد';             // العميل لا يرد على الهاتف
     case PhoneOff              = 'الهاتف مغلق';            // هاتف العميل مغلق
-    case CustomerEvading       = 'تهرّب / مختفي';          // العميل يتهرب
-    case UnsafeArea            = 'منطقة غير آمنة';         // خطر على المندوب — يتطلب GPS
     case Postponed             = 'مؤجل';                   // بطلب من العميل — يتطلب تاريخ
-    case OutsideGovernorate    = 'خارج المحافظة';          // خارج نطاق التوصيل
-    case WrongPhone            = 'رقم هاتف خاطئ';          // يتطلب تعديل من شركة الشحن
 
     // ── §٧.٣ حالات وسيطة (من الشيت — قيد التشغيل) ───────────────────────
     case OutForDelivery        = 'قيد التوصيل';            // خرج للتوصيل
@@ -36,7 +32,6 @@ enum ImportStatusHintEnum: string
         'مرتجع'             => self::RefusedNoPayment,
     ];
 
-    
     public function toStatusId(): int
     {
         return match ($this) {
@@ -48,11 +43,7 @@ enum ImportStatusHintEnum: string
             self::CustomerCancelled     => 10,
             self::NoAnswer              => 11,
             self::PhoneOff              => 12,
-            self::CustomerEvading       => 13,
-            self::UnsafeArea            => 14,
             self::Postponed             => 15,
-            self::OutsideGovernorate    => 16,
-            self::WrongPhone            => 17,
             self::OutForDelivery        => 3,
             self::Assigned              => 2,
         };
@@ -85,14 +76,6 @@ enum ImportStatusHintEnum: string
             self::RefusedNoPayment,
             self::CustomerCancelled,
         ], true);
-    }
-
-    /**
-     * هل هذه الحالة تتطلب GPS عند الاستيراد؟
-     */
-    public function requiresGps(): bool
-    {
-        return $this === self::UnsafeArea;
     }
 
     /**

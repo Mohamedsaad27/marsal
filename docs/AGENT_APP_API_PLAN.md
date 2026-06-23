@@ -154,7 +154,7 @@ GET /api/v1/agent/orders
 - `new` → `status_id IN (1, 2)` — pending or assigned
 - `in_delivery` → `status_id = 3`
 - `postponed` → `status_id = 15`
-- `all` → all non-terminal statuses (IDs: 1–4, 11–17)
+- `all` → all non-terminal statuses (IDs: 1–4, 11–12, 15)
 
 **Response:**
 ```json
@@ -261,7 +261,7 @@ GET /api/v1/agent/orders/{orderId}
 - Eager load all 6 child tables: `orderCustomerInfo`, `orderAddress`, `orderFinancials`, `orderItems`, `orderSchedule`, `orderApprovals`
 - `available_actions` is computed server-side based on current `status_id`:
   - `assigned (2)` → `[start_delivery, postpone, call_customer]`
-  - `out_for_delivery (3)` → `[confirm_delivery, refuse, no_answer, phone_off, postpone, unsafe_area, call_customer]`
+  - `out_for_delivery (3)` → `[confirm_delivery, refuse, no_answer, phone_off, postpone, call_customer]`
   - `awaiting_approval (4)` → `[call_customer]` (waiting for admin)
   - Terminal statuses → `[]`
 

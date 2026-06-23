@@ -51,11 +51,6 @@ class OrderRowValidator
             $errors[] = "Row {$dto->rowNumber}: حالة التحصيل تتطلب مبلغاً أكبر من صفر";
         }
 
-        // Excel import has no GPS / postponed-date columns — reject rows that require them.
-        if ($hint?->requiresGps()) {
-            $errors[] = "Row {$dto->rowNumber}: حالة «{$hint->value}» تتطلب GPS ولا يمكن استيرادها من Excel";
-        }
-
         if ($hint?->requiresPostponedDate()) {
             $errors[] = "Row {$dto->rowNumber}: حالة «{$hint->value}» تتطلب تاريخ تأجيل ولا يمكن استيرادها من Excel";
         }

@@ -21,7 +21,6 @@ class OrderStatusTransitionService
                 'no_answer',
                 'phone_off',
                 'postpone',
-                'unsafe_area',
                 'call_customer',
             ],
             OrderStatusEnum::AwaitingApproval => [
@@ -51,11 +50,7 @@ class OrderStatusTransitionService
                 OrderStatusEnum::CustomerCancelled,
                 OrderStatusEnum::NoAnswer,
                 OrderStatusEnum::PhoneOff,
-                OrderStatusEnum::CustomerEvading,
-                OrderStatusEnum::UnsafeArea,
                 OrderStatusEnum::Postponed,
-                OrderStatusEnum::OutsideGovernorate,
-                OrderStatusEnum::WrongPhone,
             ],
             default => [],
         };
