@@ -27,4 +27,18 @@ interface AgentOrderRepositoryInterface
     public function countDeliveredToday(string $deliveryAgentId): int;
 
     public function getWeeklyDeliveryRatePercent(string $deliveryAgentId): int;
+
+    /**
+     * @return Collection<int, Order>
+     */
+    public function listPostponedForAgent(
+        string $deliveryAgentId,
+        ?string $date,
+        ?string $month,
+    ): Collection;
+
+    /**
+     * @return array{month: string, total_postponed: int, dates: array<string, int>}
+     */
+    public function getPostponedCalendarForAgent(string $deliveryAgentId, string $month): array;
 }

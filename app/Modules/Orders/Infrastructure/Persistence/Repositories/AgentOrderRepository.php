@@ -5,6 +5,7 @@ namespace App\Modules\Orders\Infrastructure\Persistence\Repositories;
 use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Orders\Domain\Interfaces\AgentOrderRepositoryInterface;
 use App\Modules\Orders\Infrastructure\Database\Models\Order;
+use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -125,6 +126,80 @@ class AgentOrderRepository implements AgentOrderRepositoryInterface
             ->count();
 
         return (int) round(($delivered / $terminal) * 100);
+    }
+
+    public function listPostponedForAgent(
+        string $deliveryAgentId,
+        ?string $date,
+        ?string $month,
+    ): Collection {
+        $query = Order::query()
+            ->select('orders.*')
+            ->with(['customerInfo', 'financials', 'address.city', 'schedule'])
+            ->join('order_schedules', function ($join) {
+                $join->on('orders.order_id', '=', 'order_schedules.order_id')
+                    ->whereNull('order_schedules.deleted_at')
+                    ->whereNotNull('order_schedules.postponed_date');
+            })
+            ->where('orders.delivery_agent_id', $deliveryAgentId)
+            ->where('orders.status', OrderStatusEnum::Postponed->value);
+
+        if ($date !== null && $date !== '') {
+            $query->whereDate('order_schedules.postponed_date', $date);
+        }
+
+        if ($month !== null && $month !== '') {
+            $parsed = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+            $query->whereBetween('order_schedules.postponed_date', [
+                $parsed->toDateString(),
+                $parsed->copy()->endOfMonth()->toDateString(),
+            ]);
+        }
+
+        return $query
+            ->orderBy('order_schedules.postponed_date')
+            ->orderBy('orders.reference_code')
+            ->get();
+    }
+
+    public function getPostponedCalendarForAgent(string $deliveryAgentId, string $month): array
+    {
+        $start = Carbon::createFromFormat('Y-m', $month)->startOfMonth();
+        $end = $start->copy()->endOfMonth();
+
+        $rows = DB::table('orders')
+            ->join('order_schedules', function ($join) {
+                $join->on('orders.order_id', '=', 'order_schedules.order_id')
+                    ->whereNull('order_schedules.deleted_at')
+                    ->whereNotNull('order_schedules.postponed_date');
+            })
+            ->where('orders.delivery_agent_id', $deliveryAgentId)
+            ->where('orders.status', OrderStatusEnum::Postponed->value)
+            ->whereNull('orders.deleted_at')
+            ->whereBetween('order_schedules.postponed_date', [
+                $start->toDateString(),
+                $end->toDateString(),
+            ])
+            ->selectRaw('DATE(order_schedules.postponed_date) as postponed_day, COUNT(*) as order_count')
+            ->groupBy(DB::raw('DATE(order_schedules.postponed_date)'))
+            ->orderBy('postponed_day')
+            ->get();
+
+        $dates = [];
+        $total = 0;
+
+        foreach ($rows as $row) {
+            $day = (string) $row->postponed_day;
+            $count = (int) $row->order_count;
+            $dates[$day] = $count;
+            $total += $count;
+        }
+
+        return [
+            'month' => $month,
+            'total_postponed' => $total,
+            'dates' => $dates,
+        ];
     }
 
     private function applyStatusFilter($query, ?string $statusFilter): void

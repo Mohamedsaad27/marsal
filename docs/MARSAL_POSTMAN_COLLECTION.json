@@ -2,7 +2,7 @@
   "info": {
     "_postman_id": "marsal-api",
     "name": "Marsal API",
-    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import), Agent Mobile (Phase 1 orders + Phase 2 collections), Audit Logs, Dashboard (admin home KPIs), Notifications.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections endpoints. Requires Spatie role `delivery_agent`.",
+    "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import), Agent Mobile (Phase 1 orders · Phase 2 collections · Phase 3 schedule), Audit Logs, Dashboard (admin home KPIs), Notifications.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections/schedule endpoints. Requires Spatie role `delivery_agent`.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "variable": [
@@ -3552,6 +3552,151 @@
               ]
             },
             "description": "Same as **List Agent Collections** but filtered to settled rows (`settlement_id IS NOT NULL`).\n\nUseful for viewing historical handovers after admin creates and pays an agent settlement."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Agent — Schedule",
+      "description": "Delivery agent mobile app APIs (Phase 3 — postponed schedule).\n\n**Base path:** `/api/v1/agent/schedule*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Agent — Orders → Login as Delivery Agent** first.\n\nOnly orders with `status_id = 15` (postponed) assigned to the authenticated agent are included. Dates come from `order_schedules.postponed_date`.\n\n**Tip:** run **Agent — Orders → Postpone Order** first to create postponed orders for testing.",
+      "item": [
+        {
+          "name": "List Postponed Orders",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/schedule",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "schedule"
+              ],
+              "query": [
+                {
+                  "key": "date",
+                  "value": "",
+                  "description": "Optional — filter by postponed date (Y-m-d)",
+                  "disabled": true
+                },
+                {
+                  "key": "month",
+                  "value": "",
+                  "description": "Optional — filter by month (Y-m), e.g. 2026-06",
+                  "disabled": true
+                }
+              ]
+            },
+            "description": "List view for **الطلبات المؤجلة** screen.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Query (all optional):**\n- `date` — filter by exact postponed date (`Y-m-d`)\n- `month` — filter by calendar month (`Y-m`)\n- Omit both to return all postponed orders for this agent\n\n**Response `data`:**\n- `items[]` — `order_id`, `internal_code`, `customer_name`, `city`, `cod_amount`, `postponed_date`, `postpone_notes`\n- `total` — item count\n\nOrdered by `postponed_date` ascending."
+          }
+        },
+        {
+          "name": "List Postponed Orders by Month",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/schedule?month=2026-06",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "schedule"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "2026-06",
+                  "description": "Filter by month (Y-m)"
+                }
+              ]
+            },
+            "description": "Same as **List Postponed Orders** filtered to a single month — used when the list view is scoped to the calendar month."
+          }
+        },
+        {
+          "name": "Get Schedule Calendar",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/schedule/calendar?month=2026-06",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "schedule",
+                "calendar"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "2026-06",
+                  "description": "Required — calendar month (Y-m)"
+                }
+              ]
+            },
+            "description": "Calendar dot indicators for the schedule screen toggle.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Query:** `month` (required, `Y-m`)\n\n**Success (200) `data`:**\n```json\n{\n  \"month\": \"2026-06\",\n  \"total_postponed\": 5,\n  \"dates\": {\n    \"2026-06-06\": 1,\n    \"2026-06-08\": 1,\n    \"2026-06-16\": 1\n  }\n}\n```\n\n`dates` maps each postponed date to the count of orders on that day."
+          }
+        },
+        {
+          "name": "Reschedule Postponed Order",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Accept",
+                "value": "application/json"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"postponed_date\": \"2026-06-25\",\n  \"notes\": \"العميل سيكون متاحاً بعد أسبوع\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/reschedule",
+              "host": [
+                "{{base_url}}"
+              ],
+              "path": [
+                "api",
+                "v1",
+                "agent",
+                "orders",
+                "{{order_id}}",
+                "reschedule"
+              ]
+            },
+            "description": "Change the postponed date for an order already in **postponed (15)** status.\n\nAuth: Bearer + `delivery_agent` role. Uses `{{order_id}}` from **List Agent Orders** or **List Postponed Orders**.\n\n**Body:**\n- `postponed_date` (required) — must be after today (`Y-m-d`)\n- `notes` (optional, max 500)\n\n**Side effects (DB transaction):**\n- Updates `order_schedules.postponed_date` + `schedule_notes`\n- Updates latest `postponed_schedules` row (resets `reminder_sent`)\n- Inserts `order_status_history` row (status 15 → 15 with note)\n\n**Success (200) `data`:** `order_id`, `postponed_date`, `status` `{ id, label }`\n\n**422:** order is not in postponed status."
           }
         }
       ]

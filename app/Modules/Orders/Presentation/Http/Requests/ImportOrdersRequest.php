@@ -14,7 +14,7 @@ class ImportOrdersRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'file' => ['required', 'file', 'mimes:xlsx,xls'],
+            'file' => ['required', 'file', 'mimes:xlsx,xls,csv'],
         ];
     }
 
@@ -22,8 +22,7 @@ class ImportOrdersRequest extends FormRequest
     {
         return [
             'file.required' => 'يرجى رفع ملف Excel',
-            'file.mimes'    => 'الملف يجب أن يكون xlsx أو xls',
-            'file.max'      => 'حجم الملف يجب ألا يتجاوز 10 ميجابايت',
+            'file.mimes'    => 'الملف يجب أن يكون xlsx أو xls أو csv',
         ];
     }
 }

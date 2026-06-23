@@ -5,19 +5,23 @@ namespace App\Modules\Orders\Presentation\Http\Controllers;
 use App\Http\Controllers\Controller;
 use App\Modules\Core\Infrastructure\Helpers\PaginationMeta;
 use App\Modules\Core\Infrastructure\Traits\ApiResponseTrait;
+use App\Modules\Orders\Application\DTOs\RescheduleOrderDTO;
 use App\Modules\Orders\Application\DTOs\UpdateAgentOrderStatusDTO;
 use App\Modules\Orders\Application\DTOs\UploadOrderProofDTO;
 use App\Modules\Orders\Application\Services\AgentContextService;
 use App\Modules\Orders\Application\UseCases\Agent\GetAgentOrderDetailUseCase;
 use App\Modules\Orders\Application\UseCases\Agent\ListAgentOrdersUseCase;
+use App\Modules\Orders\Application\UseCases\Agent\RescheduleOrderUseCase;
 use App\Modules\Orders\Application\UseCases\Agent\UpdateAgentOrderStatusUseCase;
 use App\Modules\Orders\Application\UseCases\Agent\UploadDeliveryProofUseCase;
 use App\Modules\Orders\Domain\Enums\OrderProofFileTypeEnum;
+use App\Modules\Orders\Presentation\Http\Requests\RescheduleOrderRequest;
 use App\Modules\Orders\Presentation\Http\Requests\UpdateAgentOrderStatusRequest;
 use App\Modules\Orders\Presentation\Http\Requests\UploadDeliveryProofRequest;
 use App\Modules\Orders\Presentation\Http\Resources\AgentOrderDetailResource;
 use App\Modules\Orders\Presentation\Http\Resources\AgentOrderListResource;
 use App\Modules\Orders\Presentation\Http\Resources\AgentOrderProofResource;
+use App\Modules\Orders\Presentation\Http\Resources\AgentOrderRescheduledResource;
 use App\Modules\Orders\Presentation\Http\Resources\AgentOrderStatusUpdatedResource;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -31,6 +35,7 @@ class AgentOrderController extends Controller
         private GetAgentOrderDetailUseCase $getOrderDetail,
         private UpdateAgentOrderStatusUseCase $updateStatus,
         private UploadDeliveryProofUseCase $uploadProof,
+        private RescheduleOrderUseCase $rescheduleOrder,
         private AgentContextService $agentContext,
     ) {}
 
@@ -100,6 +105,26 @@ class AgentOrderController extends Controller
         return $this->success(
             new AgentOrderProofResource($result),
             __('orders::messages.proof_uploaded'),
+        );
+    }
+
+    public function reschedule(RescheduleOrderRequest $request, string $orderId): JsonResponse
+    {
+        $userId = $request->user()->user_id;
+        $deliveryAgentId = $this->agentContext->resolveDeliveryAgentId($userId);
+
+        $result = $this->rescheduleOrder->execute(
+            RescheduleOrderDTO::fromArray(
+                orderId: $orderId,
+                deliveryAgentId: $deliveryAgentId,
+                userId: $userId,
+                data: $request->validated(),
+            ),
+        );
+
+        return $this->success(
+            new AgentOrderRescheduledResource($result),
+            __('orders::messages.order_rescheduled'),
         );
     }
 }
