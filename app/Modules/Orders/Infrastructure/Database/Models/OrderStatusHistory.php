@@ -6,6 +6,7 @@ use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Str;
 
 class OrderStatusHistory extends Model
 {
@@ -26,6 +27,15 @@ class OrderStatusHistory extends Model
         'changed_by',
         'notes',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (self $model): void {
+            if (empty($model->order_status_history_id)) {
+                $model->order_status_history_id = (string) Str::uuid();
+            }
+        });
+    }
 
     public function order(): BelongsTo
     {
