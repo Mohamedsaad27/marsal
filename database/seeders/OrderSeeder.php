@@ -326,9 +326,7 @@ class OrderSeeder extends Seeder
         // ── order_financials ──────────────────────────────────────────────────
         $originalAmount    = round(rand(150, 3000) + (rand(0, 99) / 100), 2);
         $commissionRate    = (float) $company->commission_value;
-        $commissionAmount  = $company->commission_type == 1
-            ? round($originalAmount * ($commissionRate / 100), 2)
-            : $commissionRate;
+        $commissionAmount  = $commissionRate;
         $collectedAmount   = ($status === OrderStatusEnum::Delivered->value)
             ? $originalAmount
             : null;

@@ -5,6 +5,7 @@ namespace App\Modules\Users\Infrastructure\Persistence;
 use App\Modules\Users\Application\DTOs\GetUsersDTO;
 use App\Modules\Users\Application\DTOs\ImportUserRowDTO;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
+use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
 use App\Modules\Users\Domain\Interfaces\UserRepositoryInterface;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
@@ -57,7 +58,7 @@ class UserRepository implements UserRepositoryInterface
                 ShippingCompany::query()->create([
                     'user_id' => $user->user_id,
                     'company_name' => $dto->companyName ?? $dto->name,
-                    'commission_type' => 1,
+                    'commission_type' => CommissionTypeEnum::Fixed->value,
                     'commission_value' => 0,
                 ]);
             }

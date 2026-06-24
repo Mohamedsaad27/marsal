@@ -167,12 +167,11 @@ class UpdateAgentOrderStatusUseCase
         DateTimeInterface $now,
     ): void {
         $collectedAmount = $dto->collectedAmount ?? 0.0;
-        $commissionData = $this->resolveAgentCommission($dto->deliveryAgentId);
+        $commissionValue = $this->resolveAgentCommissionValue($dto->deliveryAgentId);
 
         $commission = $this->commissionCalculator->calculate(
             collectedAmount: $collectedAmount,
-            commissionType: $commissionData['commission_type'],
-            commissionValue: $commissionData['commission_value'],
+            commissionValue: $commissionValue,
         );
 
         DB::table('collections')->insert([
@@ -194,19 +193,13 @@ class UpdateAgentOrderStatusUseCase
             ->increment('balance', $collectedAmount);
     }
 
-    /**
-     * @return array{commission_type: int, commission_value: float}
-     */
-    private function resolveAgentCommission(string $deliveryAgentId): array
+    private function resolveAgentCommissionValue(string $deliveryAgentId): float
     {
         $agent = DeliveryAgent::query()
             ->whereKey($deliveryAgentId)
-            ->firstOrFail(['commission_type', 'commission_value']);
+            ->firstOrFail(['commission_value']);
 
-        return [
-            'commission_type' => $agent->commission_type->value,
-            'commission_value' => (float) $agent->commission_value,
-        ];
+        return (float) $agent->commission_value;
     }
 
     private function updateCollectedAmount(

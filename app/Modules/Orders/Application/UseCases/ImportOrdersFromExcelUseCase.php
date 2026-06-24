@@ -384,7 +384,7 @@ class ImportOrdersFromExcelUseCase
             $company = ShippingCompany::query()->create([
                 'user_id'          => $user->user_id,
                 'company_name'     => $dto->companyName,
-                'commission_type'  => 1,   // percentage — admin configures later
+                'commission_type'  => 2,
                 'commission_value' => 0,
                 'balance'          => 0,
                 'is_active'        => 1,

@@ -28,7 +28,7 @@ class ShippingCompanySeeder extends Seeder
                 'company' => [
                     'company_name'     => 'سريع للشحن',
                     'commercial_reg'   => 'EG-2021-11001',
-                    'commission_type'  => 1,    // percentage
+                    'commission_type'  => 2,
                     'commission_value' => 8.50,
                     'balance'          => 12500.00,
                     'is_active'        => 1,
@@ -45,7 +45,7 @@ class ShippingCompanySeeder extends Seeder
                 'company' => [
                     'company_name'     => 'النيل للتوصيل',
                     'commercial_reg'   => 'EG-2020-22002',
-                    'commission_type'  => 1,
+                    'commission_type'  => 2,
                     'commission_value' => 7.00,
                     'balance'          => 8750.00,
                     'is_active'        => 1,
@@ -79,7 +79,7 @@ class ShippingCompanySeeder extends Seeder
                 'company' => [
                     'company_name'     => 'إكسبريس مصر',
                     'commercial_reg'   => 'EG-2022-44004',
-                    'commission_type'  => 1,
+                    'commission_type'  => 2,
                     'commission_value' => 9.50,
                     'balance'          => 5500.00,
                     'is_active'        => 1,
@@ -96,7 +96,7 @@ class ShippingCompanySeeder extends Seeder
                 'company' => [
                     'company_name'     => 'جو شيب',
                     'commercial_reg'   => 'EG-2023-55005',
-                    'commission_type'  => 1,
+                    'commission_type'  => 2,
                     'commission_value' => 10.00,
                     'balance'          => 9200.00,
                     'is_active'        => 1,

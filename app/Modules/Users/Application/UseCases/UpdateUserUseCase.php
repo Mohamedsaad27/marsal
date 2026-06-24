@@ -6,6 +6,7 @@ use App\Modules\Auth\Application\Exceptions\RoleNotFoundException;
 use App\Modules\Locations\Infrastructure\Database\Models\Address;
 use App\Modules\Users\Application\DTOs\UpdateUserDTO;
 use App\Modules\Users\Application\Exceptions\UserActionForbiddenException;
+use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
 use App\Modules\Users\Domain\Interfaces\UserRepositoryInterface;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -92,7 +93,10 @@ class UpdateUserUseCase
         }
 
         if ($user->shippingCompany) {
-            $updates = array_intersect_key($profile, array_flip(['company_name', 'commercial_reg', 'logo_url']));
+            $updates = array_intersect_key($profile, array_flip(['company_name', 'commercial_reg', 'logo_url', 'commission_value']));
+            if (array_key_exists('commission_type', $profile) || array_key_exists('commission_value', $profile)) {
+                $updates['commission_type'] = CommissionTypeEnum::Fixed->value;
+            }
             if ($updates !== []) {
                 $user->shippingCompany->update($updates);
             }
@@ -104,7 +108,11 @@ class UpdateUserUseCase
                 'vehicle_type',
                 'vehicle_plate_number',
                 'supervisor_agent_id',
+                'commission_value',
             ]));
+            if (array_key_exists('commission_type', $profile) || array_key_exists('commission_value', $profile)) {
+                $updates['commission_type'] = CommissionTypeEnum::Fixed->value;
+            }
             if ($updates !== []) {
                 $user->deliveryAgent->update($updates);
             }

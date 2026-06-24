@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Presentation\Http\Requests;
 
 use App\Modules\Core\Presentation\Http\Requests\BaseFormRequest;
+use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Presentation\Http\Requests\Concerns\ValidatesUserAddress;
 use Illuminate\Validation\Rule;
@@ -69,6 +70,8 @@ class UpdateUserRequest extends BaseFormRequest
                 'uuid',
                 'exists:delivery_agents,delivery_agent_id',
             ],
+            'profile.commission_type' => ['sometimes', 'integer', Rule::in([CommissionTypeEnum::Fixed->value])],
+            'profile.commission_value' => ['sometimes', 'numeric', 'min:0'],
             ...$this->addressRulesForUpdate(),
         ];
     }

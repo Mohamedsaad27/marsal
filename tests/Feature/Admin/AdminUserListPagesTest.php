@@ -139,20 +139,42 @@ class AdminUserListPagesTest extends TestCase
         ));
 
         $create->execute(new CreateUserDTO(
-            name: 'Percent Agent',
-            email: 'percent@example.com',
+            name: 'Another Fixed Agent',
+            email: 'another-fixed@example.com',
             phone: '01090000006',
             password: 'password123',
             accountType: AccountTypeEnum::DeliveryAgent,
             roles: ['delivery_agent'],
-            profile: ['commission_type' => 1, 'commission_value' => 10],
+            profile: ['commission_value' => 10],
         ));
 
         $this->auth()
             ->getJson('/api/v1/admin/delivery-agents?commission_type=2')
             ->assertOk()
-            ->assertJsonCount(1, 'data.items')
+            ->assertJsonCount(2, 'data.items')
             ->assertJsonPath('data.items.0.delivery_agent.commission.type.code', 2);
+    }
+
+    public function test_create_delivery_agent_rejects_percentage_commission_type(): void
+    {
+        $this->auth()
+            ->postJson('/api/v1/admin/users', [
+                'name' => 'Percent Agent',
+                'email' => 'percent@example.com',
+                'phone' => '01090000007',
+                'password' => 'password123',
+                'type' => 'delivery_agent',
+                'role' => 'delivery_agent',
+                'profile' => [
+                    'commission_type' => 1,
+                    'commission_value' => 10,
+                ],
+                'address' => [
+                    'address_line' => '10 Test St',
+                ],
+            ])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors(['profile.commission_type']);
     }
 
     public function test_delivery_agent_supervisors_index_returns_only_supervisors(): void

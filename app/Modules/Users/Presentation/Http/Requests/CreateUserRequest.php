@@ -4,6 +4,7 @@ namespace App\Modules\Users\Presentation\Http\Requests;
 
 use App\Modules\Users\Application\DTOs\CreateUserDTO;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
+use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
 use App\Modules\Core\Presentation\Http\Requests\BaseFormRequest;
 use App\Modules\Users\Presentation\Http\Requests\Concerns\ValidatesUserAddress;
 use Illuminate\Validation\Rule;
@@ -40,6 +41,8 @@ class CreateUserRequest extends BaseFormRequest
             'profile.vehicle_type' => ['nullable', 'integer', 'min:1', 'max:5'],
             'profile.vehicle_plate_number' => ['nullable', 'string', 'max:30'],
             'profile.supervisor_agent_id' => ['nullable', 'uuid', 'exists:delivery_agents,delivery_agent_id'],
+            'profile.commission_type' => ['nullable', 'integer', Rule::in([CommissionTypeEnum::Fixed->value])],
+            'profile.commission_value' => ['nullable', 'numeric', 'min:0'],
             ...$this->addressRules(required: $this->string('type')->toString() !== 'super_admin'),
         ];
     }

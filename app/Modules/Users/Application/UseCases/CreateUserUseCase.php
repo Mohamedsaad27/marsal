@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Application\UseCases;
 
 use App\Modules\Users\Application\DTOs\CreateUserDTO;
+use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
 use App\Modules\Users\Domain\Interfaces\UserRepositoryInterface;
 use App\Modules\Locations\Infrastructure\Database\Models\Address;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
@@ -54,7 +55,7 @@ class CreateUserUseCase
                     'company_name' => $dto->profile['company_name'] ?? $dto->name,
                     'commercial_reg' => $dto->profile['commercial_reg'] ?? null,
                     'logo_url' => $dto->profile['logo_url'] ?? null,
-                    'commission_type' => $dto->profile['commission_type'] ?? 1,
+                    'commission_type' => CommissionTypeEnum::Fixed->value,
                     'commission_value' => $dto->profile['commission_value'] ?? 0,
                 ]);
             }
@@ -66,7 +67,7 @@ class CreateUserUseCase
                     'national_id' => $dto->profile['national_id'] ?? null,
                     'vehicle_type' => $dto->profile['vehicle_type'] ?? null,
                     'vehicle_plate_number' => $dto->profile['vehicle_plate_number'] ?? null,
-                    'commission_type' => $dto->profile['commission_type'] ?? 1,
+                    'commission_type' => CommissionTypeEnum::Fixed->value,
                     'commission_value' => $dto->profile['commission_value'] ?? 0,
                 ]);
             }
