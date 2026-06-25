@@ -48,7 +48,7 @@ class DeliveryAgentSeeder extends Seeder
                 ],
                 'agent' => [
                     'national_id'          => '29805021234502',
-                    'vehicle_type'         => 3,   // van
+                    'vehicle_type'         => 1,   // van
                     'vehicle_plate_number' => 'د.هـ.و 5678',
                     'commission_type'      => 2,
                     'commission_value'     => 5.50,
@@ -151,7 +151,7 @@ class DeliveryAgentSeeder extends Seeder
                 ],
                 'agent' => [
                     'national_id'          => '30006061234506',
-                    'vehicle_type'         => 4,   // bicycle
+                    'vehicle_type'         => 1,   // bicycle
                     'vehicle_plate_number' => null,
                     'commission_type'      => 2,
                     'commission_value'     => 3.50,
@@ -223,7 +223,7 @@ class DeliveryAgentSeeder extends Seeder
                 ],
                 'agent' => [
                     'national_id'          => '30110101234510',
-                    'vehicle_type'         => 5,   // on_foot
+                    'vehicle_type'         => 1,   // on_foot
                     'vehicle_plate_number' => null,
                     'commission_type'      => 2,
                     'commission_value'     => 8.00,
