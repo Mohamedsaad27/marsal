@@ -15,5 +15,6 @@ class RouteServiceProvider extends ServiceProvider
     {
         $this->loadRoutesFrom(__DIR__ . '/../../Presentation/Routes/api.php');
         $this->loadRoutesFrom(__DIR__ . '/../../Presentation/Routes/admin.php');
+        $this->loadRoutesFrom(__DIR__ . '/../../Presentation/Routes/company.php');
     }
 }

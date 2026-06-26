@@ -5,9 +5,11 @@ namespace App\Modules\Orders\Infrastructure\Providers;
 use App\Modules\Orders\Domain\Interfaces\AdminOrderRepositoryInterface;
 use App\Modules\Orders\Domain\Interfaces\AgentOrderRepositoryInterface;
 use App\Modules\Orders\Domain\Interfaces\ApprovalRequestRepositoryInterface;
+use App\Modules\Orders\Domain\Interfaces\CompanyOrderRepositoryInterface;
 use App\Modules\Orders\Infrastructure\Persistence\Repositories\AdminOrderRepository;
 use App\Modules\Orders\Infrastructure\Persistence\Repositories\AgentOrderRepository;
 use App\Modules\Orders\Infrastructure\Persistence\Repositories\ApprovalRequestRepository;
+use App\Modules\Orders\Infrastructure\Persistence\Repositories\CompanyOrderRepository;
 use Illuminate\Support\ServiceProvider;
 
 class RepositoryServiceProvider extends ServiceProvider
@@ -27,6 +29,11 @@ class RepositoryServiceProvider extends ServiceProvider
         $this->app->bind(
             ApprovalRequestRepositoryInterface::class,
             ApprovalRequestRepository::class,
+        );
+
+        $this->app->bind(
+            CompanyOrderRepositoryInterface::class,
+            CompanyOrderRepository::class,
         );
     }
 

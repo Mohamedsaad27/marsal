@@ -15,6 +15,15 @@ return [
     'stats_success'          => 'Statistics loaded successfully',
     'order_assigned'         => 'Agent assigned successfully',
 
+    // Company
+    'company_dashboard_success'  => 'Company dashboard loaded successfully',
+    'company_orders_list_success' => 'Shipments list loaded successfully',
+    'company_order_detail_success' => 'Shipment details loaded successfully',
+    'company_wallet_success'      => 'Wallet loaded successfully',
+    'company_profile_success'     => 'Profile loaded successfully',
+    'company_order_not_found'     => 'Shipment not found',
+    'company_profile_not_found'   => 'Company profile not found',
+
     // Admin — Approval Requests
     'approvals_list_success'  => 'Approval requests list loaded successfully',
     'approval_detail_success' => 'Approval request details loaded successfully',

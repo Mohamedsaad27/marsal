@@ -11,6 +11,15 @@ return [
     'schedule_calendar_success' => 'تم تحميل بيانات التقويم بنجاح',
     'order_rescheduled' => 'تم تحديث موعد التأجيل',
 
+    // Company
+    'company_dashboard_success'   => 'تم تحميل لوحة تحكم الشركة بنجاح',
+    'company_orders_list_success' => 'تم تحميل قائمة الشحنات بنجاح',
+    'company_order_detail_success' => 'تم تحميل تفاصيل الشحنة بنجاح',
+    'company_wallet_success'      => 'تم تحميل المحفظة بنجاح',
+    'company_profile_success'     => 'تم تحميل الملف الشخصي بنجاح',
+    'company_order_not_found'     => 'الشحنة غير موجودة',
+    'company_profile_not_found'   => 'لم يتم العثور على ملف الشركة',
+
     // Admin — Orders
     'stats_success'          => 'تم تحميل الإحصائيات بنجاح',
     'order_assigned'         => 'تم تعيين المندوب بنجاح',

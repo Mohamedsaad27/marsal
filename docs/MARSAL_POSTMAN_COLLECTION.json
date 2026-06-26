@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "marsal-api",
         "name": "Marsal API",
-        "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import), Agent Mobile (Phases 1–3 orders/collections/schedule · Phase 5 profile), Audit Logs, Dashboard (admin home KPIs), Notifications.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections/schedule/profile endpoints. Requires Spatie role `delivery_agent`.",
+        "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import), Admin Collections & Settlements, Agent Mobile (Phases 1–3 orders/collections/schedule · Phase 5 profile), Company Mobile (dashboard, shipments, wallet, profile, settlements), Audit Logs, Dashboard (admin home KPIs), Notifications.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections/schedule/profile endpoints. Requires Spatie role `delivery_agent`.\n\n**Company mobile:** run **Auth → Login** with a shipping company account, then use **Company** folder — dashboard, orders list/detail, wallet, profile, settlements list/detail. All routes at `/api/v1/company/*`. Requires Spatie role `shipping_company`.\n\n**Admin finance:** run **Auth → Login** as super_admin, then **Admin — Collections** (stats, list, mark cash received) and **Admin — Settlements** (stats, list, create, approve, mark paid).",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
@@ -92,7 +92,25 @@
             "key": "collection_id",
             "value": "",
             "type": "string",
-            "description": "UUID of a collection (`collection_id`). Auto-set from Agent — Collections → List Agent Collections (first item)."
+            "description": "UUID of a collection (`collection_id`). Auto-set from Agent — Collections or Admin — Collections list responses (first item)."
+        },
+        {
+            "key": "settlement_id",
+            "value": "",
+            "type": "string",
+            "description": "UUID of a settlement (`settlement_id`). Auto-set from Admin — Settlements → List Settlements (first draft item)."
+        },
+        {
+            "key": "delivery_agent_id",
+            "value": "",
+            "type": "string",
+            "description": "UUID of a delivery agent. Use as `agent_id` filter on Admin — Collections or as `reference_entity_id` when creating an agent settlement (`settlement_type=1`)."
+        },
+        {
+            "key": "shipping_company_id",
+            "value": "",
+            "type": "string",
+            "description": "UUID of a shipping company. Use as `company_id` filter on Admin — Collections or as `reference_entity_id` when creating a company settlement (`settlement_type=2`)."
         },
         {
             "key": "approval_request_id",
@@ -4144,6 +4162,425 @@
                             "path": ["api", "v1", "admin", "approval-requests", "{{approval_request_id}}", "review"]
                         },
                         "description": "رفض طلب الموافقة — يعيد الطلب إلى حالة قيد التوصيل.\n\n**Side effects (all in one DB transaction):**\n1. Sets `approval_status = 3`, `reviewed_by`, `reviewed_at`, `review_notes`.\n2. Reverts order status to `OutForDelivery (3)`.\n3. Creates `order_status_history` record.\n4. Dispatches in-app notification to shipping company.\n\n**Returns 422** if approval is not in `Pending` status."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Collections",
+            "description": "Admin collections dashboard — KPI cards, paginated operations list, and cash receipt from agents.\n\nAll routes: `auth:api` + `role:super_admin`.\n\n**Collection lifecycle:**\n1. Agent confirms delivery (terminal status) → system creates a `collections` row.\n2. Admin physically receives cash from agent → `PATCH /collections/{id}/mark-cash-received` sets `cash_received_at`.\n3. Admin creates & pays a settlement → collections get `settlement_id` linked on mark-paid.\n\n**Status filter (`status` query):** `pending_cash` (awaiting admin receipt) · `unsettled` (cash received, not settled) · `settled` (`settlement_id` set).\n\n**Collection types:** 1=COD · 2=shipping_fee · 3=partial.",
+            "item": [
+                {
+                    "name": "Collection Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/collections/stats",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "collections", "stats"]
+                        },
+                        "description": "الإحصائيات السريعة لصفحة التحصيلات — 4 بطاقات KPI.\n\n**Response `data`:**\n```json\n{\n  \"total_collected\": \"5971.25\",\n  \"total_commissions\": \"477.70\",\n  \"net_due_to_companies\": \"5493.55\",\n  \"pending_cash_count\": 3\n}\n```\n\n- `total_collected` — SUM of all `collected_amount`\n- `total_commissions` — SUM of all `commission_amount`\n- `net_due_to_companies` — SUM of all `net_due`\n- `pending_cash_count` — rows where `cash_received_at IS NULL` and not yet settled"
+                    }
+                },
+                {
+                    "name": "List Collections",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data && json.data.items;",
+                                    "    if (items && items.length > 0) {",
+                                    "        const pending = items.find(i => !i.cash_received_at && !i.settlement_id);",
+                                    "        const target = pending || items[0];",
+                                    "        if (target?.id) {",
+                                    "            pm.collectionVariables.set('collection_id', target.id);",
+                                    "        }",
+                                    "        if (target?.agent?.id) {",
+                                    "            pm.collectionVariables.set('delivery_agent_id', target.agent.id);",
+                                    "        }",
+                                    "        if (target?.company?.id) {",
+                                    "            pm.collectionVariables.set('shipping_company_id', target.company.id);",
+                                    "        }",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/collections?per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "collections"],
+                            "query": [
+                                { "key": "search", "value": "", "description": "Order code, agent name, or company name", "disabled": true },
+                                { "key": "collection_type", "value": "1", "description": "1=COD | 2=shipping_fee | 3=partial", "disabled": true },
+                                { "key": "status", "value": "pending_cash", "description": "pending_cash | unsettled | settled", "disabled": true },
+                                { "key": "date_from", "value": "", "description": "Filter collected_at from (Y-m-d)", "disabled": true },
+                                { "key": "date_to", "value": "", "description": "Filter collected_at to (Y-m-d)", "disabled": true },
+                                { "key": "agent_id", "value": "{{delivery_agent_id}}", "description": "UUID of delivery agent", "disabled": true },
+                                { "key": "company_id", "value": "{{shipping_company_id}}", "description": "UUID of shipping company", "disabled": true },
+                                { "key": "per_page", "value": "20", "description": "Items per page (max 100)" }
+                            ]
+                        },
+                        "description": "قائمة عمليات التحصيل للمشرف — مرشّحة وقابلة للصفحات، مرتبة بتاريخ التحصيل تنازلياً.\n\nSaves first pending `collection_id` to collection variable. Also saves `delivery_agent_id` and `shipping_company_id` from the first row when present.\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"order\": { \"id\": \"uuid\", \"internal_code\": \"6-2846\" },\n  \"agent\": { \"id\": \"uuid\", \"name\": \"محمد الزهراني\" },\n  \"company\": { \"id\": \"uuid\", \"name\": \"ساعة الخضراء\" },\n  \"collection_type\": { \"code\": 1, \"label\": \"مبلغ الاستلام (COD)\" },\n  \"collected_amount\": \"1420.50\",\n  \"commission_amount\": \"113.64\",\n  \"net_due\": \"1306.86\",\n  \"cash_received_at\": null,\n  \"cash_received_by\": null,\n  \"settlement_id\": null,\n  \"collected_at\": \"2026-01-15T09:00:00.000000Z\"\n}\n```"
+                    }
+                },
+                {
+                    "name": "Mark Cash Received",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/collections/{{collection_id}}/mark-cash-received",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "collections", "{{collection_id}}", "mark-cash-received"]
+                        },
+                        "description": "تسجيل استلام النقد من المندوب — يضبط `cash_received_at` و `cash_received_by`.\n\n`{{collection_id}}` — UUID. Auto-set from **List Collections**.\n\n**Returns 422** if cash was already received for this collection.\n**Returns 404** if collection not found.\n\n**Success (200) `data`:** updated `AdminCollectionResource` with `cash_received_at` and `cash_received_by` populated."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Settlements",
+            "description": "Admin settlements dashboard — KPI cards, paginated list, create draft, approve, and mark paid.\n\nAll routes: `auth:api` + `role:super_admin`.\n\n**Settlement status pipeline:** 1=مسودة (draft) → 2=معتمدة (approved) → 3=مدفوعة (paid)\n\n**Settlement types:** 1=agent (`reference_entity_id` = `delivery_agent_id`) · 2=company (`reference_entity_id` = `shipping_company_id`)\n\n**Workflow:**\n1. Admin marks collections as cash received.\n2. Admin creates settlement for entity + date range → aggregates eligible collections (cash received, not yet settled).\n3. Admin approves draft settlement.\n4. Admin marks paid → links collections, sets `order_financials.is_settled`, decrements agent/company balance.\n\nPermissions: `settlements.view`, `settlements.create`, `settlements.approve`, `settlements.mark_paid` (super_admin bypasses).",
+            "item": [
+                {
+                    "name": "Settlement Stats",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/settlements/stats",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "settlements", "stats"]
+                        },
+                        "description": "الإحصائيات السريعة لصفحة التسويات — 4 بطاقات KPI.\n\n**Response `data`:**\n```json\n{\n  \"total_amount\": \"45805.83\",\n  \"pending_approval\": \"19343.89\",\n  \"approved_unpaid\": \"9952.00\",\n  \"paid_this_month\": \"0.00\"\n}\n```\n\n- `total_amount` — SUM of all settlement `net_amount`\n- `pending_approval` — SUM where `settlement_status = 1` (draft)\n- `approved_unpaid` — SUM where `settlement_status = 2` (approved)\n- `paid_this_month` — SUM where paid this calendar month"
+                    }
+                },
+                {
+                    "name": "List Settlements",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data && json.data.items;",
+                                    "    if (items && items.length > 0) {",
+                                    "        const draft = items.find(i => i.status && i.status.code === 1);",
+                                    "        const approved = items.find(i => i.status && i.status.code === 2);",
+                                    "        const target = draft || approved || items[0];",
+                                    "        if (target?.id) {",
+                                    "            pm.collectionVariables.set('settlement_id', target.id);",
+                                    "        }",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/settlements?per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "settlements"],
+                            "query": [
+                                { "key": "search", "value": "", "description": "Settlement ID, entity name, or payment reference", "disabled": true },
+                                { "key": "settlement_type", "value": "2", "description": "1=agent | 2=company", "disabled": true },
+                                { "key": "status", "value": "1", "description": "1=draft | 2=approved | 3=paid", "disabled": true },
+                                { "key": "date_from", "value": "", "description": "Filter created_at from (Y-m-d)", "disabled": true },
+                                { "key": "date_to", "value": "", "description": "Filter created_at to (Y-m-d)", "disabled": true },
+                                { "key": "per_page", "value": "20", "description": "Items per page (max 100)" }
+                            ]
+                        },
+                        "description": "قائمة التسويات للمشرف — مرشّحة وقابلة للصفحات، مرتبة بالأحدث أولاً.\n\nSaves first draft (or approved) `settlement_id` to collection variable.\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"reference\": \"STL-A1B2C3D4\",\n  \"settlement_type\": { \"code\": 2, \"label\": \"شركة شحن\" },\n  \"status\": { \"code\": 1, \"label\": \"مسودة\" },\n  \"entity\": { \"id\": \"uuid\", \"name\": \"إكسبرس ريتم\" },\n  \"period_from\": \"2026-01-01\",\n  \"period_to\": \"2026-01-31\",\n  \"collections_count\": 5,\n  \"total_collections\": \"12630.50\",\n  \"total_commissions\": \"1490.46\",\n  \"net_amount\": \"10930.04\",\n  \"payment_method\": null,\n  \"payment_reference\": null,\n  \"paid_at\": null,\n  \"initiated_by\": { \"id\": \"uuid\", \"name\": \"عبدالله الراشد\" },\n  \"notes\": null,\n  \"created_at\": \"2026-01-01T00:00:00.000000Z\"\n}\n```"
+                    }
+                },
+                {
+                    "name": "Create Settlement (Company)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    const json = pm.response.json();",
+                                    "    if (json.data?.id) {",
+                                    "        pm.collectionVariables.set('settlement_id', json.data.id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"settlement_type\": 2,\n  \"reference_entity_id\": \"{{shipping_company_id}}\",\n  \"period_from\": \"2026-01-01\",\n  \"period_to\": \"2026-01-31\",\n  \"notes\": \"تسوية شهر يناير\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/settlements",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "settlements"]
+                        },
+                        "description": "إنشاء تسوية مسودة لشركة شحن — يجمع كل التحصيلات المؤهلة في الفترة.\n\n**Body:**\n- `settlement_type` (required) — `2` for company\n- `reference_entity_id` (required) — `shipping_company_id` UUID (`{{shipping_company_id}}`)\n- `period_from`, `period_to` (required, Y-m-d)\n- `notes` (optional)\n\nEligible collections: `cash_received_at IS NOT NULL`, `settlement_id IS NULL`, matching company, `collected_at` within period.\n\n**Returns 422** if no eligible collections found.\n\n**Success (201):** `SettlementResource` with `status.code = 1` (draft). Saves `settlement_id`."
+                    }
+                },
+                {
+                    "name": "Create Settlement (Agent)",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 201) {",
+                                    "    const json = pm.response.json();",
+                                    "    if (json.data?.id) {",
+                                    "        pm.collectionVariables.set('settlement_id', json.data.id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"settlement_type\": 1,\n  \"reference_entity_id\": \"{{delivery_agent_id}}\",\n  \"period_from\": \"2026-01-01\",\n  \"period_to\": \"2026-01-31\",\n  \"notes\": \"تسوية مندوب — يناير\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/settlements",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "settlements"]
+                        },
+                        "description": "إنشاء تسوية مسودة لمندوب توصيل — same as **Create Settlement (Company)** but `settlement_type=1` and `reference_entity_id` = `{{delivery_agent_id}}`."
+                    }
+                },
+                {
+                    "name": "Approve Settlement",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/settlements/{{settlement_id}}/approve",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "settlements", "{{settlement_id}}", "approve"]
+                        },
+                        "description": "اعتماد التسوية — ينقل الحالة من `مسودة (1)` إلى `معتمدة (2)`.\n\n`{{settlement_id}}` — UUID. Auto-set from **List Settlements** or **Create Settlement**.\n\n**Returns 422** if settlement is not in draft status.\n**Returns 404** if not found."
+                    }
+                },
+                {
+                    "name": "Mark Settlement Paid",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" },
+                            { "key": "Content-Type", "value": "application/json" }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"payment_method\": \"bank_transfer\",\n  \"payment_reference\": \"TRX-20260131-001\",\n  \"notes\": \"تحويل بنكي — بنك CIB\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/settlements/{{settlement_id}}/mark-paid",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "admin", "settlements", "{{settlement_id}}", "mark-paid"]
+                        },
+                        "description": "تسجيل دفع التسوية — ينقل الحالة من `معتمدة (2)` إلى `مدفوعة (3)`.\n\n**Body:**\n- `payment_method` (required) — e.g. `bank_transfer`, `cash`, `instapay`\n- `payment_reference` (optional)\n- `notes` (optional)\n\n**Side effects (DB transaction):**\n- Links eligible collections → sets `settlement_id`\n- Sets `order_financials.is_settled = true` for linked orders\n- Decrements `delivery_agents.balance` or `shipping_companies.balance` by `net_amount`\n- Sets `paid_at` timestamp\n\n**Returns 422** if settlement is not approved or no eligible collections remain.\n**Returns 404** if not found."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Company",
+            "description": "Shipping company mobile app endpoints — Dashboard, Shipments, Wallet, Profile, and Settlements.\n\n**Auth:** JWT Bearer + Spatie role `shipping_company`.\n\nRun **Auth → Login** with a shipping company account first. All routes are under `/api/v1/company/*` and are automatically scoped to the authenticated company.\n\n**Workflow:**\n1. Company logs in → hits **Dashboard** for home screen KPIs + recent shipments\n2. **Orders** tab → browse all company shipments with optional filters\n3. **Wallet** tab → view current balance and financial aggregates\n4. **Profile** tab → company info, order stats, last settlement reference\n5. **Settlements** → browse own settlement history and drill into detail",
+            "item": [
+                {
+                    "name": "Dashboard",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/dashboard",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "company", "dashboard"]
+                        },
+                        "description": "الرئيسية (شركة) — الشاشة الرئيسية لتطبيق الشركة.\n\n**Response `data`:**\n```json\n{\n  \"stats\": {\n    \"total_orders\": 186,\n    \"in_delivery_count\": 12,\n    \"collected_today\": 510.00,\n    \"delivery_rate_percent\": 94\n  },\n  \"recent_orders\": [\n    {\n      \"order_id\": \"uuid\",\n      \"reference_code\": \"MRS-22101\",\n      \"reference_no\": \"EX-001\",\n      \"status\": { \"id\": 1, \"label\": \"بانتظار التوزيع\", \"color\": \"gray\" },\n      \"customer\": { \"name\": \"سارة الحربي\", \"phone\": \"01012345678\" },\n      \"address\": { \"governorate\": \"القاهرة\", \"city\": \"مدينة نصر\", \"address_line\": \"...\" },\n      \"amount\": 910.00,\n      \"created_at\": \"2026-06-25T...\"\n    }\n  ]\n}\n```\n\n`in_delivery_count` — orders in statuses: Assigned (2), OutForDelivery (3), AwaitingApproval (4).\n`collected_today` — sum of `net_due` from `collections` where `collected_at` is today.\n`delivery_rate_percent` — delivered terminal statuses ÷ all terminal statuses × 100.\n\n**403** if authenticated user has no `shipping_companies` profile row."
+                    }
+                },
+                {
+                    "name": "List My Orders",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data && json.data.items;",
+                                    "    if (items && items.length > 0) {",
+                                    "        pm.collectionVariables.set('order_id', items[0].order_id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/orders?per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "company", "orders"],
+                            "query": [
+                                { "key": "status", "value": "in_delivery", "description": "all | pending | in_delivery | delivered | returned", "disabled": true },
+                                { "key": "search", "value": "", "description": "Search by reference_code, reference_no, customer name/phone", "disabled": true },
+                                { "key": "date_from", "value": "", "description": "Filter created_at from (Y-m-d)", "disabled": true },
+                                { "key": "date_to", "value": "", "description": "Filter created_at to (Y-m-d)", "disabled": true },
+                                { "key": "per_page", "value": "20", "description": "Items per page (max 100)" }
+                            ]
+                        },
+                        "description": "شحناتي — قائمة شحنات الشركة مرشّحة وقابلة للصفحات.\n\nSaves first `order_id` to collection variable.\n\n**Status filter values:**\n- `all` — no filter\n- `pending` — بانتظار التوزيع (1)\n- `in_delivery` — معيّن + قيد التوصيل + بانتظار موافقة (2,3,4)\n- `delivered` — تم التسليم بجميع أنواعه (5,6,7,8)\n- `returned` — رفض بدون دفع + ألغى (9,10)\n\n**Response `data`:**\n```json\n{\n  \"items\": [\n    {\n      \"order_id\": \"uuid\",\n      \"reference_code\": \"MRS-22101\",\n      \"reference_no\": \"EX-001\",\n      \"status\": { \"id\": 1, \"label\": \"بانتظار التوزيع\", \"color\": \"gray\" },\n      \"customer\": { \"name\": \"سارة الحربي\", \"phone\": \"01012345678\" },\n      \"address\": { \"governorate\": \"القاهرة\", \"city\": \"مدينة نصر\", \"address_line\": null },\n      \"amount\": 910.00,\n      \"created_at\": \"2026-06-25T...\"\n    }\n  ],\n  \"type\": \"length_aware\",\n  \"current_page\": 1,\n  \"last_page\": 5,\n  \"per_page\": 20,\n  \"total\": 186,\n  \"has_more\": true\n}\n```"
+                    }
+                },
+                {
+                    "name": "Get Order Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/orders/{{order_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "company", "orders", "{{order_id}}"]
+                        },
+                        "description": "تفاصيل الشحنة — يُعيد كامل بيانات الطلب المرتبط بشركة الشحن المسجّلة.\n\n`{{order_id}}` — UUID. Auto-set from **List My Orders**.\n\n**Response `data`:**\n```json\n{\n  \"order_id\": \"uuid\",\n  \"reference_code\": \"MRS-22101\",\n  \"reference_no\": \"EX-001\",\n  \"notes\": null,\n  \"status\": { \"id\": 5, \"label\": \"تم التسليم\", \"color\": \"green\", \"is_terminal\": true },\n  \"customer\": { \"name\": \"سارة الحربي\", \"phone\": \"01012345678\", \"phone_alt\": null },\n  \"address\": { \"governorate\": \"القاهرة\", \"city\": \"مدينة نصر\", \"address_line\": \"شارع عباس العقاد\" },\n  \"financials\": {\n    \"original_amount\": 910.00,\n    \"approved_amount\": null,\n    \"collected_amount\": 910.00,\n    \"shipping_fee\": 25.00,\n    \"net_due_company\": 885.00,\n    \"is_settled\": false\n  },\n  \"items\": { \"description\": \"ملابس\", \"total_quantity\": 2, \"delivered_quantity\": 2, \"returned_quantity\": 0 },\n  \"schedule\": { \"expected_delivery_date\": \"2026-06-26\", \"postponed_date\": null, \"schedule_notes\": null },\n  \"status_history\": [\n    { \"from_status\": null, \"to_status\": \"بانتظار التوزيع\", \"to_status_id\": 1, \"notes\": null, \"changed_at\": \"...\" }\n  ],\n  \"proofs\": [],\n  \"assigned_at\": null,\n  \"delivered_at\": \"2026-06-25T...\",\n  \"created_at\": \"2026-06-24T...\"\n}\n```\n\n**404** if the order does not belong to the authenticated company."
+                    }
+                },
+                {
+                    "name": "Wallet",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/wallet",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "company", "wallet"]
+                        },
+                        "description": "المحفظة — الرصيد الحالي والتفصيل المالي لشركة الشحن.\n\n**Response `data`:**\n```json\n{\n  \"balance\": 14050.00,\n  \"total_collected\": 29340.00,\n  \"total_commissions\": 2340.00,\n  \"total_net_due\": 27000.00,\n  \"pending_settlement_amount\": 3790.00,\n  \"pending_collection_count\": 9,\n  \"last_settlement\": {\n    \"reference\": \"STL-3308XXXX\",\n    \"net_amount\": 10260.00,\n    \"paid_at\": \"2026-06-13T...\"\n  }\n}\n```\n\n- `balance` — current balance from `shipping_companies.balance`\n- `total_collected` — lifetime sum of `collections.collected_amount` for this company\n- `total_commissions` — lifetime sum of `collections.commission_amount`\n- `total_net_due` — lifetime sum of `collections.net_due`\n- `pending_settlement_amount` — sum of `net_due` for collections with `cash_received_at` set but no `settlement_id` yet\n- `pending_collection_count` — count of those pending collections\n- `last_settlement` — last paid settlement reference, or `null`\n\n**403** if no company profile found."
+                    }
+                },
+                {
+                    "name": "Profile",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/profile",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "company", "profile"]
+                        },
+                        "description": "حسابي — بيانات الشركة، الإحصائيات، والرصيد.\n\n**Response `data`:**\n```json\n{\n  \"company_id\": \"uuid\",\n  \"company_name\": \"أكسبريس مصر\",\n  \"phone\": \"+20 100 555 12 24\",\n  \"commercial_reg\": \"12345678\",\n  \"logo_url\": null,\n  \"balance\": 14050.00,\n  \"stats\": {\n    \"total_orders\": 186,\n    \"delivery_rate_percent\": 94\n  },\n  \"last_settlement\": {\n    \"reference\": \"STL-3308XXXX\",\n    \"net_amount\": 10260.00,\n    \"paid_at\": \"2026-06-13T...\"\n  }\n}\n```\n\n- `balance` — from `shipping_companies.balance` (updated when settlements are marked paid)\n- `delivery_rate_percent` — delivered terminal orders ÷ all terminal orders × 100\n- `last_settlement` — most recent paid company settlement, or `null`\n\n**403** if no company profile found."
+                    }
+                },
+                {
+                    "name": "List My Settlements",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data && json.data.items;",
+                                    "    if (items && items.length > 0) {",
+                                    "        pm.collectionVariables.set('settlement_id', items[0].id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/settlements?per_page=20",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "company", "settlements"],
+                            "query": [
+                                { "key": "status", "value": "3", "description": "1=draft | 2=approved | 3=paid", "disabled": true },
+                                { "key": "date_from", "value": "", "description": "Filter created_at from (Y-m-d)", "disabled": true },
+                                { "key": "date_to", "value": "", "description": "Filter created_at to (Y-m-d)", "disabled": true },
+                                { "key": "per_page", "value": "20", "description": "Items per page (max 100)" }
+                            ]
+                        },
+                        "description": "التسويات (شركة) — قائمة التسويات الخاصة بشركة الشحن المسجّلة.\n\nSaves first `settlement_id` to collection variable for use in **Get Settlement Detail**.\n\n**Response `data.items[]`** (same shape as Admin — Settlements):\n```json\n{\n  \"id\": \"uuid\",\n  \"reference\": \"STL-3301XXXX\",\n  \"settlement_type\": { \"code\": 2, \"label\": \"شركة شحن\" },\n  \"status\": { \"code\": 3, \"label\": \"مدفوعة\" },\n  \"entity\": { \"id\": \"uuid\", \"name\": \"أكسبريس مصر\" },\n  \"period_from\": \"2026-06-01\",\n  \"period_to\": \"2026-06-12\",\n  \"collections_count\": 18,\n  \"total_collections\": 9420.00,\n  \"total_commissions\": 920.00,\n  \"net_amount\": 8500.00,\n  \"payment_method\": \"bank_transfer\",\n  \"payment_reference\": \"TXN-9988\",\n  \"paid_at\": \"2026-06-12T...\",\n  \"notes\": null,\n  \"created_at\": \"2026-06-10T...\"\n}\n```\n\n**403** if no company profile found."
+                    }
+                },
+                {
+                    "name": "Get Settlement Detail",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            { "key": "Accept", "value": "application/json" }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/settlements/{{settlement_id}}",
+                            "host": ["{{base_url}}"],
+                            "path": ["api", "v1", "company", "settlements", "{{settlement_id}}"]
+                        },
+                        "description": "تفاصيل التسوية — يُعيد بيانات التسوية كاملةً مع قائمة التحصيلات المرتبطة بها.\n\n`{{settlement_id}}` — UUID. Auto-set from **List My Settlements**.\n\n**Response `data`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"reference\": \"STL-3301XXXX\",\n  \"status\": { \"code\": 3, \"label\": \"مدفوعة\" },\n  \"period_from\": \"2026-06-01\",\n  \"period_to\": \"2026-06-12\",\n  \"collections_count\": 18,\n  \"total_collections\": 9420.00,\n  \"total_commissions\": 920.00,\n  \"net_amount\": 8500.00,\n  \"payment_method\": \"bank_transfer\",\n  \"payment_reference\": \"TXN-9988\",\n  \"paid_at\": \"2026-06-12T...\",\n  \"notes\": null,\n  \"collections\": [\n    {\n      \"collection_id\": \"uuid\",\n      \"order_code\": \"MRS-22104\",\n      \"order_id\": \"uuid\",\n      \"collection_type\": { \"code\": 1, \"label\": \"تحصيل COD\" },\n      \"collected_amount\": 910.00,\n      \"commission_amount\": 45.00,\n      \"net_due\": 865.00,\n      \"collected_at\": \"2026-06-05T...\"\n    }\n  ],\n  \"created_at\": \"2026-06-10T...\"\n}\n```\n\n**404** if settlement not found or does not belong to the authenticated company.\n**403** if no company profile found."
                     }
                 }
             ]

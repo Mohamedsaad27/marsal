@@ -1,0 +1,99 @@
+<?php
+
+namespace App\Modules\Orders\Presentation\Http\Resources\Company;
+
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
+use App\Modules\Orders\Infrastructure\Database\Models\Order;
+use App\Modules\Orders\Infrastructure\Database\Models\OrderStatusHistory;
+use Illuminate\Http\Request;
+use Illuminate\Http\Resources\Json\JsonResource;
+
+/** @mixin Order */
+class CompanyOrderDetailResource extends JsonResource
+{
+    public function toArray(Request $request): array
+    {
+        $status = $this->status instanceof OrderStatusEnum
+            ? $this->status
+            : OrderStatusEnum::tryFrom((int) $this->status);
+
+        return [
+            'order_id'       => $this->order_id,
+            'reference_code' => $this->reference_code,
+            'reference_no'   => $this->reference_no,
+            'notes'          => $this->notes,
+            'status'         => [
+                'id'          => $status?->value,
+                'label'       => $status?->labelAr(),
+                'color'       => $status?->badgeColor(),
+                'is_terminal' => $status?->isTerminal(),
+            ],
+            'customer'       => [
+                'name'      => $this->customerInfo?->customer_name,
+                'phone'     => $this->customerInfo?->customer_phone,
+                'phone_alt' => $this->customerInfo?->phone_alt,
+            ],
+            'address'        => [
+                'governorate' => $this->address?->governorate?->name_ar,
+                'city'        => $this->address?->city?->name_ar,
+                'address_line' => $this->address?->address_line,
+            ],
+            'financials'     => $this->when(
+                $this->relationLoaded('financials') && $this->financials !== null,
+                fn () => [
+                    'original_amount'  => (float) $this->financials->original_amount,
+                    'approved_amount'  => $this->financials->approved_amount !== null
+                        ? (float) $this->financials->approved_amount
+                        : null,
+                    'collected_amount' => $this->financials->collected_amount !== null
+                        ? (float) $this->financials->collected_amount
+                        : null,
+                    'shipping_fee'     => (float) $this->financials->shipping_fee,
+                    'net_due_company'  => $this->financials->net_due_company !== null
+                        ? (float) $this->financials->net_due_company
+                        : null,
+                    'is_settled'       => (bool) $this->financials->is_settled,
+                ]
+            ),
+            'items'          => $this->when(
+                $this->relationLoaded('items') && $this->items !== null,
+                fn () => [
+                    'description'        => $this->items->item_description,
+                    'total_quantity'     => $this->items->total_quantity,
+                    'delivered_quantity' => $this->items->delivered_quantity,
+                    'returned_quantity'  => $this->items->returned_quantity,
+                ]
+            ),
+            'schedule'       => $this->when(
+                $this->relationLoaded('schedule') && $this->schedule !== null,
+                fn () => [
+                    'expected_delivery_date' => $this->schedule->expected_delivery_date?->toDateString(),
+                    'postponed_date'         => $this->schedule->postponed_date?->toDateString(),
+                    'schedule_notes'         => $this->schedule->schedule_notes,
+                ]
+            ),
+            'status_history' => $this->when(
+                $this->relationLoaded('statusHistory'),
+                fn () => $this->statusHistory->map(fn (OrderStatusHistory $h) => [
+                    'from_status' => $h->from_status_id
+                        ? OrderStatusEnum::tryFrom((int) $h->from_status_id)?->labelAr()
+                        : null,
+                    'to_status'   => OrderStatusEnum::tryFrom((int) $h->to_status_id)?->labelAr(),
+                    'to_status_id' => (int) $h->to_status_id,
+                    'notes'       => $h->notes,
+                    'changed_at'  => $h->created_at?->toISOString(),
+                ])->values()
+            ),
+            'proofs'         => $this->when(
+                $this->relationLoaded('proofs'),
+                fn () => $this->proofs->map(fn ($p) => [
+                    'file_url'    => $p->file_url,
+                    'uploaded_at' => $p->created_at?->toISOString(),
+                ])->values()
+            ),
+            'assigned_at'    => $this->assigned_at?->toISOString(),
+            'delivered_at'   => $this->delivered_at?->toISOString(),
+            'created_at'     => $this->created_at?->toISOString(),
+        ];
+    }
+}

@@ -7,6 +7,7 @@ use App\Modules\Core\Infrastructure\Traits\HasUuid;
 use App\Modules\Orders\Infrastructure\Database\Models\Order;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
+use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -34,6 +35,8 @@ class Collection extends Model
         'commission_amount',
         'net_due',
         'settlement_id',
+        'cash_received_at',
+        'cash_received_by',
         'collected_at',
     ];
 
@@ -44,6 +47,7 @@ class Collection extends Model
             'collected_amount' => 'decimal:2',
             'commission_amount' => 'decimal:2',
             'net_due' => 'decimal:2',
+            'cash_received_at' => 'datetime',
             'collected_at' => 'datetime',
             'created_at' => 'datetime',
             'updated_at' => 'datetime',
@@ -64,5 +68,15 @@ class Collection extends Model
     public function shippingCompany(): BelongsTo
     {
         return $this->belongsTo(ShippingCompany::class, 'shipping_company_id', 'shipping_company_id');
+    }
+
+    public function cashReceivedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'cash_received_by', 'user_id');
+    }
+
+    public function settlement(): BelongsTo
+    {
+        return $this->belongsTo(Settlement::class, 'settlement_id', 'settlement_id');
     }
 }
