@@ -27,7 +27,7 @@ class ApprovalRequestRepository implements ApprovalRequestRepositoryInterface
 
     public function stats(): array
     {
-        $base    = ApprovalRequest::query();
+        $base    = ApprovalRequest::query()->whereHas('order');
         $urgency = Carbon::now()->addMinutes(30);
 
         $awaiting = (clone $base)->where('approval_status', 1)->count();
@@ -57,6 +57,7 @@ class ApprovalRequestRepository implements ApprovalRequestRepositoryInterface
     ): LengthAwarePaginator {
         $query = ApprovalRequest::query()
             ->with(self::LIST_RELATIONS)
+            ->whereHas('order')
             ->orderByRaw('CASE WHEN approval_status = 1 THEN 0 ELSE 1 END')
             ->orderBy('expires_at')
             ->orderByDesc('created_at');

@@ -7,9 +7,12 @@ use App\Modules\Orders\Domain\Enums\ApprovalTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
 class ApprovalRequest extends Model
 {
+    use SoftDeletes;
+
     protected $table = 'approval_requests';
 
     protected $primaryKey = 'approval_request_id';
@@ -43,6 +46,7 @@ class ApprovalRequest extends Model
             'reviewed_at'      => 'datetime',
             'created_at'       => 'datetime',
             'updated_at'       => 'datetime',
+            'deleted_at'       => 'datetime',
         ];
     }
 
