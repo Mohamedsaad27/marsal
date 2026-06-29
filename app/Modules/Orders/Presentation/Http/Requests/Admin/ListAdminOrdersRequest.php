@@ -17,13 +17,9 @@ class ListAdminOrdersRequest extends FormRequest
     {
         $validStatuses = array_map(
             static fn (OrderStatusEnum $s) => (string) $s->value,
-            OrderStatusEnum::cases()
+            OrderStatusEnum::cases(),
         );
         $validStatuses[] = 'all';
-        $validStatuses[] = 'pending';
-        $validStatuses[] = 'in_delivery';
-        $validStatuses[] = 'delivered';
-        $validStatuses[] = 'postponed_refused';
         $validStatuses[] = 'returned';
 
         return [

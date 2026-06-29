@@ -41,39 +41,28 @@ class AdminOrderRepository implements AdminOrderRepositoryInterface
     {
         $base = Order::query()->whereNull('deleted_at');
 
-        $total            = (clone $base)->count();
-        $pending          = (clone $base)->where('status', OrderStatusEnum::Pending->value)->count();
-        $inDelivery       = (clone $base)->whereIn('status', [
-            OrderStatusEnum::Assigned->value,
-            OrderStatusEnum::OutForDelivery->value,
-            OrderStatusEnum::AwaitingApproval->value,
-        ])->count();
-        $delivered        = (clone $base)->whereIn('status', [
-            OrderStatusEnum::Delivered->value,
-            OrderStatusEnum::DeliveredPriceChanged->value,
-            OrderStatusEnum::PartialDelivery->value,
-        ])->count();
-        $postponedRefused = (clone $base)->whereIn('status', [
-            OrderStatusEnum::RefusedPaidShipping->value,
-            OrderStatusEnum::RefusedNoPayment->value,
-            OrderStatusEnum::CustomerCancelled->value,
-            OrderStatusEnum::NoAnswer->value,
-            OrderStatusEnum::PhoneOff->value,
-            OrderStatusEnum::Postponed->value,
-        ])->count();
+        $total = (clone $base)->count();
         $returned = (clone $base)->whereExists(fn ($q) => $q
             ->select(DB::raw(1))
             ->from('returns')
             ->whereColumn('returns.order_id', 'orders.order_id')
         )->count();
 
+        $statuses = array_map(
+            static function (OrderStatusEnum $status) use ($base) {
+                return [
+                    'id'       => $status->value,
+                    'label_ar' => $status->labelAr(),
+                    'count'    => (clone $base)->where('status', $status->value)->count(),
+                ];
+            },
+            OrderStatusEnum::cases(),
+        );
+
         return [
-            'total'             => $total,
-            'pending'           => $pending,
-            'in_delivery'       => $inDelivery,
-            'delivered'         => $delivered,
-            'postponed_refused' => $postponedRefused,
-            'returned'          => $returned,
+            'total'    => $total,
+            'returned' => $returned,
+            'statuses' => $statuses,
         ];
     }
 
@@ -157,31 +146,21 @@ class AdminOrderRepository implements AdminOrderRepositoryInterface
 
     private function applyStatusFilter($query, string $status): void
     {
-        match ($status) {
-            'pending'           => $query->where('status', OrderStatusEnum::Pending->value),
-            'in_delivery'       => $query->whereIn('status', [
-                OrderStatusEnum::Assigned->value,
-                OrderStatusEnum::OutForDelivery->value,
-                OrderStatusEnum::AwaitingApproval->value,
-            ]),
-            'delivered'         => $query->whereIn('status', [
-                OrderStatusEnum::Delivered->value,
-                OrderStatusEnum::DeliveredPriceChanged->value,
-                OrderStatusEnum::PartialDelivery->value,
-            ]),
-            'postponed_refused' => $query->whereIn('status', [
-                OrderStatusEnum::RefusedPaidShipping->value,
-                OrderStatusEnum::RefusedNoPayment->value,
-                OrderStatusEnum::CustomerCancelled->value,
-                OrderStatusEnum::NoAnswer->value,
-                OrderStatusEnum::PhoneOff->value,
-                OrderStatusEnum::Postponed->value,
-            ]),
-            'returned' => $query->whereExists(fn ($q) => $q
+        if ($status === 'returned') {
+            $query->whereExists(fn ($q) => $q
                 ->select(DB::raw(1))
                 ->from('returns')
-                ->whereColumn('returns.order_id', 'orders.order_id')),
-            default    => null,
-        };
+                ->whereColumn('returns.order_id', 'orders.order_id'));
+
+            return;
+        }
+
+        if (ctype_digit($status)) {
+            $orderStatus = OrderStatusEnum::tryFrom((int) $status);
+
+            if ($orderStatus !== null) {
+                $query->where('status', $orderStatus->value);
+            }
+        }
     }
 }

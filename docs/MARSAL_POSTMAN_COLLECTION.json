@@ -3954,7 +3954,7 @@
         },
         {
             "name": "Admin — Orders (Shipments)",
-            "description": "Admin shipments dashboard — stats cards, paginated filterable order list, order detail, and agent assignment.\n\nAll routes: `auth:api` + `role:super_admin`.\n\n**Status filter values:** `all` | `pending` | `in_delivery` | `delivered` | `postponed_refused` | `returned` | or a raw numeric status ID (1–15).\n\n**Assign flow:** send `PATCH /orders/{orderId}/assign` with `agent_id` — transitions order to `Assigned (2)`, writes status history, dispatches FCM notification to agent.",
+            "description": "Admin shipments dashboard — per-status filter tabs, paginated order list, order detail, and agent assignment.\n\nAll routes: `auth:api` + `role:super_admin`.\n\n---\n\n### Order status filter (`?status=`)\n\nEach filter maps to **exactly one** order status. Grouped filters (`in_delivery`, `delivered`, `postponed_refused`) are **removed**.\n\n| `status` value | ID | Arabic label |\n|----------------|-----|--------------|\n| `all` | — | كل الطلبات (no status filter) |\n| `1` | 1 | بانتظار التوزيع |\n| `2` | 2 | تم التعيين |\n| `3` | 3 | قيد التوصيل |\n| `4` | 4 | بانتظار الموافقة |\n| `5` | 5 | تم التسليم |\n| `6` | 6 | تم التسليم بتغيير سعر |\n| `7` | 7 | تسليم جزئي |\n| `8` | 8 | رفض + دفع رسوم الشحن |\n| `9` | 9 | رفض وعدم دفع رسوم الشحن |\n| `10` | 10 | ألغى العميل |\n| `11` | 11 | لا يوجد رد |\n| `12` | 12 | الهاتف مغلق |\n| `15` | 15 | مؤجل |\n| `returned` | — | طلبات لها سجل في جدول `returns` (not an order status) |\n\n**Stats:** `GET /orders/stats` returns `statuses[]` — one `{ id, label_ar, count }` entry per status above, plus `total` and `returned`.\n\n**Assign flow:** `PATCH /orders/{orderId}/assign` with `agent_id` → status `Assigned (2)`, status history, FCM to agent.",
             "item": [
                 {
                     "name": "Order Stats",
@@ -3968,11 +3968,11 @@
                             "host": ["{{base_url}}"],
                             "path": ["api", "v1", "admin", "orders", "stats"]
                         },
-                        "description": "الإحصائيات السريعة لصفحة الطلبات — 6 بطاقات.\n\n**Response `data`:**\n```json\n{\n  \"total\": 250,\n  \"pending\": 18,\n  \"in_delivery\": 42,\n  \"delivered\": 150,\n  \"postponed_refused\": 35,\n  \"returned\": 5\n}\n```\n\n- `pending` — status = 1 (بانتظار التعيين)\n- `in_delivery` — status IN (2, 3, 4) (تم التعيين + قيد التوصيل + بانتظار الموافقة)\n- `delivered` — status IN (5, 6, 7) (تم التسليم بأشكاله)\n- `postponed_refused` — status IN (8, 9, 10, 11, 12, 15)\n- `returned` — orders with a linked return record"
+                        "description": "إحصائيات صفحة الطلبات — عدّاد لكل حالة على حدة.\n\n**Response `data`:**\n```json\n{\n  \"total\": 250,\n  \"returned\": 5,\n  \"statuses\": [\n    { \"id\": 1, \"label_ar\": \"بانتظار التوزيع\", \"count\": 18 },\n    { \"id\": 2, \"label_ar\": \"تم التعيين\", \"count\": 12 },\n    { \"id\": 3, \"label_ar\": \"قيد التوصيل\", \"count\": 20 },\n    { \"id\": 4, \"label_ar\": \"بانتظار الموافقة\", \"count\": 3 },\n    { \"id\": 5, \"label_ar\": \"تم التسليم\", \"count\": 120 },\n    { \"id\": 6, \"label_ar\": \"تم التسليم بتغيير سعر\", \"count\": 8 },\n    { \"id\": 7, \"label_ar\": \"تسليم جزئي\", \"count\": 5 },\n    { \"id\": 8, \"label_ar\": \"رفض + دفع رسوم الشحن\", \"count\": 10 },\n    { \"id\": 9, \"label_ar\": \"رفض وعدم دفع رسوم الشحن\", \"count\": 7 },\n    { \"id\": 10, \"label_ar\": \"ألغى العميل\", \"count\": 4 },\n    { \"id\": 11, \"label_ar\": \"لا يوجد رد\", \"count\": 6 },\n    { \"id\": 12, \"label_ar\": \"الهاتف مغلق\", \"count\": 3 },\n    { \"id\": 15, \"label_ar\": \"مؤجل\", \"count\": 9 }\n  ]\n}\n```\n\n**Fields:**\n- `total` — all non-deleted orders\n- `returned` — orders with a linked `returns` row\n- `statuses[]` — one row per active `OrderStatusEnum` case; use to build filter tabs (`id` → `?status=` value, `count` → badge)\n\n**Removed (breaking):** `pending`, `in_delivery`, `delivered`, `postponed_refused` grouped keys."
                     }
                 },
                 {
-                    "name": "List Orders",
+                    "name": "List Orders — All",
                     "event": [
                         {
                             "listen": "test",
@@ -4000,7 +4000,7 @@
                             "host": ["{{base_url}}"],
                             "path": ["api", "v1", "admin", "orders"],
                             "query": [
-                                { "key": "status", "value": "all", "description": "all | pending | in_delivery | delivered | postponed_refused | returned | or numeric status ID" },
+                                { "key": "status", "value": "all", "description": "all = no filter. Or single status ID: 1|2|3|4|5|6|7|8|9|10|11|12|15. Or returned = orders with returns record." },
                                 { "key": "company_id", "value": "", "description": "UUID of shipping company — filter by company", "disabled": true },
                                 { "key": "agent_id", "value": "", "description": "UUID of delivery agent — filter by agent", "disabled": true },
                                 { "key": "governorate_id", "value": "", "description": "UUID of governorate — filter by region", "disabled": true },
@@ -4010,8 +4010,252 @@
                                 { "key": "per_page", "value": "20", "description": "Items per page (max 100)" }
                             ]
                         },
-                        "description": "قائمة الطلبات للمشرف — مرشّحة وقابلة للصفحات.\n\nSaves `order_id` of the first result to collection variable.\n\n**Response `data.items[]`:**\n```json\n{\n  \"order_id\": \"uuid\",\n  \"reference_code\": \"MR-2841\",\n  \"reference_no\": \"REF-91204\",\n  \"display_company_name\": null,\n  \"status\": { \"id\": 1, \"label\": \"بانتظار التوزيع\", \"color\": \"gray\" },\n  \"customer\": { \"name\": \"أحمد عبدالله\", \"phone\": \"01005551024\", \"phone_alt\": null },\n  \"address\": { \"governorate\": \"القاهرة\", \"city\": \"مدينة نصر\", \"address_line\": \"شارع 9\" },\n  \"company\": { \"id\": \"uuid\", \"name\": \"أرامكس مصر\" },\n  \"agent\": null,\n  \"amount\": 275.00,\n  \"assigned_at\": null,\n  \"created_at\": \"2026-06-19T10:00:00.000000Z\"\n}\n```"
+                        "description": "قائمة كل الطلبات — بدون فلتر حالة.\n\nSaves `order_id` of the first result to collection variable.\n\n**Status filter:** pass numeric ID for one status only (see folder description table). Grouped keys (`in_delivery`, `delivered`, `postponed_refused`) return **422**.\n\n**Response `data.items[]`:**\n```json\n{\n  \"order_id\": \"uuid\",\n  \"reference_code\": \"MR-2841\",\n  \"reference_no\": \"REF-91204\",\n  \"display_company_name\": null,\n  \"status\": { \"id\": 1, \"label\": \"بانتظار التوزيع\", \"color\": \"gray\" },\n  \"customer\": { \"name\": \"أحمد عبدالله\", \"phone\": \"01005551024\", \"phone_alt\": null },\n  \"address\": { \"governorate\": \"القاهرة\", \"city\": \"مدينة نصر\", \"address_line\": \"شارع 9\" },\n  \"company\": { \"id\": \"uuid\", \"name\": \"أرامكس مصر\" },\n  \"agent\": null,\n  \"amount\": 275.00,\n  \"assigned_at\": null,\n  \"created_at\": \"2026-06-19T10:00:00.000000Z\"\n}\n```"
                     }
+                },
+                {
+                    "name": "List Orders — By Status",
+                    "item": [
+                        {
+                            "name": "Status 1 — Pending (بانتظار التوزيع)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=1&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "1" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 1` only."
+                            }
+                        },
+                        {
+                            "name": "Status 2 — Assigned (تم التعيين)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=2&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "2" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 2` only."
+                            }
+                        },
+                        {
+                            "name": "Status 3 — Out For Delivery (قيد التوصيل)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=3&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "3" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 3` only."
+                            }
+                        },
+                        {
+                            "name": "Status 4 — Awaiting Approval (بانتظار الموافقة)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=4&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "4" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 4` only — price-change requests pending admin review."
+                            }
+                        },
+                        {
+                            "name": "Status 5 — Delivered (تم التسليم)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=5&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "5" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 5` only."
+                            }
+                        },
+                        {
+                            "name": "Status 6 — Delivered Price Changed (تم التسليم بتغيير سعر)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=6&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "6" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 6` only."
+                            }
+                        },
+                        {
+                            "name": "Status 7 — Partial Delivery (تسليم جزئي)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=7&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "7" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 7` only."
+                            }
+                        },
+                        {
+                            "name": "Status 8 — Refused Paid Shipping (رفض + دفع الشحن)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=8&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "8" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 8` only."
+                            }
+                        },
+                        {
+                            "name": "Status 9 — Refused No Payment (رفض بدون دفع)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=9&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "9" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 9` only."
+                            }
+                        },
+                        {
+                            "name": "Status 10 — Customer Cancelled (ألغى العميل)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=10&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "10" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 10` only."
+                            }
+                        },
+                        {
+                            "name": "Status 11 — No Answer (لا يوجد رد)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=11&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "11" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 11` only."
+                            }
+                        },
+                        {
+                            "name": "Status 12 — Phone Off (الهاتف مغلق)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=12&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "12" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 12` only."
+                            }
+                        },
+                        {
+                            "name": "Status 15 — Postponed (مؤجل)",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=15&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "15" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 15` only."
+                            }
+                        },
+                        {
+                            "name": "Returned — Has Return Record",
+                            "request": {
+                                "method": "GET",
+                                "header": [{ "key": "Accept", "value": "application/json" }],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=returned&per_page=20",
+                                    "host": ["{{base_url}}"],
+                                    "path": ["api", "v1", "admin", "orders"],
+                                    "query": [
+                                        { "key": "status", "value": "returned" },
+                                        { "key": "per_page", "value": "20" }
+                                    ]
+                                },
+                                "description": "Special filter — orders with a row in `returns` table (any order status)."
+                            }
+                        }
+                    ],
+                    "description": "One request per filter value. Each `?status=` matches **exactly one** order status ID (or `returned`). Pair with **Order Stats** — use `statuses[].id` and `statuses[].count` for tab labels and badges."
                 },
                 {
                     "name": "Get Order Detail",
