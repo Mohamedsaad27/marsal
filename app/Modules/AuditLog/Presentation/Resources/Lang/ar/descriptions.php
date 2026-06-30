@@ -14,6 +14,8 @@ return [
     'status_changed'         => 'تغيير حالة :entity :subject من :old إلى :new',
     'status_changed_generic' => 'تغيير حالة :entity :subject',
     'assigned'               => 'تم تعيين :entity :subject',
+    'order_assigned'         => 'تم تعيين الطلب :subject للمندوب :agent',
+    'order_reassigned'       => 'تم إعادة تعيين الطلب :subject من المندوب :old_agent إلى المندوب :new_agent',
     'approved'               => 'تمت الموافقة على :entity :subject',
     'rejected'               => 'تم رفض :entity :subject',
     'settled'                => 'تمت تسوية :entity :subject',

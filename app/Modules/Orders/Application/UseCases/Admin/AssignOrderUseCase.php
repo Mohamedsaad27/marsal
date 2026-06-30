@@ -2,6 +2,8 @@
 
 namespace App\Modules\Orders\Application\UseCases\Admin;
 
+use App\Modules\AuditLog\Application\UseCases\RecordAuditUseCase;
+use App\Modules\AuditLog\Domain\Enums\AuditEventEnum;
 use App\Modules\Notifications\Application\DTOs\SendNotificationDTO;
 use App\Modules\Notifications\Application\UseCases\SendNotificationUseCase;
 use App\Modules\Notifications\Domain\Enums\NotificationTypeEnum;
@@ -18,6 +20,7 @@ class AssignOrderUseCase
     public function __construct(
         private AdminOrderRepositoryInterface $repository,
         private SendNotificationUseCase $sendNotification,
+        private RecordAuditUseCase $recordAudit,
     ) {}
 
     public function execute(string $orderId, string $agentId, string $adminUserId): Order
@@ -36,6 +39,9 @@ class AssignOrderUseCase
             throw new OrderCannotBeAssignedException();
         }
 
+        $previousAgentId = $order->delivery_agent_id;
+        $previousAgentName = $order->deliveryAgent?->user?->name;
+
         $agent = DeliveryAgent::query()
             ->with('user')
             ->where('delivery_agent_id', $agentId)
@@ -45,9 +51,57 @@ class AssignOrderUseCase
             fn () => $this->repository->assignAgent($orderId, $agentId, $adminUserId)
         );
 
+        $this->recordAssignmentAudit(
+            adminUserId: $adminUserId,
+            order: $order,
+            previousAgentId: $previousAgentId,
+            previousAgentName: $previousAgentName,
+            previousStatus: $currentStatus,
+            newAgent: $agent,
+        );
+
         $this->dispatchNotification($order, $agent);
 
         return $order;
+    }
+
+    private function recordAssignmentAudit(
+        string $adminUserId,
+        Order $order,
+        ?string $previousAgentId,
+        ?string $previousAgentName,
+        ?OrderStatusEnum $previousStatus,
+        DeliveryAgent $newAgent,
+    ): void {
+        $newAgentName = $newAgent->user?->name;
+        $isReassignment = $previousAgentId !== null
+            && $previousAgentId !== $newAgent->delivery_agent_id;
+
+        $this->recordAudit->execute(
+            userId: $adminUserId,
+            event: AuditEventEnum::Assigned,
+            auditableType: 'orders',
+            auditableId: $order->order_id,
+            oldValues: [
+                'delivery_agent_id' => $previousAgentId,
+                'agent_name' => $previousAgentName,
+                'status' => $previousStatus?->value,
+            ],
+            newValues: [
+                'delivery_agent_id' => $newAgent->delivery_agent_id,
+                'agent_name' => $newAgentName,
+                'status' => OrderStatusEnum::Assigned->value,
+            ],
+            metadata: [
+                'action' => 'order_agent_assignment',
+                'reference_code' => $order->reference_code ?? $order->reference_no,
+                'is_reassignment' => $isReassignment,
+                'previous_agent_id' => $previousAgentId,
+                'previous_agent_name' => $previousAgentName,
+                'new_agent_id' => $newAgent->delivery_agent_id,
+                'new_agent_name' => $newAgentName,
+            ],
+        );
     }
 
     private function dispatchNotification(Order $order, DeliveryAgent $agent): void

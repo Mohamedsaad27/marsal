@@ -58,10 +58,7 @@ class AuditDescriptionBuilder
                 'subject' => $subject,
             ]),
             AuditEventEnum::StatusChanged => $this->buildStatusChanged($entity, $subject, $oldValues, $newValues, $metadata),
-            AuditEventEnum::Assigned => __('audit_logs::descriptions.assigned', [
-                'entity'  => $entity,
-                'subject' => $subject,
-            ]),
+            AuditEventEnum::Assigned => $this->buildAssigned($entity, $subject, $oldValues, $newValues, $metadata),
             AuditEventEnum::Approved => __('audit_logs::descriptions.approved', [
                 'entity'  => $entity,
                 'subject' => $subject,
@@ -108,6 +105,41 @@ class AuditDescriptionBuilder
         ]);
 
         return $header.' — '.$changes;
+    }
+
+    private function buildAssigned(
+        string $entity,
+        string $subject,
+        array $oldValues,
+        array $newValues,
+        array $metadata,
+    ): string {
+        if (($metadata['action'] ?? null) !== 'order_agent_assignment') {
+            return __('audit_logs::descriptions.assigned', [
+                'entity'  => $entity,
+                'subject' => $subject,
+            ]);
+        }
+
+        $ref = $this->quote((string) ($metadata['reference_code'] ?? trim($subject, '«»')));
+
+        if ($metadata['is_reassignment'] ?? false) {
+            $oldAgent = $metadata['previous_agent_name'] ?? $oldValues['agent_name'] ?? $oldValues['delivery_agent_id'] ?? null;
+            $newAgent = $metadata['new_agent_name'] ?? $newValues['agent_name'] ?? $newValues['delivery_agent_id'] ?? null;
+
+            return __('audit_logs::descriptions.order_reassigned', [
+                'subject'   => $ref,
+                'old_agent' => $this->quote($this->formatValue($oldAgent)),
+                'new_agent' => $this->quote($this->formatValue($newAgent)),
+            ]);
+        }
+
+        $newAgent = $metadata['new_agent_name'] ?? $newValues['agent_name'] ?? $newValues['delivery_agent_id'] ?? null;
+
+        return __('audit_logs::descriptions.order_assigned', [
+            'subject' => $ref,
+            'agent'   => $this->quote($this->formatValue($newAgent)),
+        ]);
     }
 
     private function buildStatusChanged(

@@ -14,6 +14,8 @@ return [
     'status_changed'         => ':entity :subject status changed from :old to :new',
     'status_changed_generic' => ':entity :subject status changed',
     'assigned'               => 'Assigned :entity :subject',
+    'order_assigned'         => 'Order :subject assigned to agent :agent',
+    'order_reassigned'       => 'Order :subject reassigned from agent :old_agent to agent :new_agent',
     'approved'               => 'Approved :entity :subject',
     'rejected'               => 'Rejected :entity :subject',
     'settled'                => 'Settled :entity :subject',
