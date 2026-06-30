@@ -2,7 +2,7 @@
 
 namespace App\Modules\Dashboard\Presentation\Http\Requests;
 
-use App\Modules\Dashboard\Domain\Enums\OrderStatusEnum;
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 

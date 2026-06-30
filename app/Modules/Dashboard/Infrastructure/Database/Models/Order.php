@@ -2,7 +2,7 @@
 
 namespace App\Modules\Dashboard\Infrastructure\Database\Models;
 
-use App\Modules\Dashboard\Domain\Enums\OrderStatusEnum;
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use Illuminate\Database\Eloquent\Model;

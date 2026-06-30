@@ -2,7 +2,7 @@
 
 namespace App\Modules\Dashboard\Presentation\Http\Resources;
 
-use App\Modules\Dashboard\Domain\Enums\OrderStatusEnum;
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Dashboard\Infrastructure\Database\Models\Order;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;

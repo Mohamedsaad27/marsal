@@ -76,7 +76,6 @@ enum OrderStatusEnum: int
         };
     }
 
-    /** @return list<int> */
     public static function terminalIds(): array
     {
         return array_values(array_map(
@@ -85,7 +84,6 @@ enum OrderStatusEnum: int
         ));
     }
 
-    /** @return list<int> */
     public static function activeIds(): array
     {
         return array_values(array_map(
