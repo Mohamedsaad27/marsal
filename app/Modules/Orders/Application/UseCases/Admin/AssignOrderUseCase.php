@@ -7,6 +7,7 @@ use App\Modules\AuditLog\Domain\Enums\AuditEventEnum;
 use App\Modules\Notifications\Application\DTOs\SendNotificationDTO;
 use App\Modules\Notifications\Application\UseCases\SendNotificationUseCase;
 use App\Modules\Notifications\Domain\Enums\NotificationTypeEnum;
+use App\Modules\Notifications\Domain\Events\OrderReassigned;
 use App\Modules\Orders\Application\Exceptions\OrderCannotBeAssignedException;
 use App\Modules\Orders\Application\Exceptions\OrderNotFoundException;
 use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
@@ -59,6 +60,15 @@ class AssignOrderUseCase
             previousStatus: $currentStatus,
             newAgent: $agent,
         );
+
+        if ($previousAgentId !== null && $previousAgentId !== $agent->delivery_agent_id) {
+            event(new OrderReassigned(
+                orderId: $order->order_id,
+                orderCode: $order->reference_code ?? $order->reference_no ?? '',
+                previousAgentName: $previousAgentName ?? 'غير معروف',
+                newAgentName: $agent->user?->name ?? 'غير معروف',
+            ));
+        }
 
         $this->dispatchNotification($order, $agent);
 

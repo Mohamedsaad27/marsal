@@ -39,6 +39,67 @@ class NotificationTemplateService
         );
     }
 
+    /**
+     * Admin-facing Arabic messages for super_admin recipients.
+     *
+     * @param  array<string, string>  $vars
+     */
+    public function buildForSuperAdmin(NotificationTypeEnum $type, array $vars = []): NotificationMessageDTO
+    {
+        [$titleTemplate, $bodyTemplate] = $this->superAdminTemplates($type);
+
+        return new NotificationMessageDTO(
+            titleAr: $this->interpolate($titleTemplate, $vars),
+            bodyAr:  $this->interpolate($bodyTemplate, $vars),
+        );
+    }
+
+    // ──────────────────────────────────────────────────────────────────────────
+    // Super-admin template definitions
+    // ──────────────────────────────────────────────────────────────────────────
+
+    /**
+     * @return array{0: string, 1: string}
+     */
+    private function superAdminTemplates(NotificationTypeEnum $type): array
+    {
+        return match ($type) {
+            NotificationTypeEnum::StatusChange => [
+                '🔄 تحديث حالة طلب',
+                'المندوب {{agent_name}} غيّر حالة الطلب {{order_code}} إلى: {{status_label}}',
+            ],
+            NotificationTypeEnum::ApprovalRequest => [
+                '⚠️ طلب موافقة جديد',
+                'المندوب {{agent_name}} يطلب موافقة على الطلب {{order_code}} — المبلغ المطلوب {{new_amount}} جنيه',
+            ],
+            NotificationTypeEnum::TimerStart => [
+                '⏱️ بدأ مؤقت رفض الاستلام',
+                'المندوب {{agent_name}} بدأ مؤقت رفض استلام الطلب {{order_code}} — المدة {{minutes}} دقيقة',
+            ],
+            NotificationTypeEnum::TimerExpired => [
+                '⌛ انتهى مؤقت رفض الاستلام',
+                'انتهى مؤقت رفض الطلب {{order_code}} دون استجابة — تم تسجيله كمرفوض بدون دفع',
+            ],
+            NotificationTypeEnum::Collected => [
+                '💰 تحصيل نقدي من مندوب',
+                'قام المندوب {{agent_name}} بتحصيل {{collected_amount}} جنيه للطلب {{order_code}}',
+            ],
+            NotificationTypeEnum::Settled => [
+                '🧾 تسوية مالية',
+                '{{settlement_action}} — {{entity_label}} بقيمة {{net_amount}} جنيه',
+            ],
+            NotificationTypeEnum::Returned => [
+                '📦 مرتجع',
+                '{{return_action}} — الطلب {{order_code}} / المندوب {{agent_name}}',
+            ],
+            NotificationTypeEnum::OrderReassigned => [
+                '🔁 إعادة تعيين طلب',
+                'تم إعادة تعيين الطلب {{order_code}} من المندوب {{old_agent}} إلى المندوب {{new_agent}}',
+            ],
+            default => $this->templates($type),
+        };
+    }
+
     // ──────────────────────────────────────────────────────────────────────────
     // Template definitions — ALL human-readable Arabic messages live here
     // ──────────────────────────────────────────────────────────────────────────

@@ -25,6 +25,10 @@ class HandleApprovalRequested implements ShouldQueue
 
     public function handle(ApprovalRequested $event): void
     {
+        if ($event->companyUserId === '') {
+            return;
+        }
+
         $message = $this->templateService->build(
             NotificationTypeEnum::ApprovalRequest,
             [

@@ -12,6 +12,10 @@ enum NotificationTypeEnum: int
     case NewMessage        = 6;
     case PhoneUpdated      = 7;
     case PostponedReminder = 8;
+    case Collected         = 9;
+    case Settled           = 10;
+    case Returned          = 11;
+    case OrderReassigned   = 12;
 
     /**
      * Human-readable Arabic label for this notification type.
@@ -27,6 +31,10 @@ enum NotificationTypeEnum: int
             self::NewMessage        => 'رسالة جديدة',
             self::PhoneUpdated      => 'تم تحديث رقم الهاتف',
             self::PostponedReminder => 'تذكير بموعد تأجيل التسليم',
+            self::Collected         => 'تحصيل نقدي من المندوب',
+            self::Settled           => 'تسوية مالية',
+            self::Returned          => 'مرتجع',
+            self::OrderReassigned   => 'إعادة تعيين طلب',
         };
     }
 
@@ -46,6 +54,10 @@ enum NotificationTypeEnum: int
             self::NewMessage        => 'any',
             self::PhoneUpdated      => 'delivery_agent',
             self::PostponedReminder => 'delivery_agent',
+            self::Collected,
+            self::Settled,
+            self::Returned,
+            self::OrderReassigned   => 'super_admin',
         };
     }
 
@@ -62,7 +74,11 @@ enum NotificationTypeEnum: int
             self::ApprovalRequest,
             self::TimerStart,
             self::TimerExpired      => NotificationKpiCategoryEnum::Approvals,
+            self::Collected,
+            self::Settled,
             self::NewMessage        => NotificationKpiCategoryEnum::Collections,
+            self::Returned,
+            self::OrderReassigned   => NotificationKpiCategoryEnum::Shipments,
         };
     }
 }

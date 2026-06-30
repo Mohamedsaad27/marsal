@@ -2,7 +2,9 @@
 
 namespace App\Modules\Orders\Application\UseCases\Agent;
 
+use App\Modules\Notifications\Domain\Events\AgentOrderStatusChanged;
 use App\Modules\Notifications\Domain\Events\ApprovalRequested;
+use App\Modules\Notifications\Domain\Events\CollectionRecorded;
 use App\Modules\Notifications\Domain\Events\OrderStatusChanged;
 use App\Modules\Orders\Application\DTOs\UpdateAgentOrderStatusDTO;
 use App\Modules\Orders\Application\Exceptions\InvalidOrderStatusTransitionException;
@@ -47,6 +49,7 @@ class UpdateAgentOrderStatusUseCase
 
         $storedStatus = $this->transitions->resolveStoredStatus($dto->requestedStatus);
         $collectionCreated = false;
+        $collectionMeta = null;
         $companyUserId = $order->shippingCompany?->user_id;
         $orderCode = $order->reference_code ?? $order->reference_no;
 
@@ -56,13 +59,14 @@ class UpdateAgentOrderStatusUseCase
             $currentStatus,
             $storedStatus,
             &$collectionCreated,
+            &$collectionMeta,
         ) {
             $now = now();
 
             $this->applyStatusSideEffects($order, $dto, $now);
 
             if ($this->shouldCreateCollection($dto)) {
-                $this->recordCollection($order, $dto, $now);
+                $collectionMeta = $this->recordCollection($order, $dto, $now);
                 $collectionCreated = true;
                 $this->updateCollectedAmount($order, $dto->collectedAmount ?? 0.0, $now);
             }
@@ -72,6 +76,7 @@ class UpdateAgentOrderStatusUseCase
         });
 
         $this->dispatchStatusEvents($dto, $order, $storedStatus, $companyUserId, $orderCode);
+        $this->dispatchSuperAdminEvents($dto, $order, $storedStatus, $orderCode, $collectionMeta);
 
         return [
             'order_id' => $order->order_id,
@@ -165,7 +170,7 @@ class UpdateAgentOrderStatusUseCase
         Order $order,
         UpdateAgentOrderStatusDTO $dto,
         DateTimeInterface $now,
-    ): void {
+    ): array {
         $collectedAmount = $dto->collectedAmount ?? 0.0;
         $commissionValue = $this->resolveAgentCommissionValue($dto->deliveryAgentId);
 
@@ -174,8 +179,10 @@ class UpdateAgentOrderStatusUseCase
             commissionValue: $commissionValue,
         );
 
+        $collectionId = (string) Str::uuid();
+
         DB::table('collections')->insert([
-            'collection_id' => (string) Str::uuid(),
+            'collection_id' => $collectionId,
             'order_id' => $order->order_id,
             'delivery_agent_id' => $dto->deliveryAgentId,
             'shipping_company_id' => $order->shipping_company_id,
@@ -191,6 +198,11 @@ class UpdateAgentOrderStatusUseCase
         DeliveryAgent::query()
             ->whereKey($dto->deliveryAgentId)
             ->increment('balance', $collectedAmount);
+
+        return [
+            'collection_id' => $collectionId,
+            'collected_amount' => number_format((float) $collectedAmount, 2, '.', ''),
+        ];
     }
 
     private function resolveAgentCommissionValue(string $deliveryAgentId): float
@@ -255,23 +267,23 @@ class UpdateAgentOrderStatusUseCase
         ?string $companyUserId,
         ?string $orderCode,
     ): void {
-        if (! $companyUserId) {
-            return;
-        }
-
         if ($dto->requestedStatus === OrderStatusEnum::DeliveredPriceChanged) {
             $agentName = User::query()
                 ->where('user_id', $dto->userId)
                 ->value('name') ?? 'المندوب';
 
             event(new ApprovalRequested(
-                companyUserId: $companyUserId,
-                orderCode: $orderCode,
+                companyUserId: $companyUserId ?? '',
+                orderCode: $orderCode ?? '',
                 orderId: $order->order_id,
                 agentName: $agentName,
                 newAmount: (string) ($dto->newCodAmount ?? $dto->collectedAmount ?? 0),
             ));
 
+            return;
+        }
+
+        if (! $companyUserId) {
             return;
         }
 
@@ -281,5 +293,40 @@ class UpdateAgentOrderStatusUseCase
             orderId: $order->order_id,
             statusLabelAr: $storedStatus->labelAr(),
         ));
+    }
+
+    private function dispatchSuperAdminEvents(
+        UpdateAgentOrderStatusDTO $dto,
+        Order $order,
+        OrderStatusEnum $storedStatus,
+        ?string $orderCode,
+        ?array $collectionMeta,
+    ): void {
+        $agentName = User::query()
+            ->where('user_id', $dto->userId)
+            ->value('name') ?? 'المندوب';
+
+        $orderCode ??= $order->reference_code ?? $order->reference_no ?? '';
+
+        if ($dto->requestedStatus === OrderStatusEnum::DeliveredPriceChanged) {
+            return;
+        }
+
+        event(new AgentOrderStatusChanged(
+            orderId: $order->order_id,
+            orderCode: $orderCode,
+            agentName: $agentName,
+            statusLabelAr: $storedStatus->labelAr(),
+        ));
+
+        if ($collectionMeta !== null) {
+            event(new CollectionRecorded(
+                orderId: $order->order_id,
+                orderCode: $orderCode,
+                collectionId: $collectionMeta['collection_id'],
+                agentName: $agentName,
+                collectedAmount: $collectionMeta['collected_amount'],
+            ));
+        }
     }
 }
