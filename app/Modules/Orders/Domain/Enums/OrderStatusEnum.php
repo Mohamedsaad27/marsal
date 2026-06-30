@@ -49,9 +49,14 @@ enum OrderStatusEnum: int
     public function blocksReassignment(): bool
     {
         return in_array($this, [
+            self::OutForDelivery,
+            self::AwaitingApproval,
             self::Delivered,
             self::DeliveredPriceChanged,
             self::PartialDelivery,
+            self::RefusedPaidShipping,
+            self::RefusedNoPayment,
+            self::CustomerCancelled,
         ], true);
     }
 

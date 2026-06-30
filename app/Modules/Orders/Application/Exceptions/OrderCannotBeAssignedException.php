@@ -8,7 +8,7 @@ class OrderCannotBeAssignedException extends BaseException
 {
     protected function getDefaultMessage(): string
     {
-        return 'لا يمكن إعادة تعيين طلب تم تسليمه أو تسليمه جزئياً أو تم تسليمه بتغيير في سعر';
+        return 'لا يمكن إعادة تعيين الطلب في هذه الحالة';
     }
 
     protected function getDefaultStatusCode(): int
