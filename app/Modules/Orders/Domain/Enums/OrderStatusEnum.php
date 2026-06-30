@@ -46,6 +46,15 @@ enum OrderStatusEnum: int
         ], true);
     }
 
+    public function blocksReassignment(): bool
+    {
+        return in_array($this, [
+            self::Delivered,
+            self::DeliveredPriceChanged,
+            self::PartialDelivery,
+        ], true);
+    }
+
     public function labelAr(): string
     {
         return match ($this) {

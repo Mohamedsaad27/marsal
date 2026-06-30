@@ -27,6 +27,7 @@ class UserResource extends JsonResource
             'account_type' => $this->resolveAccountType()?->code(),
             'is_active' => $this->is_active,
             'roles' => $this->getRoleNames(),
+            'permissions' => $this->getPermissionsViaRoles()->pluck('name'),
             'shipping_company' => ShippingCompanyResource::make($this->whenLoaded('shippingCompany')),
             'staff_member' => StaffMemberResource::make($this->whenLoaded('staffMember')),
             'delivery_agent' => DeliveryAgentResource::make($this->whenLoaded('deliveryAgent')),

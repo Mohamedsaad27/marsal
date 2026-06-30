@@ -5,7 +5,9 @@ namespace App\Modules\Orders\Application\UseCases\Admin;
 use App\Modules\Notifications\Application\DTOs\SendNotificationDTO;
 use App\Modules\Notifications\Application\UseCases\SendNotificationUseCase;
 use App\Modules\Notifications\Domain\Enums\NotificationTypeEnum;
+use App\Modules\Orders\Application\Exceptions\OrderCannotBeAssignedException;
 use App\Modules\Orders\Application\Exceptions\OrderNotFoundException;
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Orders\Domain\Interfaces\AdminOrderRepositoryInterface;
 use App\Modules\Orders\Infrastructure\Database\Models\Order;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
@@ -24,6 +26,14 @@ class AssignOrderUseCase
 
         if ($order === null) {
             throw new OrderNotFoundException($orderId);
+        }
+
+        $currentStatus = $order->status instanceof OrderStatusEnum
+            ? $order->status
+            : OrderStatusEnum::tryFrom((int) $order->status);
+
+        if ($currentStatus?->blocksReassignment()) {
+            throw new OrderCannotBeAssignedException();
         }
 
         $agent = DeliveryAgent::query()
