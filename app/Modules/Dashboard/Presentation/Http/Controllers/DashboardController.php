@@ -38,8 +38,6 @@ class DashboardController extends Controller
 
     public function summary(): JsonResponse
     {
-        // TODO: add permission check
-
         $data = $this->getDashboardSummary->execute();
 
         return $this->success(
@@ -50,8 +48,6 @@ class DashboardController extends Controller
 
     public function shipmentsChart(Request $request): JsonResponse
     {
-        // TODO: add permission check
-
         $data = $this->getShipmentsChart->execute($request->query('period', 'week'));
 
         return $this->success(
@@ -62,8 +58,6 @@ class DashboardController extends Controller
 
     public function topAgents(): JsonResponse
     {
-        // TODO: add permission check
-
         $agents = $this->getTopAgents->execute();
 
         return $this->success(
@@ -74,8 +68,6 @@ class DashboardController extends Controller
 
     public function collectionsBalance(): JsonResponse
     {
-        // TODO: add permission check
-
         $data = $this->getCollectionsBalance->execute();
 
         return $this->success(
@@ -86,8 +78,6 @@ class DashboardController extends Controller
 
     public function deliveryPerformance(): JsonResponse
     {
-        // TODO: add permission check
-
         $data = $this->getDeliveryPerformance->execute();
 
         return $this->success(
@@ -98,8 +88,6 @@ class DashboardController extends Controller
 
     public function avgDeliveryTime(): JsonResponse
     {
-        // TODO: add permission check
-
         $data = $this->getAvgDeliveryTime->execute();
 
         return $this->success(
@@ -110,8 +98,6 @@ class DashboardController extends Controller
 
     public function recentOrders(RecentOrdersRequest $request): JsonResponse
     {
-        // TODO: add permission check
-
         $paginator = $this->getRecentOrders->execute($request->validated());
 
         return response()->json([

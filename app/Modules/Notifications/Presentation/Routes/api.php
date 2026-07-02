@@ -15,33 +15,33 @@ Route::prefix('api/v1')
     ->middleware('auth:api')
     ->group(function () {
 
-        // عدد الإشعارات غير المقروءة (badge) — يجب أن يأتي قبل {notificationId}
         Route::get(
             'notifications/unread-count',
             [NotificationController::class, 'unreadCount']
-        )->name('notifications.unread-count');
+        )->middleware('permission:notifications.view')
+            ->name('notifications.unread-count');
 
-        // تحديد جميع الإشعارات كمقروءة
         Route::patch(
             'notifications/read-all',
             [NotificationController::class, 'markAllRead']
-        )->name('notifications.read-all');
+        )->middleware('permission:notifications.view')
+            ->name('notifications.read-all');
 
-        // حذف جميع الإشعارات المقروءة — يجب أن يأتي قبل {notificationId}
         Route::delete(
             'notifications/read',
             [NotificationController::class, 'deleteRead']
-        )->name('notifications.delete-read');
+        )->middleware('permission:notifications.view')
+            ->name('notifications.delete-read');
 
-        // قائمة الإشعارات المرقّمة
         Route::get(
             'notifications',
             [NotificationController::class, 'index']
-        )->name('notifications.index');
+        )->middleware('permission:notifications.view')
+            ->name('notifications.index');
 
-        // تحديد إشعار واحد كمقروء
         Route::patch(
             'notifications/{notificationId}/read',
             [NotificationController::class, 'markRead']
-        )->name('notifications.mark-read');
+        )->middleware('permission:notifications.view')
+            ->name('notifications.mark-read');
     });

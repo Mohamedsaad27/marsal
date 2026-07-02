@@ -11,7 +11,7 @@ Route::prefix('api/v1/admin')
             ->name('admin.users.index');
 
         Route::get('staff-members', [AdminUserController::class, 'indexStaffMembers'])
-            ->middleware('permission:users.view')
+            ->middleware('permission:staff_members.view')
             ->name('admin.staff-members.index');
 
         Route::get('shipping-companies', [AdminUserController::class, 'indexShippingCompanies'])
@@ -59,7 +59,7 @@ Route::prefix('api/v1/admin')
             ->middleware('permission:delivery_agents.create');
 
         Route::post('staff-members', [AdminUserController::class, 'storeStaffMember'])
-            ->middleware('permission:users.create');
+            ->middleware('permission:staff_members.create');
 
         Route::put('users/{userId}/change-password', [AdminUserController::class, 'changePassword'])
             ->middleware('permission:users.change_password')

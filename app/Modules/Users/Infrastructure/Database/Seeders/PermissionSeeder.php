@@ -36,6 +36,7 @@ class PermissionSeeder extends Seeder
             PermissionEnum::ChatView->value,
             PermissionEnum::ChatSend->value,
             PermissionEnum::NotificationsView->value,
+            PermissionEnum::NotificationsManage->value,
         ]);
 
         $deliveryAgent = Role::firstOrCreate(['name' => 'delivery_agent', 'guard_name' => $guard]);
@@ -46,6 +47,7 @@ class PermissionSeeder extends Seeder
             PermissionEnum::ChatView->value,
             PermissionEnum::ChatSend->value,
             PermissionEnum::NotificationsView->value,
+            PermissionEnum::NotificationsManage->value,
         ]);
     }
 }

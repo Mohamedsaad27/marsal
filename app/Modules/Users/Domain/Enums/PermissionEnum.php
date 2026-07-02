@@ -4,7 +4,11 @@ namespace App\Modules\Users\Domain\Enums;
 
 enum PermissionEnum: string
 {
+    case DashboardView = 'dashboard.view';
+    case DashboardManage = 'dashboard.manage';
+
     case OrdersView = 'orders.view';
+    case OrdersManage = 'orders.manage';
     case OrdersCreate = 'orders.create';
     case OrdersUpdate = 'orders.update';
     case OrdersDelete = 'orders.delete';
@@ -14,12 +18,14 @@ enum PermissionEnum: string
     case OrdersViewFinancials = 'orders.view_financials';
 
     case ShippingCompaniesView = 'shipping_companies.view';
+    case ShippingCompaniesManage = 'shipping_companies.manage';
     case ShippingCompaniesCreate = 'shipping_companies.create';
     case ShippingCompaniesUpdate = 'shipping_companies.update';
     case ShippingCompaniesDelete = 'shipping_companies.delete';
     case ShippingCompaniesToggle = 'shipping_companies.toggle';
 
     case DeliveryAgentsView = 'delivery_agents.view';
+    case DeliveryAgentsManage = 'delivery_agents.manage';
     case DeliveryAgentsCreate = 'delivery_agents.create';
     case DeliveryAgentsUpdate = 'delivery_agents.update';
     case DeliveryAgentsDelete = 'delivery_agents.delete';
@@ -27,23 +33,28 @@ enum PermissionEnum: string
     case DeliveryAgentsViewBalance = 'delivery_agents.view_balance';
 
     case CollectionsView = 'collections.view';
+    case CollectionsManage = 'collections.manage';
     case CollectionsCreate = 'collections.create';
     case CollectionsExport = 'collections.export';
 
     case ReturnsView = 'returns.view';
+    case ReturnsManage = 'returns.manage';
     case ReturnsReceive = 'returns.receive';
     case ReturnsSendToCompany = 'returns.send_to_company';
 
     case SettlementsView = 'settlements.view';
+    case SettlementsManage = 'settlements.manage';
     case SettlementsCreate = 'settlements.create';
     case SettlementsApprove = 'settlements.approve';
     case SettlementsMarkPaid = 'settlements.mark_paid';
 
     case ApprovalRequestsView = 'approval_requests.view';
+    case ApprovalRequestsManage = 'approval_requests.manage';
     case ApprovalRequestsApprove = 'approval_requests.approve';
     case ApprovalRequestsReject = 'approval_requests.reject';
 
     case UsersView = 'users.view';
+    case UsersManage = 'users.manage';
     case UsersCreate = 'users.create';
     case UsersUpdate = 'users.update';
     case UsersDelete = 'users.delete';
@@ -55,15 +66,19 @@ enum PermissionEnum: string
     case RolesManage = 'roles.manage';
 
     case NotificationsView = 'notifications.view';
+    case NotificationsManage = 'notifications.manage';
     case NotificationsSend = 'notifications.send';
 
     case SettingsView = 'settings.view';
+    case SettingsManage = 'settings.manage';
     case SettingsUpdate = 'settings.update';
 
     case ReportsView = 'reports.view';
+    case ReportsManage = 'reports.manage';
     case ReportsExport = 'reports.export';
 
     case ChatView = 'chat.view';
+    case ChatManage = 'chat.manage';
     case ChatSend = 'chat.send';
 
     case GovernoratesView = 'governorates.view';
@@ -73,6 +88,13 @@ enum PermissionEnum: string
     case DepartmentsManage = 'departments.manage';
 
     case AuditLogsView = 'audit_logs.view';
+    case AuditLogsManage = 'audit_logs.manage';
+
+    case StaffMembersView = 'staff_members.view';
+    case StaffMembersManage = 'staff_members.manage';
+    case StaffMembersCreate = 'staff_members.create';
+    case StaffMembersUpdate = 'staff_members.update';
+    case StaffMembersDelete = 'staff_members.delete';
 
     public function label(): string
     {
@@ -97,6 +119,7 @@ enum PermissionEnum: string
     public function groupLabelAr(): string
     {
         return match ($this->group()) {
+            'dashboard' => 'لوحة التحكم',
             'orders' => 'الطلبات',
             'shipping_companies' => 'شركات الشحن',
             'delivery_agents' => 'المناديب',
@@ -113,6 +136,7 @@ enum PermissionEnum: string
             'governorates' => 'المناطق الجغرافية',
             'departments' => 'الأقسام',
             'audit_logs' => 'سجلات النشاط',
+            'staff_members' => 'موظفو النظام',
             default => $this->group(),
         };
     }

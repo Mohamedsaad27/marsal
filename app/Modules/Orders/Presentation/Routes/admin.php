@@ -6,35 +6,50 @@ use App\Modules\Orders\Presentation\Http\Controllers\OrderImportController;
 use Illuminate\Support\Facades\Route;
 
 Route::prefix('api/v1/admin')
-    ->middleware(['auth:api', 'role:super_admin'])
+    ->middleware(['auth:api'])
     ->group(function () {
 
-        // Excel import
         Route::post('orders/import', [OrderImportController::class, 'store'])
-             ->name('orders.import');
+            ->middleware('permission:orders.import')
+            ->name('orders.import');
 
-        // Orders — Shipments dashboard
         Route::get('orders/stats', [AdminOrderController::class, 'stats'])
-             ->name('admin.orders.stats');
-        Route::get('orders/export', [AdminOrderController::class, 'export'])
-             ->middleware('permission:orders.export')
-             ->name('admin.orders.export');
-        Route::get('orders', [AdminOrderController::class, 'index'])
-             ->name('admin.orders.index');
-        Route::get('orders/{orderId}', [AdminOrderController::class, 'show'])
-             ->name('admin.orders.show');
-        Route::patch('orders/{orderId}/assign', [AdminOrderController::class, 'assign'])
-             ->name('admin.orders.assign');
-        Route::delete('orders', [AdminOrderController::class, 'bulkDestroy'])
-             ->name('admin.orders.bulkDestroy');
+            ->middleware('permission:orders.view')
+            ->name('admin.orders.stats');
 
-        // Approval Requests — Approvals dashboard
+        Route::get('orders/export', [AdminOrderController::class, 'export'])
+            ->middleware('permission:orders.export')
+            ->name('admin.orders.export');
+
+        Route::get('orders', [AdminOrderController::class, 'index'])
+            ->middleware('permission:orders.view')
+            ->name('admin.orders.index');
+
+        Route::get('orders/{orderId}', [AdminOrderController::class, 'show'])
+            ->middleware('permission:orders.view')
+            ->name('admin.orders.show');
+
+        Route::patch('orders/{orderId}/assign', [AdminOrderController::class, 'assign'])
+            ->middleware('permission:orders.assign')
+            ->name('admin.orders.assign');
+
+        Route::delete('orders', [AdminOrderController::class, 'bulkDestroy'])
+            ->middleware('permission:orders.delete')
+            ->name('admin.orders.bulkDestroy');
+
         Route::get('approval-requests/stats', [AdminApprovalController::class, 'stats'])
-             ->name('admin.approval-requests.stats');
+            ->middleware('permission:approval_requests.view')
+            ->name('admin.approval-requests.stats');
+
         Route::get('approval-requests', [AdminApprovalController::class, 'index'])
-             ->name('admin.approval-requests.index');
+            ->middleware('permission:approval_requests.view')
+            ->name('admin.approval-requests.index');
+
         Route::get('approval-requests/{approvalRequestId}', [AdminApprovalController::class, 'show'])
-             ->name('admin.approval-requests.show');
+            ->middleware('permission:approval_requests.view')
+            ->name('admin.approval-requests.show');
+
         Route::patch('approval-requests/{approvalRequestId}/review', [AdminApprovalController::class, 'review'])
-             ->name('admin.approval-requests.review');
+            ->middleware('permission:approval_requests.approve|approval_requests.reject')
+            ->name('admin.approval-requests.review');
     });
