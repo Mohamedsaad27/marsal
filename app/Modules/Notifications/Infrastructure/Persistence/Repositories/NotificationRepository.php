@@ -2,6 +2,7 @@
 
 namespace App\Modules\Notifications\Infrastructure\Persistence\Repositories;
 
+use App\Modules\Notifications\Domain\Enums\NotificationKpiCategoryEnum;
 use App\Modules\Notifications\Domain\Enums\NotificationTypeEnum;
 use App\Modules\Notifications\Domain\Interfaces\NotificationRepositoryInterface;
 use App\Modules\Notifications\Infrastructure\Database\Models\Notification;
@@ -81,12 +82,16 @@ class NotificationRepository implements NotificationRepositoryInterface
             ->groupBy('notification_type')
             ->pluck('aggregate', 'notification_type');
 
-        $kpis = [
-            'approvals'   => 0,
-            'collections' => 0,
-            'shipments'   => 0,
-            'unread'      => 0,
-        ];
+        $kpis = array_merge(
+            array_fill_keys(
+                array_map(
+                    static fn (NotificationKpiCategoryEnum $category) => $category->value,
+                    NotificationKpiCategoryEnum::cases(),
+                ),
+                0,
+            ),
+            ['unread' => 0],
+        );
 
         foreach ($countsByType as $typeValue => $count) {
             $count = (int) $count;

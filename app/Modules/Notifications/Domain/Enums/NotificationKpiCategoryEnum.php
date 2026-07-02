@@ -7,6 +7,7 @@ enum NotificationKpiCategoryEnum: string
     case Approvals   = 'approvals';
     case Collections = 'collections';
     case Shipments   = 'shipments';
+    case Settlements = 'settlements';
 
     public function labelAr(): string
     {
@@ -14,6 +15,7 @@ enum NotificationKpiCategoryEnum: string
             self::Approvals   => 'موافقات',
             self::Collections => 'تحصيلات',
             self::Shipments   => 'شحنات',
+            self::Settlements => 'التسويات',
         };
     }
 

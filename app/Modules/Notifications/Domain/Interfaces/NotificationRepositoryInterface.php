@@ -53,6 +53,7 @@ interface NotificationRepositoryInterface
      *     approvals: int,
      *     collections: int,
      *     shipments: int,
+     *     settlements: int,
      *     unread: int
      * }
      */

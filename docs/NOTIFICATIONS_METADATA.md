@@ -66,7 +66,8 @@ Each item in `GET /api/v1/notifications` (`NotificationResource`) has this shape
       "approvals": 2,
       "collections": 4,
       "shipments": 8,
-      "unread": 14
+      "settlements": 1,
+      "unread": 15
     },
     "items": [],
     "current_page": 1,
@@ -85,7 +86,17 @@ Each item in `GET /api/v1/notifications` (`NotificationResource`) has this shape
 | `approvals` | `number` | Unread notifications in approvals bucket |
 | `collections` | `number` | Unread notifications in collections bucket |
 | `shipments` | `number` | Unread notifications in shipments bucket |
+| `settlements` | `number` | Unread notifications in settlements bucket (التسويات) |
 | `unread` | `number` | Total unread notifications |
+
+### KPI category → notification types
+
+| KPI key | Arabic label | Type codes |
+|---------|--------------|------------|
+| `approvals` | موافقات | `3`, `4`, `5` |
+| `collections` | تحصيلات | `9` |
+| `shipments` | شحنات | `1`, `2`, `6`, `7`, `8`, `11`, `12` |
+| `settlements` | التسويات | `10` |
 
 ---
 
