@@ -16,12 +16,20 @@ enum OrderStatusEnum: int
     case CustomerCancelled = 10;
     case NoAnswer = 11;
     case PhoneOff = 12;
+    case UnsafeArea = 14;
+    case OutsideGovernorate = 16;
+    case WrongPhone = 17;
     case Postponed = 15;
 
-    /** @return list<int> */
+    /**
+     * IDs that exist in historical data / DB but have no active enum case.
+     * Only CustomerEvading (13) remains retired.
+     *
+     * @return list<int>
+     */
     public static function retiredIds(): array
     {
-        return [13, 14, 16, 17];
+        return [13];
     }
 
     public function isTerminal(): bool
@@ -75,6 +83,9 @@ enum OrderStatusEnum: int
             self::CustomerCancelled => 'ألغى العميل',
             self::NoAnswer => 'لا يوجد رد',
             self::PhoneOff => 'الهاتف مغلق',
+            self::UnsafeArea => 'منطقة غير آمنة',
+            self::OutsideGovernorate => 'خارج المحافظة',
+            self::WrongPhone => 'رقم هاتف خاطئ',
             self::Postponed => 'مؤجل',
         };
     }
@@ -86,6 +97,7 @@ enum OrderStatusEnum: int
             self::Postponed => 'orange',
             self::Delivered, self::DeliveredPriceChanged, self::PartialDelivery => 'green',
             self::RefusedPaidShipping, self::RefusedNoPayment, self::CustomerCancelled => 'red',
+            self::UnsafeArea, self::OutsideGovernorate, self::WrongPhone => 'orange',
             default => 'gray',
         };
     }

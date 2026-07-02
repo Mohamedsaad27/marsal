@@ -2766,7 +2766,7 @@
                                 "import"
                             ]
                         },
-                        "description": "Permission: `orders.import`\n\nUploads an Excel file and queues background import. Creates one order per valid row across the 3NF order tables (`orders`, `order_customer_info`, `order_addresses`, `order_financials`, `order_items`, `order_schedules`, `order_approvals`, `order_status_history`).\n\n**Multipart:** `file` (required) — `.xlsx` or `.xls`, max 10 MB\n\n**Column mapping (0-based indices, data from Excel row 2+):**\n| Col | Header (AR) | DB field |\n|-----|-------------|----------|\n| 0 | الكود | `orders.reference_no` |\n| 1 | اسم العميل | `order_customer_info.customer_name` |\n| 2 | العنوان | `order_addresses.address_line` |\n| 3 | المحافظة | governorate lookup → `order_addresses.governorate_id` |\n| 4 | رقم التليفون | `order_customer_info.customer_phone` / `phone_alt` |\n| 5 | وصف الشحنة | `orders.notes` |\n| 6 | عدد القطع | `order_items.total_quantity` |\n| 7 | الإجمالي | `order_financials.original_amount` (+ `collected_amount` / `shipping_fee` per status) |\n| 8 | اسم الشركة | `orders.display_company_name` |\n| 9 | اسم الراسل | shipping company lookup → `orders.shipping_company_id` (auto-create if missing) |\n| 10 | اسم المندوب | delivery agent lookup → `orders.delivery_agent_id` |\n| 11 | موقف العميل | status hint → `orders.status` via `ImportStatusHintEnum` (empty = pending `1`) |\n\n**Status hints (col 11):** `تم التوصيل`→5 · `تم التوصيل بتغيير سعر`→6 · `تسليم جزئي`→7 · `رفض + دفع الشحن`→8 · `رفض وعدم دفع الشحن`→9 · `ألغى العميل`→10 · `لا يوجد رد`→11 · `الهاتف مغلق`→12 · `مؤجل`→15 · `قيد التوصيل`→3 · `معيّن لمندوب`→2 · empty→pending(1)\n\n**Success (202):**\n```json\n{\n  \"status\": true,\n  \"message\": \"جاري معالجة ملف الاستيراد في الخلفية\",\n  \"data\": { \"batch_id\": \"uuid-here\" }\n}\n```\n\nSaves `batch_id` to `{{import_batch_id}}` and sets audit trail variables.\n\n**422:** missing/invalid file.\n\n**401/403:** missing JWT or `orders.import` permission.\n\n**After job completes:** check **Admin — Audit Logs → Audit Trail — Subject** with `auditable_type=orders` and `auditable_id={{import_batch_id}}`."
+                        "description": "Permission: `orders.import`\n\nUploads an Excel file and queues background import. Creates one order per valid row across the 3NF order tables (`orders`, `order_customer_info`, `order_addresses`, `order_financials`, `order_items`, `order_schedules`, `order_approvals`, `order_status_history`).\n\n**Multipart:** `file` (required) — `.xlsx` or `.xls`, max 10 MB\n\n**Column mapping (0-based indices, data from Excel row 2+):**\n| Col | Header (AR) | DB field |\n|-----|-------------|----------|\n| 0 | الكود | `orders.reference_no` |\n| 1 | اسم العميل | `order_customer_info.customer_name` |\n| 2 | العنوان | `order_addresses.address_line` |\n| 3 | المحافظة | governorate lookup → `order_addresses.governorate_id` |\n| 4 | رقم التليفون | `order_customer_info.customer_phone` / `phone_alt` |\n| 5 | وصف الشحنة | `orders.notes` |\n| 6 | عدد القطع | `order_items.total_quantity` |\n| 7 | الإجمالي | `order_financials.original_amount` (+ `collected_amount` / `shipping_fee` per status) |\n| 8 | اسم الشركة | `orders.display_company_name` |\n| 9 | اسم الراسل | shipping company lookup → `orders.shipping_company_id` (auto-create if missing) |\n| 10 | اسم المندوب | delivery agent lookup → `orders.delivery_agent_id` |\n| 11 | موقف العميل | status hint → `orders.status` via `ImportStatusHintEnum` (empty = pending `1`) |\n\n**Status hints (col 11):** `تم التوصيل`→5 · `تم التوصيل بتغيير سعر`→6 · `تسليم جزئي`→7 · `رفض + دفع الشحن`→8 · `رفض وعدم دفع الشحن`→9 · `ألغى العميل`→10 · `لا يوجد رد`→11 · `الهاتف مغلق`→12 · `منطقة غير آمنة`→14 · `خارج المحافظة`→16 · `رقم هاتف خاطئ`→17 · `مؤجل`→15 · `قيد التوصيل`→3 · `معيّن لمندوب`→2 · empty→pending(1)\n\n**Success (202):**\n```json\n{\n  \"status\": true,\n  \"message\": \"جاري معالجة ملف الاستيراد في الخلفية\",\n  \"data\": { \"batch_id\": \"uuid-here\" }\n}\n```\n\nSaves `batch_id` to `{{import_batch_id}}` and sets audit trail variables.\n\n**422:** missing/invalid file.\n\n**401/403:** missing JWT or `orders.import` permission.\n\n**After job completes:** check **Admin — Audit Logs → Audit Trail — Subject** with `auditable_type=orders` and `auditable_id={{import_batch_id}}`."
                     }
                 }
             ]
@@ -3113,7 +3113,7 @@
                                 "definitions"
                             ]
                         },
-                        "description": "Returns all coded status/type definitions used by the agent app.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Success (200) `data` sections:**\n\n---\n\n### `order_statuses[]` — all 13 order statuses (`orders.status`)\n| Field | Description |\n|-------|-------------|\n| `id` | TINYINT value sent as `status_id` in PATCH status |\n| `code` | snake_case key (e.g. `out_for_delivery`) |\n| `label_ar` | Arabic UI label |\n| `is_terminal` | Order leaves active list when `true` |\n| `requires_collection` | PATCH status requires `collected_amount` + `collection_type` |\n| `badge_color` | UI badge: `blue` · `green` · `red` · `orange` · `gray` |\n| `available_actions[]` | Server-computed action keys for order detail screen |\n\n| id | code | label_ar | terminal | collection |\n|----|------|----------|----------|------------|\n| 1 | pending | بانتظار التوزيع | — | — |\n| 2 | assigned | تم التعيين | — | — |\n| 3 | out_for_delivery | قيد التوصيل | — | — |\n| 4 | awaiting_approval | بانتظار الموافقة | — | — |\n| 5 | delivered | تم التسليم | ✓ | ✓ |\n| 6 | delivered_price_changed | تم التسليم بتغيير سعر | ✓ | ✓ |\n| 7 | partial_delivery | تسليم جزئي | ✓ | ✓ |\n| 8 | refused_paid_shipping | رفض + دفع رسوم الشحن | ✓ | ✓ |\n| 9 | refused_no_payment | رفض وعدم دفع رسوم الشحن | ✓ | — |\n| 10 | customer_cancelled | ألغى العميل | ✓ | — |\n| 11 | no_answer | لا يوجد رد | — | — |\n| 12 | phone_off | الهاتف مغلق | — | — |\n| 15 | postponed | مؤجل | — | — |\n\n**Retired IDs (no longer valid):** `13` customer_evading · `14` unsafe_area · `16` outside_governorate · `17` wrong_phone\n\n---\n\n### `collection_types[]` — `collections.collection_type`\n| id | code | label_ar |\n|----|------|----------|\n| 1 | cod | مبلغ الاستلام (COD) |\n| 2 | shipping_fee | رسوم الشحن |\n| 3 | partial | تحصيل جزئي |\n\n---\n\n### `proof_file_types[]` — `order_proofs.file_type`\n| id | code | label_ar |\n|----|------|----------|\n| 1 | image | صورة |\n| 2 | pdf | ملف PDF |\n| 3 | other | أخرى |\n\n---\n\n### `order_list_filters[]` — `GET /agent/orders?status=`\n| key | label_ar | status_ids |\n|-----|----------|------------|\n| all | الكل | 1,2,3,4,11,12,15 |\n| new | جديد | 1, 2 |\n| in_delivery | قيد التوصيل | 3 |\n| postponed | مؤجل | 15 |\n\n---\n\n### `collection_settled_filters[]` — `GET /agent/collections?settled=`\n| key | query_value | label_ar |\n|-----|-------------|----------|\n| unsettled | false | غير مسوّاة |\n| settled | true | مسوّاة |\n\n---\n\n### `refusal_resolutions[]` — `POST /agent/orders/{id}/refusal/resolve` (Phase 4)\n| id | code | label_ar | result_status_id | requires_collection |\n|----|------|----------|------------------|---------------------|\n| 1 | delivered | وافق العميل أثناء المؤقت | 5 | ✓ |\n| 2 | refused_paid | رفض ودفع رسوم الشحن | 8 | ✓ |\n| 3 | refused_no_pay | رفض وعدم الدفع | 9 | — |\n| 4 | expired | انتهى المؤقت بدون حل | 9 | — |\n\nSee **Examples** tab for the full live JSON response."
+                        "description": "Returns all coded status/type definitions used by the agent app.\n\nAuth: Bearer + `delivery_agent` role.\n\n**Success (200) `data` sections:**\n\n---\n\n### `order_statuses[]` — all 16 order statuses (`orders.status`)\n| Field | Description |\n|-------|-------------|\n| `id` | TINYINT value sent as `status_id` in PATCH status |\n| `code` | snake_case key (e.g. `out_for_delivery`) |\n| `label_ar` | Arabic UI label |\n| `is_terminal` | Order leaves active list when `true` |\n| `requires_collection` | PATCH status requires `collected_amount` + `collection_type` |\n| `badge_color` | UI badge: `blue` · `green` · `red` · `orange` · `gray` |\n| `available_actions[]` | Server-computed action keys for order detail screen |\n\n| id | code | label_ar | terminal | collection |\n|----|------|----------|----------|------------|\n| 1 | pending | بانتظار التوزيع | — | — |\n| 2 | assigned | تم التعيين | — | — |\n| 3 | out_for_delivery | قيد التوصيل | — | — |\n| 4 | awaiting_approval | بانتظار الموافقة | — | — |\n| 5 | delivered | تم التسليم | ✓ | ✓ |\n| 6 | delivered_price_changed | تم التسليم بتغيير سعر | ✓ | ✓ |\n| 7 | partial_delivery | تسليم جزئي | ✓ | ✓ |\n| 8 | refused_paid_shipping | رفض + دفع رسوم الشحن | ✓ | ✓ |\n| 9 | refused_no_payment | رفض وعدم دفع رسوم الشحن | ✓ | — |\n| 10 | customer_cancelled | ألغى العميل | ✓ | — |\n| 11 | no_answer | لا يوجد رد | — | — |\n| 12 | phone_off | الهاتف مغلق | — | — |\n| 14 | unsafe_area | منطقة غير آمنة | — | — |\n| 16 | outside_governorate | خارج المحافظة | — | — |\n| 17 | wrong_phone | رقم هاتف خاطئ | — | — |\n| 15 | postponed | مؤجل | — | — |\n\n**Retired IDs (no longer valid):** `13` customer_evading only\n\n**Agent available actions from `out_for_delivery`:** `confirm_delivery` · `refuse` · `no_answer` · `phone_off` · `unsafe_area` · `outside_governorate` · `wrong_phone` · `postpone` · `call_customer`\n\n---\n\n### `collection_types[]` — `collections.collection_type`\n| id | code | label_ar |\n|----|------|----------|\n| 1 | cod | مبلغ الاستلام (COD) |\n| 2 | shipping_fee | رسوم الشحن |\n| 3 | partial | تحصيل جزئي |\n\n---\n\n### `proof_file_types[]` — `order_proofs.file_type`\n| id | code | label_ar |\n|----|------|----------|\n| 1 | image | صورة |\n| 2 | pdf | ملف PDF |\n| 3 | other | أخرى |\n\n---\n\n### `order_list_filters[]` — `GET /agent/orders?status=`\n| key | label_ar | status_ids |\n|-----|----------|------------|\n| all | الكل | 1,2,3,4,11,12,14,15,16,17 |\n| new | جديد | 1, 2 |\n| in_delivery | قيد التوصيل | 3 |\n| postponed | مؤجل | 15 |\n\n---\n\n### `collection_settled_filters[]` — `GET /agent/collections?settled=`\n| key | query_value | label_ar |\n|-----|-------------|----------|\n| unsettled | false | غير مسوّاة |\n| settled | true | مسوّاة |\n\n---\n\n### `refusal_resolutions[]` — `POST /agent/orders/{id}/refusal/resolve` (Phase 4)\n| id | code | label_ar | result_status_id | requires_collection |\n|----|------|----------|------------------|---------------------|\n| 1 | delivered | وافق العميل أثناء المؤقت | 5 | ✓ |\n| 2 | refused_paid | رفض ودفع رسوم الشحن | 8 | ✓ |\n| 3 | refused_no_pay | رفض وعدم الدفع | 9 | — |\n| 4 | expired | انتهى المؤقت بدون حل | 9 | — |\n\nSee **Examples** tab for the full live JSON response."
                     },
                     "response": [
                         {
@@ -3148,7 +3148,7 @@
                                     "value": "application/json"
                                 }
                             ],
-                            "body": "{\n    \"isSuccess\": true,\n    \"message\": \"تم تحميل تعريفات الحالات والأنواع بنجاح\",\n    \"data\": {\n        \"order_statuses\": [\n            {\n                \"id\": 1,\n                \"code\": \"pending\",\n                \"label_ar\": \"بانتظار التوزيع\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"gray\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 2,\n                \"code\": \"assigned\",\n                \"label_ar\": \"تم التعيين\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"blue\",\n                \"available_actions\": [\n                    \"start_delivery\",\n                    \"postpone\",\n                    \"call_customer\"\n                ]\n            },\n            {\n                \"id\": 3,\n                \"code\": \"out_for_delivery\",\n                \"label_ar\": \"قيد التوصيل\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"blue\",\n                \"available_actions\": [\n                    \"confirm_delivery\",\n                    \"refuse\",\n                    \"no_answer\",\n                    \"phone_off\",\n                    \"postpone\",\n                    \"call_customer\"\n                ]\n            },\n            {\n                \"id\": 4,\n                \"code\": \"awaiting_approval\",\n                \"label_ar\": \"بانتظار الموافقة\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"blue\",\n                \"available_actions\": [\n                    \"call_customer\"\n                ]\n            },\n            {\n                \"id\": 5,\n                \"code\": \"delivered\",\n                \"label_ar\": \"تم التسليم\",\n                \"is_terminal\": true,\n                \"requires_collection\": true,\n                \"badge_color\": \"green\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 6,\n                \"code\": \"delivered_price_changed\",\n                \"label_ar\": \"تم التسليم بتغيير سعر\",\n                \"is_terminal\": true,\n                \"requires_collection\": true,\n                \"badge_color\": \"green\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 7,\n                \"code\": \"partial_delivery\",\n                \"label_ar\": \"تسليم جزئي\",\n                \"is_terminal\": true,\n                \"requires_collection\": true,\n                \"badge_color\": \"green\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 8,\n                \"code\": \"refused_paid_shipping\",\n                \"label_ar\": \"رفض + دفع رسوم الشحن\",\n                \"is_terminal\": true,\n                \"requires_collection\": true,\n                \"badge_color\": \"red\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 9,\n                \"code\": \"refused_no_payment\",\n                \"label_ar\": \"رفض وعدم دفع رسوم الشحن\",\n                \"is_terminal\": true,\n                \"requires_collection\": false,\n                \"badge_color\": \"red\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 10,\n                \"code\": \"customer_cancelled\",\n                \"label_ar\": \"ألغى العميل\",\n                \"is_terminal\": true,\n                \"requires_collection\": false,\n                \"badge_color\": \"red\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 11,\n                \"code\": \"no_answer\",\n                \"label_ar\": \"لا يوجد رد\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"gray\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 12,\n                \"code\": \"phone_off\",\n                \"label_ar\": \"الهاتف مغلق\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"gray\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 15,\n                \"code\": \"postponed\",\n                \"label_ar\": \"مؤجل\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"orange\",\n                \"available_actions\": []\n            }\n        ],\n        \"collection_types\": [\n            {\n                \"id\": 1,\n                \"code\": \"cod\",\n                \"label_ar\": \"مبلغ الاستلام (COD)\"\n            },\n            {\n                \"id\": 2,\n                \"code\": \"shipping_fee\",\n                \"label_ar\": \"رسوم الشحن\"\n            },\n            {\n                \"id\": 3,\n                \"code\": \"partial\",\n                \"label_ar\": \"تحصيل جزئي\"\n            }\n        ],\n        \"proof_file_types\": [\n            {\n                \"id\": 1,\n                \"code\": \"image\",\n                \"label_ar\": \"صورة\"\n            },\n            {\n                \"id\": 2,\n                \"code\": \"pdf\",\n                \"label_ar\": \"ملف PDF\"\n            },\n            {\n                \"id\": 3,\n                \"code\": \"other\",\n                \"label_ar\": \"أخرى\"\n            }\n        ],\n        \"order_list_filters\": [\n            {\n                \"key\": \"all\",\n                \"label_ar\": \"الكل\",\n                \"status_ids\": [\n                    1,\n                    2,\n                    3,\n                    4,\n                    11,\n                    12,\n                    15\n                ]\n            },\n            {\n                \"key\": \"new\",\n                \"label_ar\": \"جديد\",\n                \"status_ids\": [\n                    1,\n                    2\n                ]\n            },\n            {\n                \"key\": \"in_delivery\",\n                \"label_ar\": \"قيد التوصيل\",\n                \"status_ids\": [\n                    3\n                ]\n            },\n            {\n                \"key\": \"postponed\",\n                \"label_ar\": \"مؤجل\",\n                \"status_ids\": [\n                    15\n                ]\n            }\n        ],\n        \"collection_settled_filters\": [\n            {\n                \"key\": \"unsettled\",\n                \"query_value\": \"false\",\n                \"label_ar\": \"غير مسوّاة\",\n                \"description_ar\": \"تحصيلات لم يتم تسليمها للإدارة بعد\"\n            },\n            {\n                \"key\": \"settled\",\n                \"query_value\": \"true\",\n                \"label_ar\": \"مسوّاة\",\n                \"description_ar\": \"تحصيلات مرتبطة بتسوية مدفوعة\"\n            }\n        ],\n        \"refusal_resolutions\": [\n            {\n                \"id\": 1,\n                \"code\": \"delivered\",\n                \"label_ar\": \"وافق العميل أثناء المؤقت\",\n                \"result_status_id\": 5,\n                \"requires_collection\": true\n            },\n            {\n                \"id\": 2,\n                \"code\": \"refused_paid\",\n                \"label_ar\": \"رفض ودفع رسوم الشحن\",\n                \"result_status_id\": 8,\n                \"requires_collection\": true\n            },\n            {\n                \"id\": 3,\n                \"code\": \"refused_no_pay\",\n                \"label_ar\": \"رفض وعدم الدفع\",\n                \"result_status_id\": 9,\n                \"requires_collection\": false\n            },\n            {\n                \"id\": 4,\n                \"code\": \"expired\",\n                \"label_ar\": \"انتهى المؤقت بدون حل\",\n                \"result_status_id\": 9,\n                \"requires_collection\": false\n            }\n        ]\n    }\n}"
+                            "body": "{\n    \"isSuccess\": true,\n    \"message\": \"تم تحميل تعريفات الحالات والأنواع بنجاح\",\n    \"data\": {\n        \"order_statuses\": [\n            {\n                \"id\": 1,\n                \"code\": \"pending\",\n                \"label_ar\": \"بانتظار التوزيع\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"gray\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 2,\n                \"code\": \"assigned\",\n                \"label_ar\": \"تم التعيين\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"blue\",\n                \"available_actions\": [\n                    \"start_delivery\",\n                    \"postpone\",\n                    \"call_customer\"\n                ]\n            },\n            {\n                \"id\": 3,\n                \"code\": \"out_for_delivery\",\n                \"label_ar\": \"قيد التوصيل\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"blue\",\n                \"available_actions\": [\n                    \"confirm_delivery\",\n                    \"refuse\",\n                    \"no_answer\",\n                    \"phone_off\",\n                    \"unsafe_area\",\n                    \"outside_governorate\",\n                    \"wrong_phone\",\n                    \"postpone\",\n                    \"call_customer\"\n                ]\n            },\n            {\n                \"id\": 4,\n                \"code\": \"awaiting_approval\",\n                \"label_ar\": \"بانتظار الموافقة\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"blue\",\n                \"available_actions\": [\n                    \"call_customer\"\n                ]\n            },\n            {\n                \"id\": 5,\n                \"code\": \"delivered\",\n                \"label_ar\": \"تم التسليم\",\n                \"is_terminal\": true,\n                \"requires_collection\": true,\n                \"badge_color\": \"green\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 6,\n                \"code\": \"delivered_price_changed\",\n                \"label_ar\": \"تم التسليم بتغيير سعر\",\n                \"is_terminal\": true,\n                \"requires_collection\": true,\n                \"badge_color\": \"green\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 7,\n                \"code\": \"partial_delivery\",\n                \"label_ar\": \"تسليم جزئي\",\n                \"is_terminal\": true,\n                \"requires_collection\": true,\n                \"badge_color\": \"green\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 8,\n                \"code\": \"refused_paid_shipping\",\n                \"label_ar\": \"رفض + دفع رسوم الشحن\",\n                \"is_terminal\": true,\n                \"requires_collection\": true,\n                \"badge_color\": \"red\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 9,\n                \"code\": \"refused_no_payment\",\n                \"label_ar\": \"رفض وعدم دفع رسوم الشحن\",\n                \"is_terminal\": true,\n                \"requires_collection\": false,\n                \"badge_color\": \"red\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 10,\n                \"code\": \"customer_cancelled\",\n                \"label_ar\": \"ألغى العميل\",\n                \"is_terminal\": true,\n                \"requires_collection\": false,\n                \"badge_color\": \"red\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 11,\n                \"code\": \"no_answer\",\n                \"label_ar\": \"لا يوجد رد\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"gray\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 12,\n                \"code\": \"phone_off\",\n                \"label_ar\": \"الهاتف مغلق\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"gray\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 14,\n                \"code\": \"unsafe_area\",\n                \"label_ar\": \"منطقة غير آمنة\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"orange\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 16,\n                \"code\": \"outside_governorate\",\n                \"label_ar\": \"خارج المحافظة\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"orange\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 17,\n                \"code\": \"wrong_phone\",\n                \"label_ar\": \"رقم هاتف خاطئ\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"orange\",\n                \"available_actions\": []\n            },\n            {\n                \"id\": 15,\n                \"code\": \"postponed\",\n                \"label_ar\": \"مؤجل\",\n                \"is_terminal\": false,\n                \"requires_collection\": false,\n                \"badge_color\": \"orange\",\n                \"available_actions\": []\n            }\n        ],\n        \"collection_types\": [\n            {\n                \"id\": 1,\n                \"code\": \"cod\",\n                \"label_ar\": \"مبلغ الاستلام (COD)\"\n            },\n            {\n                \"id\": 2,\n                \"code\": \"shipping_fee\",\n                \"label_ar\": \"رسوم الشحن\"\n            },\n            {\n                \"id\": 3,\n                \"code\": \"partial\",\n                \"label_ar\": \"تحصيل جزئي\"\n            }\n        ],\n        \"proof_file_types\": [\n            {\n                \"id\": 1,\n                \"code\": \"image\",\n                \"label_ar\": \"صورة\"\n            },\n            {\n                \"id\": 2,\n                \"code\": \"pdf\",\n                \"label_ar\": \"ملف PDF\"\n            },\n            {\n                \"id\": 3,\n                \"code\": \"other\",\n                \"label_ar\": \"أخرى\"\n            }\n        ],\n        \"order_list_filters\": [\n            {\n                \"key\": \"all\",\n                \"label_ar\": \"الكل\",\n                \"status_ids\": [\n                    1,\n                    2,\n                    3,\n                    4,\n                    11,\n                    12,\n                    14,\n                    15,\n                    16,\n                    17\n                ]\n            },\n            {\n                \"key\": \"new\",\n                \"label_ar\": \"جديد\",\n                \"status_ids\": [\n                    1,\n                    2\n                ]\n            },\n            {\n                \"key\": \"in_delivery\",\n                \"label_ar\": \"قيد التوصيل\",\n                \"status_ids\": [\n                    3\n                ]\n            },\n            {\n                \"key\": \"postponed\",\n                \"label_ar\": \"مؤجل\",\n                \"status_ids\": [\n                    15\n                ]\n            }\n        ],\n        \"collection_settled_filters\": [\n            {\n                \"key\": \"unsettled\",\n                \"query_value\": \"false\",\n                \"label_ar\": \"غير مسوّاة\",\n                \"description_ar\": \"تحصيلات لم يتم تسليمها للإدارة بعد\"\n            },\n            {\n                \"key\": \"settled\",\n                \"query_value\": \"true\",\n                \"label_ar\": \"مسوّاة\",\n                \"description_ar\": \"تحصيلات مرتبطة بتسوية مدفوعة\"\n            }\n        ],\n        \"refusal_resolutions\": [\n            {\n                \"id\": 1,\n                \"code\": \"delivered\",\n                \"label_ar\": \"وافق العميل أثناء المؤقت\",\n                \"result_status_id\": 5,\n                \"requires_collection\": true\n            },\n            {\n                \"id\": 2,\n                \"code\": \"refused_paid\",\n                \"label_ar\": \"رفض ودفع رسوم الشحن\",\n                \"result_status_id\": 8,\n                \"requires_collection\": true\n            },\n            {\n                \"id\": 3,\n                \"code\": \"refused_no_pay\",\n                \"label_ar\": \"رفض وعدم الدفع\",\n                \"result_status_id\": 9,\n                \"requires_collection\": false\n            },\n            {\n                \"id\": 4,\n                \"code\": \"expired\",\n                \"label_ar\": \"انتهى المؤقت بدون حل\",\n                \"result_status_id\": 9,\n                \"requires_collection\": false\n            }\n        ]\n    }\n}"
                         }
                     ]
                 }
@@ -3156,7 +3156,7 @@
         },
         {
             "name": "Agent — Orders",
-            "description": "Delivery agent mobile app APIs (Phase 1 — core order flow).\n\n**Base path:** `/api/v1/agent/*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Login as Delivery Agent** first (or **Auth → Login** with an agent account).\n\nOrders are scoped to the authenticated agent's `delivery_agent_id` — agents never see other agents' orders.\n\n**Status & type maps:** see **Agent — Reference → Get Status & Type Definitions** for all order statuses, collection types, proof file types, list filters, and refusal resolution codes.\n\n**List filter `status`:** `all` (default) · `new` (1,2) · `in_delivery` (3) · `postponed` (15)",
+            "description": "Delivery agent mobile app APIs (Phase 1 — core order flow).\n\n**Base path:** `/api/v1/agent/*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Login as Delivery Agent** first (or **Auth → Login** with an agent account).\n\nOrders are scoped to the authenticated agent's `delivery_agent_id` — agents never see other agents' orders.\n\n**Status & type maps:** see **Agent — Reference → Get Status & Type Definitions** for all order statuses, collection types, proof file types, list filters, and refusal resolution codes.\n\n**List filter `status`:** `all` (default — active non-terminal IDs incl. 14,16,17) · `new` (1,2) · `in_delivery` (3) · `postponed` (15)\n\n**New field statuses (from `out_for_delivery`):** `14` منطقة غير آمنة · `16` خارج المحافظة · `17` رقم هاتف خاطئ — non-terminal, no collection required.",
             "item": [
                 {
                     "name": "Login as Delivery Agent",
@@ -3503,6 +3503,111 @@
                             ]
                         },
                         "description": "Set status to **no_answer (11)** from `out_for_delivery (3)`.\n\nNo collection required. Non-terminal — order stays on agent's active list."
+                    }
+                },
+                {
+                    "name": "Mark Unsafe Area",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status_id\": 14,\n  \"notes\": \"منطقة غير آمنة للتوصيل\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "orders",
+                                "{{order_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Set status to **unsafe_area (14)** from `out_for_delivery (3)`.\n\nNo collection required. Non-terminal — order stays on agent's active list. Badge color: `orange`."
+                    }
+                },
+                {
+                    "name": "Mark Outside Governorate",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status_id\": 16,\n  \"notes\": \"العنوان خارج نطاق المحافظة\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "orders",
+                                "{{order_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Set status to **outside_governorate (16)** from `out_for_delivery (3)`.\n\nNo collection required. Non-terminal — order stays on agent's active list. Badge color: `orange`."
+                    }
+                },
+                {
+                    "name": "Mark Wrong Phone",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status_id\": 17,\n  \"notes\": \"رقم هاتف العميل خاطئ\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/orders/{{order_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "orders",
+                                "{{order_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Set status to **wrong_phone (17)** from `out_for_delivery (3)`.\n\nNo collection required. Non-terminal — order stays on agent's active list. Badge color: `orange`."
                     }
                 },
                 {
@@ -3896,7 +4001,7 @@
         },
         {
             "name": "Notifications",
-            "description": "إشعارات النظام — in-app notifications (DB) + FCM push.\n\nAll endpoints require `auth:api` Bearer token.\nThe authenticated user only sees their own notifications — no cross-user access.\n\n**KPI categories (`data.kpis`):** `approvals` · `collections` · `shipments` · `settlements` (التسويات) · `unread`\n\n**Notification types:**\n| Code | Label (AR) | Recipient |\n|------|-----------|-----------|\n| 1 | طلب توصيل جديد | delivery_agent |\n| 2 | تحديث حالة الطلب | shipping_company |\n| 3 | طلب موافقة على تغيير السعر | shipping_company |\n| 4 | بدأ توقيت رفض الاستلام | shipping_company |\n| 5 | انتهى وقت رفض الاستلام | shipping_company + delivery_agent |\n| 6 | رسالة جديدة | conversation recipient |\n| 7 | تم تحديث رقم الهاتف | delivery_agent |\n| 8 | تذكير بموعد تأجيل التسليم | delivery_agent |\n| 9 | تحصيل نقدي من المندوب | super_admin |\n| 10 | تسوية مالية | super_admin |\n| 11 | مرتجع | super_admin |\n| 12 | إعادة تعيين طلب | super_admin |",
+            "description": "إشعارات النظام — in-app notifications (DB) + FCM push.\n\nAll endpoints require `auth:api` Bearer token.\nThe authenticated user only sees their own notifications — no cross-user access.\n\n**KPI categories (`data.kpis`):** `approvals` · `collections` · `shipments` · `settlements` (التسويات) · `unread`\n\n**KPI → type mapping:** `approvals` = 3,4,5 · `collections` = 9 only · `shipments` = 1,2,6,7,8,11,12 · `settlements` = 10\n\n**Notification types:**\n| Code | Label (AR) | Recipient |\n|------|-----------|-----------|\n| 1 | طلب توصيل جديد | delivery_agent |\n| 2 | تحديث حالة الطلب | shipping_company |\n| 3 | طلب موافقة على تغيير السعر | shipping_company |\n| 4 | بدأ توقيت رفض الاستلام | shipping_company |\n| 5 | انتهى وقت رفض الاستلام | shipping_company + delivery_agent |\n| 6 | رسالة جديدة | conversation recipient |\n| 7 | تم تحديث رقم الهاتف | delivery_agent |\n| 8 | تذكير بموعد تأجيل التسليم | delivery_agent |\n| 9 | تحصيل نقدي من المندوب | super_admin |\n| 10 | تسوية مالية | super_admin |\n| 11 | مرتجع | super_admin |\n| 12 | إعادة تعيين طلب | super_admin |",
             "item": [
                 {
                     "name": "List Notifications",
@@ -4053,7 +4158,7 @@
         },
         {
             "name": "Admin — Orders (Shipments)",
-            "description": "Admin shipments dashboard — per-status filter tabs, paginated order list, order detail, agent assignment, and Excel export.\n\nAll routes: `auth:api` + `role:super_admin`. Export additionally requires `permission:orders.export`.\n\n---\n\n### Order status filter (`?status=`)\n\nEach filter maps to **exactly one** order status. Grouped filters (`in_delivery`, `delivered`, `postponed_refused`) are **removed**.\n\n| `status` value | ID | Arabic label |\n|----------------|-----|--------------|\n| `all` | — | كل الطلبات (no status filter) |\n| `1` | 1 | بانتظار التوزيع |\n| `2` | 2 | تم التعيين |\n| `3` | 3 | قيد التوصيل |\n| `4` | 4 | بانتظار الموافقة |\n| `5` | 5 | تم التسليم |\n| `6` | 6 | تم التسليم بتغيير سعر |\n| `7` | 7 | تسليم جزئي |\n| `8` | 8 | رفض + دفع رسوم الشحن |\n| `9` | 9 | رفض وعدم دفع رسوم الشحن |\n| `10` | 10 | ألغى العميل |\n| `11` | 11 | لا يوجد رد |\n| `12` | 12 | الهاتف مغلق |\n| `15` | 15 | مؤجل |\n| `returned` | — | طلبات لها سجل في جدول `returns` (not an order status) |\n\n**Stats:** `GET /orders/stats` returns `statuses[]` — one `{ id, label_ar, count }` entry per status above, plus `total` and `returned`.\n\n**Export:** `GET /orders/export` — downloads `.xlsx` with import-compatible columns plus `مرتجعات` and `المبلغ المحصل`. Filename: `Y-m-d - {company name}.xlsx`.\n\n**Assign flow:** `PATCH /orders/{orderId}/assign` with `agent_id` → status `Assigned (2)`, status history, FCM to agent.",
+            "description": "Admin shipments dashboard — per-status filter tabs, paginated order list, order detail, agent assignment, and Excel export.\n\nAll routes: `auth:api` + `role:super_admin`. Export additionally requires `permission:orders.export`.\n\n---\n\n### Order status filter (`?status=`)\n\nEach filter maps to **exactly one** order status. Grouped filters (`in_delivery`, `delivered`, `postponed_refused`) are **removed**.\n\n| `status` value | ID | Arabic label |\n|----------------|-----|--------------|\n| `all` | — | كل الطلبات (no status filter) |\n| `1` | 1 | بانتظار التوزيع |\n| `2` | 2 | تم التعيين |\n| `3` | 3 | قيد التوصيل |\n| `4` | 4 | بانتظار الموافقة |\n| `5` | 5 | تم التسليم |\n| `6` | 6 | تم التسليم بتغيير سعر |\n| `7` | 7 | تسليم جزئي |\n| `8` | 8 | رفض + دفع رسوم الشحن |\n| `9` | 9 | رفض وعدم دفع رسوم الشحن |\n| `10` | 10 | ألغى العميل |\n| `11` | 11 | لا يوجد رد |\n| `12` | 12 | الهاتف مغلق |\n| `14` | 14 | منطقة غير آمنة |\n| `16` | 16 | خارج المحافظة |\n| `17` | 17 | رقم هاتف خاطئ |\n| `15` | 15 | مؤجل |\n| `returned` | — | طلبات لها سجل في جدول `returns` (not an order status) |\n\n**Stats:** `GET /orders/stats` returns `statuses[]` — one `{ id, label_ar, count }` entry per status above, plus `total` and `returned`.\n\n**Export:** `GET /orders/export` — downloads `.xlsx` with import-compatible columns plus `مرتجعات` and `المبلغ المحصل`. Filename: `Y-m-d - {company name}.xlsx`.\n\n**Assign flow:** `PATCH /orders/{orderId}/assign` with `agent_id` → status `Assigned (2)`, status history, FCM to agent.",
             "item": [
                 {
                     "name": "Order Stats",
@@ -4078,7 +4183,7 @@
                                 "stats"
                             ]
                         },
-                        "description": "إحصائيات صفحة الطلبات — عدّاد لكل حالة على حدة.\n\n**Response `data`:**\n```json\n{\n  \"total\": 250,\n  \"returned\": 5,\n  \"statuses\": [\n    { \"id\": 1, \"label_ar\": \"بانتظار التوزيع\", \"count\": 18 },\n    { \"id\": 2, \"label_ar\": \"تم التعيين\", \"count\": 12 },\n    { \"id\": 3, \"label_ar\": \"قيد التوصيل\", \"count\": 20 },\n    { \"id\": 4, \"label_ar\": \"بانتظار الموافقة\", \"count\": 3 },\n    { \"id\": 5, \"label_ar\": \"تم التسليم\", \"count\": 120 },\n    { \"id\": 6, \"label_ar\": \"تم التسليم بتغيير سعر\", \"count\": 8 },\n    { \"id\": 7, \"label_ar\": \"تسليم جزئي\", \"count\": 5 },\n    { \"id\": 8, \"label_ar\": \"رفض + دفع رسوم الشحن\", \"count\": 10 },\n    { \"id\": 9, \"label_ar\": \"رفض وعدم دفع رسوم الشحن\", \"count\": 7 },\n    { \"id\": 10, \"label_ar\": \"ألغى العميل\", \"count\": 4 },\n    { \"id\": 11, \"label_ar\": \"لا يوجد رد\", \"count\": 6 },\n    { \"id\": 12, \"label_ar\": \"الهاتف مغلق\", \"count\": 3 },\n    { \"id\": 15, \"label_ar\": \"مؤجل\", \"count\": 9 }\n  ]\n}\n```\n\n**Fields:**\n- `total` — all non-deleted orders\n- `returned` — orders with a linked `returns` row\n- `statuses[]` — one row per active `OrderStatusEnum` case; use to build filter tabs (`id` → `?status=` value, `count` → badge)\n\n**Removed (breaking):** `pending`, `in_delivery`, `delivered`, `postponed_refused` grouped keys."
+                        "description": "إحصائيات صفحة الطلبات — عدّاد لكل حالة على حدة.\n\n**Response `data`:**\n```json\n{\n  \"total\": 250,\n  \"returned\": 5,\n  \"statuses\": [\n    { \"id\": 1, \"label_ar\": \"بانتظار التوزيع\", \"count\": 18 },\n    { \"id\": 2, \"label_ar\": \"تم التعيين\", \"count\": 12 },\n    { \"id\": 3, \"label_ar\": \"قيد التوصيل\", \"count\": 20 },\n    { \"id\": 4, \"label_ar\": \"بانتظار الموافقة\", \"count\": 3 },\n    { \"id\": 5, \"label_ar\": \"تم التسليم\", \"count\": 120 },\n    { \"id\": 6, \"label_ar\": \"تم التسليم بتغيير سعر\", \"count\": 8 },\n    { \"id\": 7, \"label_ar\": \"تسليم جزئي\", \"count\": 5 },\n    { \"id\": 8, \"label_ar\": \"رفض + دفع رسوم الشحن\", \"count\": 10 },\n    { \"id\": 9, \"label_ar\": \"رفض وعدم دفع رسوم الشحن\", \"count\": 7 },\n    { \"id\": 10, \"label_ar\": \"ألغى العميل\", \"count\": 4 },\n    { \"id\": 11, \"label_ar\": \"لا يوجد رد\", \"count\": 6 },\n    { \"id\": 12, \"label_ar\": \"الهاتف مغلق\", \"count\": 3 },\n    { \"id\": 14, \"label_ar\": \"منطقة غير آمنة\", \"count\": 2 },\n    { \"id\": 16, \"label_ar\": \"خارج المحافظة\", \"count\": 1 },\n    { \"id\": 17, \"label_ar\": \"رقم هاتف خاطئ\", \"count\": 4 },\n    { \"id\": 15, \"label_ar\": \"مؤجل\", \"count\": 9 }\n  ]\n}\n```\n\n**Fields:**\n- `total` — all non-deleted orders\n- `returned` — orders with a linked `returns` row\n- `statuses[]` — one row per active `OrderStatusEnum` case; use to build filter tabs (`id` → `?status=` value, `count` → badge)\n\n**Removed (breaking):** `pending`, `in_delivery`, `delivered`, `postponed_refused` grouped keys."
                     }
                 },
                 {
@@ -4181,7 +4286,7 @@
                                 {
                                     "key": "status",
                                     "value": "all",
-                                    "description": "all = no filter. Or single status ID: 1|2|3|4|5|6|7|8|9|10|11|12|15. Or returned = orders with returns record."
+                                    "description": "all = no filter. Or single status ID: 1|2|3|4|5|6|7|8|9|10|11|12|14|15|16|17. Or returned = orders with returns record."
                                 },
                                 {
                                     "key": "company_id",
@@ -4650,6 +4755,111 @@
                                     ]
                                 },
                                 "description": "Filter: `orders.status = 12` only."
+                            }
+                        },
+                        {
+                            "name": "Status 14 — Unsafe Area (منطقة غير آمنة)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=14&per_page=20",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "admin",
+                                        "orders"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "status",
+                                            "value": "14"
+                                        },
+                                        {
+                                            "key": "per_page",
+                                            "value": "20"
+                                        }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 14` only. Non-terminal field status — agent reported unsafe delivery area."
+                            }
+                        },
+                        {
+                            "name": "Status 16 — Outside Governorate (خارج المحافظة)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=16&per_page=20",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "admin",
+                                        "orders"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "status",
+                                            "value": "16"
+                                        },
+                                        {
+                                            "key": "per_page",
+                                            "value": "20"
+                                        }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 16` only. Non-terminal field status — delivery address outside service governorate."
+                            }
+                        },
+                        {
+                            "name": "Status 17 — Wrong Phone (رقم هاتف خاطئ)",
+                            "request": {
+                                "method": "GET",
+                                "header": [
+                                    {
+                                        "key": "Accept",
+                                        "value": "application/json"
+                                    }
+                                ],
+                                "url": {
+                                    "raw": "{{base_url}}/api/v1/admin/orders?status=17&per_page=20",
+                                    "host": [
+                                        "{{base_url}}"
+                                    ],
+                                    "path": [
+                                        "api",
+                                        "v1",
+                                        "admin",
+                                        "orders"
+                                    ],
+                                    "query": [
+                                        {
+                                            "key": "status",
+                                            "value": "17"
+                                        },
+                                        {
+                                            "key": "per_page",
+                                            "value": "20"
+                                        }
+                                    ]
+                                },
+                                "description": "Filter: `orders.status = 17` only. Non-terminal field status — customer phone number is incorrect."
                             }
                         },
                         {

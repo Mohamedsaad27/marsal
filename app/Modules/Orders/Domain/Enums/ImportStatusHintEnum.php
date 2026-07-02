@@ -17,7 +17,12 @@ enum ImportStatusHintEnum: string
     case PhoneOff              = 'الهاتف مغلق';            // هاتف العميل مغلق
     case Postponed             = 'مؤجل';                   // بطلب من العميل — يتطلب تاريخ
 
-    // ── §٧.٣ حالات وسيطة (من الشيت — قيد التشغيل) ───────────────────────
+    // ── §٧.٣ حالات ميدانية بدون تحصيل ──────────────────────────────────────
+    case UnsafeArea            = 'منطقة غير آمنة';         // المنطقة غير آمنة
+    case OutsideGovernorate    = 'خارج المحافظة';           // خارج نطاق التوصيل
+    case WrongPhone            = 'رقم هاتف خاطئ';          // رقم هاتف خاطئ
+
+    // ── §٧.٤ حالات وسيطة (من الشيت — قيد التشغيل) ───────────────────────
     case OutForDelivery        = 'قيد التوصيل';            // خرج للتوصيل
     case Assigned              = 'معيّن لمندوب';           // تم التعيين لم يبدأ بعد
 
@@ -43,6 +48,9 @@ enum ImportStatusHintEnum: string
             self::CustomerCancelled     => 10,
             self::NoAnswer              => 11,
             self::PhoneOff              => 12,
+            self::UnsafeArea            => 14,
+            self::OutsideGovernorate    => 16,
+            self::WrongPhone            => 17,
             self::Postponed             => 15,
             self::OutForDelivery        => 3,
             self::Assigned              => 2,
