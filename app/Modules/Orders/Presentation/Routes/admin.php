@@ -16,6 +16,9 @@ Route::prefix('api/v1/admin')
         // Orders — Shipments dashboard
         Route::get('orders/stats', [AdminOrderController::class, 'stats'])
              ->name('admin.orders.stats');
+        Route::get('orders/export', [AdminOrderController::class, 'export'])
+             ->middleware('permission:orders.export')
+             ->name('admin.orders.export');
         Route::get('orders', [AdminOrderController::class, 'index'])
              ->name('admin.orders.index');
         Route::get('orders/{orderId}', [AdminOrderController::class, 'show'])

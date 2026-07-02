@@ -17,6 +17,7 @@ return [
     'orders_deleted'         => 'Orders deleted successfully',
     'order_not_found'        => 'Order not found',
     'order_delete_not_pending' => 'Only orders in pending status can be deleted.',
+    'export_invalid_status'    => 'Invalid order status value.',
 
     // Company
     'company_dashboard_success'  => 'Company dashboard loaded successfully',

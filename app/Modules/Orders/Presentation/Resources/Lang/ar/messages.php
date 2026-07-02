@@ -26,6 +26,7 @@ return [
     'orders_deleted'         => 'تم حذف الطلبات بنجاح',
     'order_not_found'        => 'الطلب غير موجود',
     'order_delete_not_pending' => 'لا يمكن حذف الطلب إلا وهو في حالة انتظار التوزيع.',
+    'export_invalid_status'    => 'قيمة حالة الطلب غير صالحة.',
 
     // Admin — Approval Requests
     'approvals_list_success'  => 'تم تحميل قائمة طلبات الموافقة بنجاح',

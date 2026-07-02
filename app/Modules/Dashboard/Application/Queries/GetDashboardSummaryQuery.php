@@ -3,7 +3,7 @@
 namespace App\Modules\Dashboard\Application\Queries;
 
 use App\Modules\Dashboard\Application\Services\DashboardCacheService;
-use App\Modules\Dashboard\Domain\Enums\OrderStatusEnum;
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Dashboard\Domain\Helpers\PercentageChange;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
@@ -14,18 +14,7 @@ class GetDashboardSummaryQuery
         private readonly DashboardCacheService $cache,
     ) {}
 
-    /**
-     * @return array{
-     *     total_orders: int,
-     *     total_orders_change_percent: float|null,
-     *     in_delivery: int,
-     *     in_delivery_label: string,
-     *     delivered_this_week: int,
-     *     delivered_change_percent: float|null,
-     *     net_balance_companies: float,
-     *     net_balance_change_percent: float|null
-     * }
-     */
+    
     public function execute(): array
     {
         return $this->cache->remember('summary', fn () => $this->compute());
@@ -58,7 +47,7 @@ class GetDashboardSummaryQuery
 
         $inDelivery = (int) DB::table('orders')
             ->whereNull('deleted_at')
-            ->where('status', OrderStatusEnum::InDelivery->value)
+            ->where('status', OrderStatusEnum::OutForDelivery->value)
             ->count();
 
         $deliveredThisWeek = (int) DB::table('orders')

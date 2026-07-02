@@ -6,6 +6,7 @@ use App\Modules\Orders\Application\DTOs\ImportOrderRowDTO;
 use App\Modules\Orders\Application\Services\ReferenceCodeGeneratorService;
 use App\Modules\Orders\Application\Validators\OrderRowValidator;
 use App\Modules\Orders\Domain\Enums\ImportStatusHintEnum;
+use App\Modules\Orders\Domain\Services\OrdersExcelSchema;
 use App\Modules\Orders\Infrastructure\Imports\OrdersImport;
 use App\Modules\Notifications\Domain\Events\OrderAssigned;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
@@ -277,40 +278,30 @@ class ImportOrdersFromExcelUseCase
     /**
      * Parse one raw Excel row into a DTO + resolved hint enum.
      *
-     * New column layout (0-based index, RTL Arabic sheet):
-     *  [0]  الكود          → reference_no
-     *  [1]  اسم العميل     → customer_name
-     *  [2]  العنوان        → address_line
-     *  [3]  المحافظة       → governorate_id
-     *  [4]  رقم التليفون   → customer_phone / phone_alt
-     *  [5]  وصف الشحنة     → orders.notes (order-level description)
-     *  [6]  عدد القطع      → total_quantity
-     *  [7]  الإجمالي       → original_amount
-     *  [8]  اسم الشركة     → display only (stored in status history note)
-     *  [9]  اسم الراسل     → shipping_company lookup / auto-create
-     *  [10] اسم المندوب    → delivery_agent lookup
-     *  [11] موقف العميل    → status (empty = pending / 1)
+     * Column layout: see OrdersExcelSchema::IMPORT_HEADINGS (0-based index).
      *
      * @return array{0: ImportOrderRowDTO, 1: ?ImportStatusHintEnum, 2: string}
      */
     private function buildDto(array $row, int $rowNumber): array
     {
-        $rawStatus = isset($row[11]) ? trim((string) $row[11]) : '';
+        $rawStatus = isset($row[OrdersExcelSchema::IMPORT_COL_STATUS])
+            ? trim((string) $row[OrdersExcelSchema::IMPORT_COL_STATUS])
+            : '';
         $hint      = ImportStatusHintEnum::fromArabic($rawStatus);
         $statusId  = $hint?->toStatusId() ?? 1;
 
         $dto = new ImportOrderRowDTO(
-            referenceNo:         trim((string) ($row[0] ?? '')),
-            customerName:        trim((string) ($row[1] ?? '')),
-            customerPhones:      $this->normalizePhones((string) ($row[4] ?? '')),
-            addressLine:         trim((string) ($row[2] ?? '')),
-            governorateName:     trim((string) ($row[3] ?? '')),
-            itemDescription:     trim((string) ($row[5] ?? '')),
-            quantity:            max(1, (int) ($row[6] ?? 1)),
-            codAmount:           max(0.0, (float) ($row[7] ?? 0)),
-            displayCompanyName:  trim((string) ($row[8] ?? '')),
-            companyName:         trim((string) ($row[9] ?? '')),
-            agentName:           trim((string) ($row[10] ?? '')),
+            referenceNo:         trim((string) ($row[OrdersExcelSchema::IMPORT_COL_REFERENCE_NO] ?? '')),
+            customerName:        trim((string) ($row[OrdersExcelSchema::IMPORT_COL_CUSTOMER_NAME] ?? '')),
+            customerPhones:      $this->normalizePhones((string) ($row[OrdersExcelSchema::IMPORT_COL_PHONES] ?? '')),
+            addressLine:         trim((string) ($row[OrdersExcelSchema::IMPORT_COL_ADDRESS] ?? '')),
+            governorateName:     trim((string) ($row[OrdersExcelSchema::IMPORT_COL_GOVERNORATE] ?? '')),
+            itemDescription:     trim((string) ($row[OrdersExcelSchema::IMPORT_COL_DESCRIPTION] ?? '')),
+            quantity:            max(1, (int) ($row[OrdersExcelSchema::IMPORT_COL_QUANTITY] ?? 1)),
+            codAmount:           max(0.0, (float) ($row[OrdersExcelSchema::IMPORT_COL_TOTAL] ?? 0)),
+            displayCompanyName:  trim((string) ($row[OrdersExcelSchema::IMPORT_COL_DISPLAY_COMPANY] ?? '')),
+            companyName:         trim((string) ($row[OrdersExcelSchema::IMPORT_COL_SHIPPING_COMPANY] ?? '')),
+            agentName:           trim((string) ($row[OrdersExcelSchema::IMPORT_COL_AGENT] ?? '')),
             statusId:            $statusId,
             rowNumber:           $rowNumber,
         );
