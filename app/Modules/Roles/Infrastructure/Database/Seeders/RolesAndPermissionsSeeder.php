@@ -25,6 +25,7 @@ class RolesAndPermissionsSeeder extends Seeder
             PermissionEnum::OrdersCreate->value,
             PermissionEnum::OrdersUpdate->value,
             PermissionEnum::OrdersAssign->value,
+            PermissionEnum::ChatView->value,
         ]);
     }
 }

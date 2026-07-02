@@ -13,8 +13,8 @@ return new class extends Migration
             $table->foreignUuid('order_id')->nullable()
                   ->references('order_id')->on('orders')->onDelete('set null')
                   ->comment('NULL = general (not tied to a specific order)');
-            $table->tinyInteger('conversation_type')->default(1)
-                  ->comment('1=admin_agent|2=admin_company|3=admin_agent_company — ConversationTypeEnum');
+            $table->unsignedTinyInteger('conversation_type')->default(1)
+                  ->comment('1=agent_company — ConversationTypeEnum');
             $table->softDeletes();
             $table->timestamps();
 
@@ -29,10 +29,12 @@ return new class extends Migration
                   ->references('conversation_id')->on('conversations')->onDelete('cascade');
             $table->foreignUuid('user_id')
                   ->references('user_id')->on('users')->onDelete('cascade');
+            $table->timestamp('last_read_at')->nullable();
             $table->timestamps();
 
             $table->unique(['conversation_id', 'user_id']);
             $table->index('user_id');
+            $table->index(['user_id', 'last_read_at'], 'idx_conv_part_user_last_read');
         });
     }
 

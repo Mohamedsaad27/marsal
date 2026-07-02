@@ -16,9 +16,8 @@ return new class extends Migration
                   ->references('user_id')->on('users')->onDelete('cascade');
             $table->text('body')->nullable()
                   ->comment('Text body; NULL when the message is an attachment only');
-            $table->tinyInteger('message_type')->default(1)
-                  ->comment('1=text|2=image|3=file — MessageTypeEnum');
-            $table->string('attachment_url', 500)->nullable();
+            $table->unsignedTinyInteger('message_type')->default(1)
+                  ->comment('1=text|2=image|3=voice — MessageTypeEnum');
             $table->softDeletes();
             $table->timestamps();
 

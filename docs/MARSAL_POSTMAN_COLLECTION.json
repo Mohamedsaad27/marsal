@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "marsal-api",
         "name": "Marsal API",
-        "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import/export), Admin Collections & Settlements, Agent Mobile (Phases 1–3 orders/collections/schedule · Phase 5 profile), Company Mobile (dashboard, shipments, wallet, profile, settlements), Audit Logs, Dashboard (admin home KPIs), Notifications.\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections/schedule/profile endpoints. Requires Spatie role `delivery_agent`.\n\n**Company mobile:** run **Auth → Login** with a shipping company account, then use **Company** folder — dashboard, orders list/detail, wallet, profile, settlements list/detail. All routes at `/api/v1/company/*`. Requires Spatie role `shipping_company`.\n\n**Admin finance:** run **Auth → Login** as super_admin, then **Admin — Collections** (stats, list, mark cash received) and **Admin — Settlements** (stats, list, create, approve, mark paid).",
+        "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import/export), Admin Collections & Settlements, Agent Mobile (Phases 1–3 orders/collections/schedule · Phase 5 profile · Chat), Company Mobile (dashboard, shipments, wallet, profile, settlements, chat), Audit Logs, Dashboard (admin home KPIs), Notifications, Admin Chat (monitor).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections/schedule/profile/chat endpoints. Requires Spatie role `delivery_agent`.\n\n**Company mobile:** run **Auth → Login** with a shipping company account, then use **Company** folder — dashboard, orders list/detail, wallet, profile, settlements, chat. All routes at `/api/v1/company/*`. Requires Spatie role `shipping_company`.\n\n**Chat:** order-scoped conversations between delivery agent and shipping company. Admin/staff monitor via **Admin — Chat** (`permission:chat.view`). No realtime — new messages trigger notification type `6` (رسالة جديدة) via FCM. Message types: `1` text · `2` image · `3` voice.\n\n**Admin finance:** run **Auth → Login** as super_admin, then **Admin — Collections** (stats, list, mark cash received) and **Admin — Settlements** (stats, list, create, approve, mark paid).",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
@@ -123,6 +123,12 @@
             "value": "",
             "type": "string",
             "description": "UUID of a return record (`return_id`). Auto-set from Admin — Returns → List Returns (first pending item)."
+        },
+        {
+            "key": "conversation_id",
+            "value": "",
+            "type": "string",
+            "description": "UUID of a chat conversation (`conversation_id`). Auto-set from Agent/Company/Admin — Chat responses (get-or-create by order, list, or show)."
         }
     ],
     "auth": {
@@ -4000,6 +4006,345 @@
             ]
         },
         {
+            "name": "Agent — Chat",
+            "description": "Delivery agent chat — order-scoped conversations with the shipping company.\n\n**Base path:** `/api/v1/agent/chat/*`\n\n**Auth:** JWT Bearer + Spatie role `delivery_agent`. Run **Agent — Orders → Login as Delivery Agent** first.\n\nChat is available only when the order has both a shipping company and an assigned delivery agent. Admin does not participate — they monitor via **Admin — Chat**.\n\n**Message types (`message_type`):** `1` text · `2` image · `3` voice\n\n**Notifications:** sending a message dispatches notification type `6` (رسالة جديدة) to the company user via FCM + in-app DB. No realtime websocket.\n\n**Workflow:**\n1. **List Agent Orders** → saves `{{order_id}}`\n2. **Get or Create Conversation by Order** → saves `{{conversation_id}}`\n3. **List Messages** / **Send Text Message** / **Send Image** / **Send Voice**\n4. **Mark Conversation Read**",
+            "item": [
+                {
+                    "name": "List Conversations",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data?.items || [];",
+                                    "    if (items.length > 0 && items[0].id) {",
+                                    "        pm.collectionVariables.set('conversation_id', items[0].id);",
+                                    "        if (items[0].order_id) {",
+                                    "            pm.collectionVariables.set('order_id', items[0].order_id);",
+                                    "        }",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/chat/conversations?per_page=15",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "chat",
+                                "conversations"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "Items per page (max 100)"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Search by order reference_code or reference_no",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "order_id",
+                                    "value": "",
+                                    "description": "Filter by order UUID",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "List chat conversations for the authenticated agent.\n\nSaves first `conversation_id` and `order_id` to collection variables.\n\n**Response `data`:**\n```json\n{\n  \"items\": [\n    {\n      \"id\": \"uuid\",\n      \"order_id\": \"uuid\",\n      \"order\": {\n        \"id\": \"uuid\",\n        \"reference_code\": \"MRS-22101\",\n        \"reference_no\": \"EX-001\",\n        \"status\": 3,\n        \"company_name\": \"أكسبريس مصر\",\n        \"agent_name\": \"أحمد محمد\"\n      },\n      \"type\": { \"code\": 1, \"label\": \"مندوب — شركة شحن\" },\n      \"participants\": [\n        { \"user_id\": \"uuid\", \"name\": \"أكسبريس مصر\", \"last_read_at\": null },\n        { \"user_id\": \"uuid\", \"name\": \"أحمد محمد\", \"last_read_at\": \"2026-07-02T...\" }\n      ],\n      \"messages_count\": 4,\n      \"last_message_at\": \"2026-07-02T...\",\n      \"created_at\": \"2026-07-01T...\",\n      \"updated_at\": \"2026-07-02T...\"\n    }\n  ],\n  \"type\": \"length_aware\",\n  \"current_page\": 1,\n  \"last_page\": 1,\n  \"per_page\": 15,\n  \"total\": 1,\n  \"has_more\": false\n}\n```"
+                    }
+                },
+                {
+                    "name": "Get or Create Conversation by Order",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const id = json.data?.id;",
+                                    "    if (id) {",
+                                    "        pm.collectionVariables.set('conversation_id', id);",
+                                    "        pm.test('conversation_id saved', () => pm.expect(id).to.not.be.empty);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/chat/orders/{{order_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "chat",
+                                "orders",
+                                "{{order_id}}"
+                            ]
+                        },
+                        "description": "Get existing conversation for an order, or create one if it does not exist yet.\n\n`{{order_id}}` — UUID. Auto-set from **Agent — Orders → List Agent Orders**.\n\n**422** if order has no assigned agent or company.\n**403** if order is not assigned to this agent.\n**404** if order not found.\n\nSaves `conversation_id` to collection variable."
+                    }
+                },
+                {
+                    "name": "Get Conversation",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/chat/conversations/{{conversation_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}"
+                            ]
+                        },
+                        "description": "Conversation details with order summary and participants.\n\n`{{conversation_id}}` — UUID. Auto-set from list or get-or-create responses.\n\n**403** if not a participant.\n**404** if not found."
+                    }
+                },
+                {
+                    "name": "List Messages",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/chat/conversations/{{conversation_id}}/messages?per_page=30",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "messages"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "30",
+                                    "description": "Items per page (max 100, default 30)"
+                                }
+                            ]
+                        },
+                        "description": "Paginated messages for a conversation — newest first.\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"conversation_id\": \"uuid\",\n  \"sender\": { \"id\": \"uuid\", \"name\": \"أحمد محمد\" },\n  \"body\": \"مرحباً\",\n  \"type\": { \"code\": 1, \"label\": \"نص\" },\n  \"attachment\": null,\n  \"created_at\": \"2026-07-02T10:30:00+00:00\"\n}\n```\n\nFor image/voice messages, `attachment` is a `MediaFileResource` with `url`, `mime_type`, `original_name`, etc."
+                    }
+                },
+                {
+                    "name": "Send Text Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"message_type\": 1,\n  \"body\": \"مرحباً، هل العميل متاح للتوصيل؟\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/chat/conversations/{{conversation_id}}/messages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Send a text message (`message_type=1`).\n\n**Body (JSON):**\n- `message_type` (required) — `1`\n- `body` (required for text) — max 2000 chars\n\n**Success (201):** returns the created message resource.\n\nTriggers notification type `6` to the shipping company user."
+                    }
+                },
+                {
+                    "name": "Send Image Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "message_type",
+                                    "value": "2",
+                                    "type": "text",
+                                    "description": "2=image"
+                                },
+                                {
+                                    "key": "body",
+                                    "value": "",
+                                    "type": "text",
+                                    "description": "optional caption",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "attachment",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "Image file — jpg, png, webp, etc. Max 10 MB"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/chat/conversations/{{conversation_id}}/messages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Send an image message (`message_type=2`).\n\n**Multipart:**\n- `message_type` = `2`\n- `attachment` (required) — image file, max 10 MB\n- `body` (optional) — caption\n\nStored via `media_files` table (`model_type=message`, collection `image`)."
+                    }
+                },
+                {
+                    "name": "Send Voice Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "message_type",
+                                    "value": "3",
+                                    "type": "text",
+                                    "description": "3=voice"
+                                },
+                                {
+                                    "key": "attachment",
+                                    "type": "file",
+                                    "src": [],
+                                    "description": "Audio file — mp3, m4a, wav, ogg, aac, webm. Max 20 MB"
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/chat/conversations/{{conversation_id}}/messages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Send a voice message (`message_type=3`).\n\n**Multipart:**\n- `message_type` = `3`\n- `attachment` (required) — audio file\n\nStored via `media_files` (`collection=voice`)."
+                    }
+                },
+                {
+                    "name": "Mark Conversation Read",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/agent/chat/conversations/{{conversation_id}}/read",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "agent",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "read"
+                            ]
+                        },
+                        "description": "Mark all messages in the conversation as read for the authenticated agent.\n\nUpdates `conversation_participants.last_read_at`.\n\n**Success (200):** `data` is `null`."
+                    }
+                }
+            ]
+        },
+        {
             "name": "Notifications",
             "description": "إشعارات النظام — in-app notifications (DB) + FCM push.\n\nAll endpoints require `auth:api` Bearer token.\nThe authenticated user only sees their own notifications — no cross-user access.\n\n**KPI categories (`data.kpis`):** `approvals` · `collections` · `shipments` · `settlements` (التسويات) · `unread`\n\n**KPI → type mapping:** `approvals` = 3,4,5 · `collections` = 9 only · `shipments` = 1,2,6,7,8,11,12 · `settlements` = 10\n\n**Notification types:**\n| Code | Label (AR) | Recipient |\n|------|-----------|-----------|\n| 1 | طلب توصيل جديد | delivery_agent |\n| 2 | تحديث حالة الطلب | shipping_company |\n| 3 | طلب موافقة على تغيير السعر | shipping_company |\n| 4 | بدأ توقيت رفض الاستلام | shipping_company |\n| 5 | انتهى وقت رفض الاستلام | shipping_company + delivery_agent |\n| 6 | رسالة جديدة | conversation recipient |\n| 7 | تم تحديث رقم الهاتف | delivery_agent |\n| 8 | تذكير بموعد تأجيل التسليم | delivery_agent |\n| 9 | تحصيل نقدي من المندوب | super_admin |\n| 10 | تسوية مالية | super_admin |\n| 11 | مرتجع | super_admin |\n| 12 | إعادة تعيين طلب | super_admin |",
             "item": [
@@ -5938,6 +6283,327 @@
             ]
         },
         {
+            "name": "Company — Chat",
+            "description": "Shipping company chat — order-scoped conversations with the assigned delivery agent.\n\n**Base path:** `/api/v1/company/chat/*`\n\n**Auth:** JWT Bearer + Spatie role `shipping_company`. Run **Auth → Login** with a company account first.\n\nSame message types and notification behaviour as **Agent — Chat**, but routes are under `/api/v1/company/chat/*` and scoped to the authenticated company.\n\n**Workflow:**\n1. **Company → List My Orders** → saves `{{order_id}}`\n2. **Get or Create Conversation by Order** → saves `{{conversation_id}}`\n3. Send/list messages and mark read",
+            "item": [
+                {
+                    "name": "List Conversations",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data?.items || [];",
+                                    "    if (items.length > 0 && items[0].id) {",
+                                    "        pm.collectionVariables.set('conversation_id', items[0].id);",
+                                    "        if (items[0].order_id) {",
+                                    "            pm.collectionVariables.set('order_id', items[0].order_id);",
+                                    "        }",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/chat/conversations?per_page=15",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "company",
+                                "chat",
+                                "conversations"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "order_id",
+                                    "value": "",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "List chat conversations for the authenticated shipping company.\n\nSame response shape as **Agent — Chat → List Conversations**."
+                    }
+                },
+                {
+                    "name": "Get or Create Conversation by Order",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const id = json.data?.id;",
+                                    "    if (id) pm.collectionVariables.set('conversation_id', id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/chat/orders/{{order_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "company",
+                                "chat",
+                                "orders",
+                                "{{order_id}}"
+                            ]
+                        },
+                        "description": "Get or create conversation for an order owned by this company.\n\n`{{order_id}}` from **Company → List My Orders**."
+                    }
+                },
+                {
+                    "name": "Get Conversation",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/chat/conversations/{{conversation_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "company",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}"
+                            ]
+                        },
+                        "description": "Conversation details for the authenticated company participant."
+                    }
+                },
+                {
+                    "name": "List Messages",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/chat/conversations/{{conversation_id}}/messages?per_page=30",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "company",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "messages"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "30"
+                                }
+                            ]
+                        },
+                        "description": "Paginated messages — newest first. Same shape as agent endpoint."
+                    }
+                },
+                {
+                    "name": "Send Text Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"message_type\": 1,\n  \"body\": \"العميل طلب التأجيل ليوم غد\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/chat/conversations/{{conversation_id}}/messages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "company",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Send text message to the assigned agent. Triggers notification type `6` to the agent."
+                    }
+                },
+                {
+                    "name": "Send Image Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "message_type",
+                                    "value": "2",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "attachment",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/chat/conversations/{{conversation_id}}/messages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "company",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Send image (`message_type=2`) via multipart form."
+                    }
+                },
+                {
+                    "name": "Send Voice Message",
+                    "request": {
+                        "method": "POST",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "formdata",
+                            "formdata": [
+                                {
+                                    "key": "message_type",
+                                    "value": "3",
+                                    "type": "text"
+                                },
+                                {
+                                    "key": "attachment",
+                                    "type": "file",
+                                    "src": []
+                                }
+                            ]
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/chat/conversations/{{conversation_id}}/messages",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "company",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "messages"
+                            ]
+                        },
+                        "description": "Send voice note (`message_type=3`) via multipart form."
+                    }
+                },
+                {
+                    "name": "Mark Conversation Read",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/company/chat/conversations/{{conversation_id}}/read",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "company",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "read"
+                            ]
+                        },
+                        "description": "Mark conversation as read for the company user."
+                    }
+                }
+            ]
+        },
+        {
             "name": "Admin — Returns",
             "description": "Admin returns dashboard — stats cards, paginated list, and two status-advance actions.\n\nAll routes: `auth:api` + `role:super_admin`.\n\n**Return status pipeline:** 1=بانتظار الاستلام → 2=تم الاستلام من المندوب → 3=تم التسليم للشركة\n\n**Workflow:**\n1. Agent marks an order as refused/partial → system creates a `returns` record (status=1).\n2. Admin physically collects items → calls `PATCH /returns/{id}/receive` (1→2).\n3. Admin hands items back to shipping company → calls `PATCH /returns/{id}/return-to-company` (2→3).",
             "item": [
@@ -6088,6 +6754,180 @@
                             ]
                         },
                         "description": "تسجيل إعادة المرتجع لشركة الشحن — ينقل الحالة من `تم الاستلام (2)` إلى `تم التسليم للشركة (3)` ويسجّل `returned_to_company_at`.\n\n`{{return_id}}` — UUID. Auto-set from List Returns.\n\n**Returns 422** if return is not in status 2 (ReceivedByAdmin).\n**Returns 404** if not found."
+                    }
+                }
+            ]
+        },
+        {
+            "name": "Admin — Chat",
+            "description": "Admin chat monitor — read-only access to all agent↔company conversations.\n\n**Base path:** `/api/v1/admin/chat/*`\n\n**Auth:** JWT Bearer + `permission:chat.view` (super_admin has all permissions; staff_member needs `chat.view` seeded).\n\nAdmin cannot send messages — only list conversations, open by order, and read message history.\n\n**Workflow:**\n1. **Auth → Login** as super_admin\n2. **List All Conversations** (optional filters)\n3. **Get Conversation by Order** or **Get Conversation** → saves `{{conversation_id}}`\n4. **List Messages**",
+            "item": [
+                {
+                    "name": "List All Conversations",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data?.items || [];",
+                                    "    if (items.length > 0 && items[0].id) {",
+                                    "        pm.collectionVariables.set('conversation_id', items[0].id);",
+                                    "        if (items[0].order_id) {",
+                                    "            pm.collectionVariables.set('order_id', items[0].order_id);",
+                                    "        }",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/chat/conversations?per_page=15",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "chat",
+                                "conversations"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "Items per page (max 100)"
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Search order reference_code / reference_no",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "order_id",
+                                    "value": "",
+                                    "description": "Filter by order UUID",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Permission: `chat.view`\n\nPaginated list of all conversations across the platform — for admin monitoring dashboard.\n\nSaves first `conversation_id` and `order_id`.\n\nSame item shape as agent/company list endpoints."
+                    }
+                },
+                {
+                    "name": "Get Conversation by Order",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const id = json.data?.id;",
+                                    "    if (id) pm.collectionVariables.set('conversation_id', id);",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/chat/orders/{{order_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "chat",
+                                "orders",
+                                "{{order_id}}"
+                            ]
+                        },
+                        "description": "Permission: `chat.view`\n\nGet existing conversation for an order, or create it if missing (so admin can monitor even before participants open chat).\n\n`{{order_id}}` — paste from admin orders or agent/company list."
+                    }
+                },
+                {
+                    "name": "Get Conversation",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/chat/conversations/{{conversation_id}}",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}"
+                            ]
+                        },
+                        "description": "Permission: `chat.view`\n\nConversation detail with order, company name, agent name, and participants."
+                    }
+                },
+                {
+                    "name": "List Messages (Monitor)",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/chat/conversations/{{conversation_id}}/messages?per_page=30",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "chat",
+                                "conversations",
+                                "{{conversation_id}}",
+                                "messages"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "30"
+                                }
+                            ]
+                        },
+                        "description": "Permission: `chat.view`\n\nRead-only message history for monitoring. Admin read does not update `last_read_at` on participants.\n\nIncludes text body and media attachment URLs for image/voice messages."
                     }
                 }
             ]
