@@ -54,6 +54,8 @@ interface UserRepositoryInterface
 
     public function deliveryAgentHasUnsettledCollections(string $deliveryAgentId): bool;
 
+    public function deliveryAgentHasUnconfirmedCollections(string $deliveryAgentId): bool;
+
     public function deliveryAgentHasNonZeroBalance(string $deliveryAgentId): bool;
 
     public function shippingCompanyHasNonTerminalOrders(string $shippingCompanyId): bool;
@@ -61,6 +63,8 @@ interface UserRepositoryInterface
     public function shippingCompanyHasOpenSettlements(string $shippingCompanyId): bool;
 
     public function shippingCompanyHasUnsettledCollections(string $shippingCompanyId): bool;
+
+    public function shippingCompanyHasUnconfirmedCollections(string $shippingCompanyId): bool;
 
     public function shippingCompanyHasNonZeroBalance(string $shippingCompanyId): bool;
 }

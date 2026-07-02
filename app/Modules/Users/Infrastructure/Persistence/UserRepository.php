@@ -2,6 +2,7 @@
 
 namespace App\Modules\Users\Infrastructure\Persistence;
 
+use App\Modules\Collections\Domain\Enums\SettlementStatusEnum;
 use App\Modules\Users\Application\DTOs\GetUsersDTO;
 use App\Modules\Users\Application\DTOs\ImportUserRowDTO;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
@@ -265,6 +266,23 @@ class UserRepository implements UserRepositoryInterface
             ->exists();
     }
 
+    public function deliveryAgentHasUnconfirmedCollections(string $deliveryAgentId): bool
+    {
+        return DB::table('collections as c')
+            ->leftJoin('settlements as s', function ($join) {
+                $join->on('c.settlement_id', '=', 's.settlement_id')
+                    ->whereNull('s.deleted_at');
+            })
+            ->where('c.delivery_agent_id', $deliveryAgentId)
+            ->whereNull('c.deleted_at')
+            ->where(function ($query) {
+                $query->whereNull('c.settlement_id')
+                    ->orWhereNull('s.settlement_id')
+                    ->orWhere('s.settlement_status', '!=', SettlementStatusEnum::Paid->value);
+            })
+            ->exists();
+    }
+
     public function deliveryAgentHasNonZeroBalance(string $deliveryAgentId): bool
     {
         return DB::table('delivery_agents')
@@ -297,6 +315,23 @@ class UserRepository implements UserRepositoryInterface
             ->where('shipping_company_id', $shippingCompanyId)
             ->whereNull('settlement_id')
             ->whereNull('deleted_at')
+            ->exists();
+    }
+
+    public function shippingCompanyHasUnconfirmedCollections(string $shippingCompanyId): bool
+    {
+        return DB::table('collections as c')
+            ->leftJoin('settlements as s', function ($join) {
+                $join->on('c.settlement_id', '=', 's.settlement_id')
+                    ->whereNull('s.deleted_at');
+            })
+            ->where('c.shipping_company_id', $shippingCompanyId)
+            ->whereNull('c.deleted_at')
+            ->where(function ($query) {
+                $query->whereNull('c.settlement_id')
+                    ->orWhereNull('s.settlement_id')
+                    ->orWhere('s.settlement_status', '!=', SettlementStatusEnum::Paid->value);
+            })
             ->exists();
     }
 

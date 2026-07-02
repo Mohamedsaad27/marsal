@@ -48,6 +48,9 @@ Route::prefix('api/v1/admin')
         Route::delete('users/{userId}', [AdminUserController::class, 'destroy'])
             ->middleware('permission:users.delete')
             ->name('admin.users.destroy');
+        Route::delete('users', [AdminUserController::class, 'bulkDestroy'])
+            ->middleware('permission:users.delete')
+            ->name('admin.users.bulk-destroy');
 
         Route::post('shipping-companies', [AdminUserController::class, 'storeShippingCompany'])
             ->middleware('permission:shipping_companies.create');

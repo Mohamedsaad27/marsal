@@ -6,6 +6,7 @@ use App\Modules\Core\Infrastructure\Traits\ApiResponseTrait;
 use App\Modules\Locations\Application\DTOs\CreateGovernorateDTO;
 use App\Modules\Locations\Application\DTOs\UpdateGovernorateDTO;
 use App\Modules\Locations\Application\UseCases\CreateGovernorateUseCase;
+use App\Modules\Locations\Application\UseCases\BulkDeleteGovernoratesUseCase;
 use App\Modules\Locations\Application\UseCases\DeleteGovernorateUseCase;
 use App\Modules\Locations\Application\UseCases\GetGovernorateUseCase;
 use App\Modules\Locations\Application\UseCases\GetGovernoratesKpisUseCase;
@@ -16,6 +17,7 @@ use App\Modules\Locations\Application\UseCases\UpdateGovernorateUseCase;
 use App\Modules\Locations\Presentation\Http\Controllers\Concerns\PaginatesResources;
 use App\Modules\Locations\Presentation\Http\Controllers\Concerns\ParsesLocationListFilters;
 use App\Modules\Locations\Presentation\Http\Requests\StoreGovernorateRequest;
+use App\Modules\Locations\Presentation\Http\Requests\BulkDeleteGovernoratesRequest;
 use App\Modules\Locations\Presentation\Http\Requests\UpdateGovernorateRequest;
 use App\Modules\Locations\Presentation\Http\Resources\CityResource;
 use App\Modules\Locations\Presentation\Http\Resources\GovernorateResource;
@@ -37,6 +39,7 @@ class GovernorateController extends Controller
         private readonly UpdateGovernorateUseCase $updateGovernorateUseCase,
         private readonly ToggleGovernorateStatusUseCase $toggleGovernorateStatusUseCase,
         private readonly DeleteGovernorateUseCase $deleteGovernorateUseCase,
+        private readonly BulkDeleteGovernoratesUseCase $bulkDeleteGovernoratesUseCase,
         private readonly ListCitiesUseCase $listCitiesUseCase,
     ) {}
 
@@ -102,6 +105,13 @@ class GovernorateController extends Controller
         $this->deleteGovernorateUseCase->execute($governorateId);
 
         return $this->success(null, __('locations::messages.governorate_deleted'));
+    }
+
+    public function bulkDestroy(BulkDeleteGovernoratesRequest $request): JsonResponse
+    {
+        $this->bulkDeleteGovernoratesUseCase->execute($request->validated('ids'));
+
+        return $this->success(null, __('locations::messages.governorates_deleted'));
     }
 
     public function cities(Request $request, string $governorateId): JsonResponse

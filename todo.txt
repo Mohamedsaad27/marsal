@@ -1,3 +1,1 @@
-1- handle filteration assgined orders returned with deliveried status
-2- admin can change order status to any other status and update order in database
 3- bulk delete 

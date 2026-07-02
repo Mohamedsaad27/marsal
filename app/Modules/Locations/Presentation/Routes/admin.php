@@ -19,6 +19,8 @@ Route::prefix('api/v1/admin')
             ->middleware('permission:governorates.manage');
         Route::delete('governorates/{governorateId}', [GovernorateController::class, 'destroy'])
             ->middleware('permission:governorates.manage');
+        Route::delete('governorates', [GovernorateController::class, 'bulkDestroy'])
+            ->middleware('permission:governorates.manage');
         Route::get('governorates/{governorateId}/cities', [GovernorateController::class, 'cities'])
             ->middleware('permission:governorates.view');
 
@@ -33,5 +35,7 @@ Route::prefix('api/v1/admin')
         Route::patch('cities/{cityId}/toggle-status', [CityController::class, 'toggleStatus'])
             ->middleware('permission:governorates.manage');
         Route::delete('cities/{cityId}', [CityController::class, 'destroy'])
+            ->middleware('permission:governorates.manage');
+        Route::delete('cities', [CityController::class, 'bulkDestroy'])
             ->middleware('permission:governorates.manage');
     });

@@ -14,5 +14,9 @@ interface AdminOrderRepositoryInterface
 
     public function findWithRelations(string $orderId): ?Order;
 
+    public function findById(string $orderId): ?Order;
+
     public function assignAgent(string $orderId, string $agentId, string $adminUserId): Order;
+
+    public function softDelete(Order $order): void;
 }

@@ -57,8 +57,8 @@ class DeleteUserUseCase
                 throw new UserDeletionBlockedException(__('users::messages.agent_has_open_settlements'));
             }
 
-            if ($this->repository->deliveryAgentHasUnsettledCollections($agentId)) {
-                throw new UserDeletionBlockedException(__('users::messages.agent_has_unsettled_collections'));
+            if ($this->repository->deliveryAgentHasUnconfirmedCollections($agentId)) {
+                throw new UserDeletionBlockedException(__('users::messages.agent_has_unconfirmed_collections'));
             }
 
             if ($this->repository->deliveryAgentHasNonZeroBalance($agentId)) {
@@ -77,8 +77,8 @@ class DeleteUserUseCase
                 throw new UserDeletionBlockedException(__('users::messages.company_has_open_settlements'));
             }
 
-            if ($this->repository->shippingCompanyHasUnsettledCollections($companyId)) {
-                throw new UserDeletionBlockedException(__('users::messages.company_has_unsettled_collections'));
+            if ($this->repository->shippingCompanyHasUnconfirmedCollections($companyId)) {
+                throw new UserDeletionBlockedException(__('users::messages.company_has_unconfirmed_collections'));
             }
 
             if ($this->repository->shippingCompanyHasNonZeroBalance($companyId)) {

@@ -7,10 +7,12 @@ use App\Modules\Core\Infrastructure\Helpers\PaginationMeta;
 use App\Modules\Core\Infrastructure\Traits\ApiResponseTrait;
 use App\Modules\Orders\Application\DTOs\AdminOrderFilterDTO;
 use App\Modules\Orders\Application\UseCases\Admin\AssignOrderUseCase;
+use App\Modules\Orders\Application\UseCases\Admin\BulkDeleteAdminOrdersUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\GetAdminOrderDetailUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\GetAdminOrderStatsUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\ListAdminOrdersUseCase;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\AssignOrderRequest;
+use App\Modules\Orders\Presentation\Http\Requests\Admin\BulkDeleteAdminOrdersRequest;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\ListAdminOrdersRequest;
 use App\Modules\Orders\Presentation\Http\Resources\Admin\AdminOrderDetailResource;
 use App\Modules\Orders\Presentation\Http\Resources\Admin\AdminOrderListResource;
@@ -25,6 +27,7 @@ class AdminOrderController extends Controller
         private ListAdminOrdersUseCase $listOrders,
         private GetAdminOrderDetailUseCase $getDetail,
         private AssignOrderUseCase $assignOrder,
+        private BulkDeleteAdminOrdersUseCase $bulkDeleteOrders,
     ) {}
 
     public function stats(): JsonResponse
@@ -70,5 +73,12 @@ class AdminOrderController extends Controller
             new AdminOrderDetailResource($order),
             __('orders::messages.order_assigned'),
         );
+    }
+
+    public function bulkDestroy(BulkDeleteAdminOrdersRequest $request): JsonResponse
+    {
+        $this->bulkDeleteOrders->execute($request->validated('ids'));
+
+        return $this->success(null, __('orders::messages.orders_deleted'));
     }
 }

@@ -14,6 +14,9 @@ return [
     // Admin — Orders
     'stats_success'          => 'Statistics loaded successfully',
     'order_assigned'         => 'Agent assigned successfully',
+    'orders_deleted'         => 'Orders deleted successfully',
+    'order_not_found'        => 'Order not found',
+    'order_delete_not_pending' => 'Only orders in pending status can be deleted.',
 
     // Company
     'company_dashboard_success'  => 'Company dashboard loaded successfully',

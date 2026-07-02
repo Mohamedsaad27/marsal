@@ -23,6 +23,9 @@ return [
     // Admin — Orders
     'stats_success'          => 'تم تحميل الإحصائيات بنجاح',
     'order_assigned'         => 'تم تعيين المندوب بنجاح',
+    'orders_deleted'         => 'تم حذف الطلبات بنجاح',
+    'order_not_found'        => 'الطلب غير موجود',
+    'order_delete_not_pending' => 'لا يمكن حذف الطلب إلا وهو في حالة انتظار التوزيع.',
 
     // Admin — Approval Requests
     'approvals_list_success'  => 'تم تحميل قائمة طلبات الموافقة بنجاح',

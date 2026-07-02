@@ -5,6 +5,7 @@ return [
     'governorate_updated' => 'Governorate updated successfully.',
     'governorate_status_toggled' => 'Governorate status toggled successfully.',
     'governorate_deleted' => 'Governorate deleted successfully.',
+    'governorates_deleted' => 'Governorates deleted successfully.',
     'governorate_not_found' => 'Governorate not found.',
     'governorate_has_cities' => 'Cannot delete governorate while it still has cities.',
     'governorate_inactive' => 'The selected governorate is inactive.',
@@ -13,6 +14,7 @@ return [
     'city_updated' => 'City updated successfully.',
     'city_status_toggled' => 'City status toggled successfully.',
     'city_deleted' => 'City deleted successfully.',
+    'cities_deleted' => 'Cities deleted successfully.',
     'city_not_found' => 'City not found.',
 
     'location_in_use' => 'This location is in use and cannot be deleted.',

@@ -118,6 +118,11 @@ class AdminOrderRepository implements AdminOrderRepositoryInterface
             ->first();
     }
 
+    public function findById(string $orderId): ?Order
+    {
+        return Order::query()->find($orderId);
+    }
+
     public function assignAgent(string $orderId, string $agentId, string $adminUserId): Order
     {
         $order = Order::query()->findOrFail($orderId);
@@ -142,6 +147,11 @@ class AdminOrderRepository implements AdminOrderRepositoryInterface
         ]);
 
         return $order->fresh(self::DETAIL_RELATIONS);
+    }
+
+    public function softDelete(Order $order): void
+    {
+        $order->delete();
     }
 
     private function applyStatusFilter($query, string $status): void

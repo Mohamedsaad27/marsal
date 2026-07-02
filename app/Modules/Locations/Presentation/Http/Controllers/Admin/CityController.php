@@ -6,6 +6,7 @@ use App\Modules\Core\Infrastructure\Traits\ApiResponseTrait;
 use App\Modules\Locations\Application\DTOs\CreateCityDTO;
 use App\Modules\Locations\Application\DTOs\UpdateCityDTO;
 use App\Modules\Locations\Application\UseCases\CreateCityUseCase;
+use App\Modules\Locations\Application\UseCases\BulkDeleteCitiesUseCase;
 use App\Modules\Locations\Application\UseCases\DeleteCityUseCase;
 use App\Modules\Locations\Application\UseCases\GetCitiesKpisUseCase;
 use App\Modules\Locations\Application\UseCases\GetCityUseCase;
@@ -15,6 +16,7 @@ use App\Modules\Locations\Application\UseCases\UpdateCityUseCase;
 use App\Modules\Locations\Presentation\Http\Controllers\Concerns\PaginatesResources;
 use App\Modules\Locations\Presentation\Http\Controllers\Concerns\ParsesLocationListFilters;
 use App\Modules\Locations\Presentation\Http\Requests\StoreCityRequest;
+use App\Modules\Locations\Presentation\Http\Requests\BulkDeleteCitiesRequest;
 use App\Modules\Locations\Presentation\Http\Requests\UpdateCityRequest;
 use App\Modules\Locations\Presentation\Http\Resources\CityResource;
 use Illuminate\Http\JsonResponse;
@@ -35,6 +37,7 @@ class CityController extends Controller
         private readonly UpdateCityUseCase $updateCityUseCase,
         private readonly ToggleCityStatusUseCase $toggleCityStatusUseCase,
         private readonly DeleteCityUseCase $deleteCityUseCase,
+        private readonly BulkDeleteCitiesUseCase $bulkDeleteCitiesUseCase,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -99,5 +102,12 @@ class CityController extends Controller
         $this->deleteCityUseCase->execute($cityId);
 
         return $this->success(null, __('locations::messages.city_deleted'));
+    }
+
+    public function bulkDestroy(BulkDeleteCitiesRequest $request): JsonResponse
+    {
+        $this->bulkDeleteCitiesUseCase->execute($request->validated('ids'));
+
+        return $this->success(null, __('locations::messages.cities_deleted'));
     }
 }

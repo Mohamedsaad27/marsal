@@ -11,6 +11,7 @@ use App\Modules\Users\Application\DTOs\ListDeliveryAgentSupervisorsDTO;
 use App\Modules\Users\Application\DTOs\UpdateUserDTO;
 use App\Modules\Users\Application\Exceptions\ImportUsersUnreadableFileException;
 use App\Modules\Users\Application\UseCases\AdminChangeUserPasswordUseCase;
+use App\Modules\Users\Application\UseCases\BulkDeleteUsersUseCase;
 use App\Modules\Users\Application\UseCases\CreateUserUseCase;
 use App\Modules\Users\Application\UseCases\DeleteUserUseCase;
 use App\Modules\Users\Application\UseCases\GetUsersUseCase;
@@ -21,6 +22,7 @@ use App\Modules\Users\Application\UseCases\UpdateUserUseCase;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Infrastructure\Excel\UsersImportTemplateExport;
 use App\Modules\Users\Presentation\Http\Requests\AdminChangeUserPasswordRequest;
+use App\Modules\Users\Presentation\Http\Requests\BulkDeleteUsersRequest;
 use App\Modules\Users\Presentation\Http\Requests\CreateUserRequest;
 use App\Modules\Users\Presentation\Http\Requests\GetUsersRequest;
 use App\Modules\Users\Presentation\Http\Requests\ImportUsersRequest;
@@ -53,6 +55,7 @@ class AdminUserController extends Controller
         private readonly UpdateUserUseCase $updateUserUseCase,
         private readonly ToggleUserStatusUseCase $toggleUserStatusUseCase,
         private readonly DeleteUserUseCase $deleteUserUseCase,
+        private readonly BulkDeleteUsersUseCase $bulkDeleteUsersUseCase,
         private readonly ImportUsersUseCase $importUsersUseCase,
         private readonly ListDeliveryAgentSupervisorsUseCase $listDeliveryAgentSupervisorsUseCase,
     ) {}
@@ -198,6 +201,13 @@ class AdminUserController extends Controller
         $this->deleteUserUseCase->execute($userId);
 
         return $this->success(null, __('users::messages.user_deleted'));
+    }
+
+    public function bulkDestroy(BulkDeleteUsersRequest $request): JsonResponse
+    {
+        $this->bulkDeleteUsersUseCase->execute($request->validated('ids'));
+
+        return $this->success(null, __('users::messages.users_deleted'));
     }
 
     public function changePassword(AdminChangeUserPasswordRequest $request, string $userId): JsonResponse

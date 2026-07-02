@@ -22,6 +22,8 @@ Route::prefix('api/v1/admin')
              ->name('admin.orders.show');
         Route::patch('orders/{orderId}/assign', [AdminOrderController::class, 'assign'])
              ->name('admin.orders.assign');
+        Route::delete('orders', [AdminOrderController::class, 'bulkDestroy'])
+             ->name('admin.orders.bulkDestroy');
 
         // Approval Requests — Approvals dashboard
         Route::get('approval-requests/stats', [AdminApprovalController::class, 'stats'])
