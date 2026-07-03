@@ -2,7 +2,7 @@
     "info": {
         "_postman_id": "marsal-api",
         "name": "Marsal API",
-        "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import/export), Admin Collections & Settlements, Agent Mobile (Phases 1–3 orders/collections/schedule · Phase 5 profile · Chat), Company Mobile (dashboard, shipments, wallet, profile, settlements, chat), Audit Logs, Dashboard (admin home KPIs), Notifications, Admin Chat (monitor).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections/schedule/profile/chat endpoints. Requires Spatie role `delivery_agent`.\n\n**Company mobile:** run **Auth → Login** with a shipping company account, then use **Company** folder — dashboard, orders list/detail, wallet, profile, settlements, chat. All routes at `/api/v1/company/*`. Requires Spatie role `shipping_company`.\n\n**Chat:** order-scoped conversations between delivery agent and shipping company. Admin/staff monitor via **Admin — Chat** (`permission:chat.view`). No realtime — new messages trigger notification type `6` (رسالة جديدة) via FCM. Message types: `1` text · `2` image · `3` voice.\n\n**Admin finance:** run **Auth → Login** as super_admin, then **Admin — Collections** (stats, list, mark cash received) and **Admin — Settlements** (stats, list, create, approve, mark paid).",
+        "description": "Marsal REST API — Auth (JWT), Users, Roles & Permissions, Departments, Locations (governorates & cities), Orders (Excel import/export), Admin Collections & Settlements, Agent Mobile (Phases 1–3 orders/collections/schedule · Phase 5 profile · Chat), Company Mobile (dashboard, shipments, wallet, profile, settlements, chat), Audit Logs, Dashboard (admin home KPIs), Notifications, Admin Chat (monitor).\n\n**Account types:** `super_admin` | `staff_member` | `shipping_company` | `delivery_agent` — stored on `users.account_type` (single source of truth). Create endpoints use `type` + `role` (generic route) or `role` only (specific routes).\n\n**Agent mobile:** run **Agent — Orders → Login as Delivery Agent**, then dashboard/orders/collections/schedule/profile/chat endpoints. Requires Spatie role `delivery_agent`.\n\n**Company mobile:** run **Auth → Login** with a shipping company account, then use **Company** folder — dashboard, orders list/detail, wallet, profile, settlements, chat. All routes at `/api/v1/company/*`. Requires Spatie role `shipping_company`.\n\n**Chat:** order-scoped conversations between delivery agent and shipping company. Admin/staff monitor via **Admin — Chat** (`permission:chat.view`). No realtime — new messages trigger notification type `6` (رسالة جديدة) via FCM. Message types: `1` text · `2` image · `3` voice.\n\n**Admin orders:** run **Auth → Login** as super_admin, then **Admin — Orders (Shipments)** — list/filter, assign agent (`orders.assign`), **override status** (`PATCH /orders/{id}/status`, `orders.update`), export. Admin status changes bypass agent transition rules.\n\n**Admin finance:** run **Auth → Login** as super_admin, then **Admin — Collections** (stats, list, mark cash received) and **Admin — Settlements** (stats, list, create, approve, mark paid).",
         "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
     },
     "variable": [
@@ -4503,7 +4503,7 @@
         },
         {
             "name": "Admin — Orders (Shipments)",
-            "description": "Admin shipments dashboard — per-status filter tabs, paginated order list, order detail, agent assignment, and Excel export.\n\nAll routes: `auth:api` + `role:super_admin`. Export additionally requires `permission:orders.export`.\n\n---\n\n### Order status filter (`?status=`)\n\nEach filter maps to **exactly one** order status. Grouped filters (`in_delivery`, `delivered`, `postponed_refused`) are **removed**.\n\n| `status` value | ID | Arabic label |\n|----------------|-----|--------------|\n| `all` | — | كل الطلبات (no status filter) |\n| `1` | 1 | بانتظار التوزيع |\n| `2` | 2 | تم التعيين |\n| `3` | 3 | قيد التوصيل |\n| `4` | 4 | بانتظار الموافقة |\n| `5` | 5 | تم التسليم |\n| `6` | 6 | تم التسليم بتغيير سعر |\n| `7` | 7 | تسليم جزئي |\n| `8` | 8 | رفض + دفع رسوم الشحن |\n| `9` | 9 | رفض وعدم دفع رسوم الشحن |\n| `10` | 10 | ألغى العميل |\n| `11` | 11 | لا يوجد رد |\n| `12` | 12 | الهاتف مغلق |\n| `14` | 14 | منطقة غير آمنة |\n| `16` | 16 | خارج المحافظة |\n| `17` | 17 | رقم هاتف خاطئ |\n| `15` | 15 | مؤجل |\n| `returned` | — | طلبات لها سجل في جدول `returns` (not an order status) |\n\n**Stats:** `GET /orders/stats` returns `statuses[]` — one `{ id, label_ar, count }` entry per status above, plus `total` and `returned`.\n\n**Export:** `GET /orders/export` — downloads `.xlsx` with import-compatible columns plus `مرتجعات` and `المبلغ المحصل`. Filename: `Y-m-d - {company name}.xlsx`.\n\n**Assign flow:** `PATCH /orders/{orderId}/assign` with `agent_id` → status `Assigned (2)`, status history, FCM to agent.",
+            "description": "Admin shipments dashboard — per-status filter tabs, paginated order list, order detail, agent assignment, status override, and Excel export.\n\nAll routes: `auth:api` + `role:super_admin`. Export additionally requires `permission:orders.export`. Status update requires `permission:orders.update`.\n\n---\n\n### Order status filter (`?status=`)\n\nEach filter maps to **exactly one** order status. Grouped filters (`in_delivery`, `delivered`, `postponed_refused`) are **removed**.\n\n| `status` value | ID | Arabic label |\n|----------------|-----|--------------|\n| `all` | — | كل الطلبات (no status filter) |\n| `1` | 1 | بانتظار التوزيع |\n| `2` | 2 | تم التعيين |\n| `3` | 3 | قيد التوصيل |\n| `4` | 4 | بانتظار الموافقة |\n| `5` | 5 | تم التسليم |\n| `6` | 6 | تم التسليم بتغيير سعر |\n| `7` | 7 | تسليم جزئي |\n| `8` | 8 | رفض + دفع رسوم الشحن |\n| `9` | 9 | رفض وعدم دفع رسوم الشحن |\n| `10` | 10 | ألغى العميل |\n| `11` | 11 | لا يوجد رد |\n| `12` | 12 | الهاتف مغلق |\n| `14` | 14 | منطقة غير آمنة |\n| `16` | 16 | خارج المحافظة |\n| `17` | 17 | رقم هاتف خاطئ |\n| `15` | 15 | مؤجل |\n| `returned` | — | طلبات لها سجل في جدول `returns` (not an order status) |\n\n**Stats:** `GET /orders/stats` returns `statuses[]` — one `{ id, label_ar, count }` entry per status above, plus `total` and `returned`.\n\n**Export:** `GET /orders/export` — downloads `.xlsx` with import-compatible columns plus `مرتجعات` and `المبلغ المحصل`. Filename: `Y-m-d - {company name}.xlsx`.\n\n**Assign flow:** `PATCH /orders/{orderId}/assign` with `agent_id` → status `Assigned (2)`, status history, FCM to agent.\n\n**Status override:** `PATCH /orders/{orderId}/status` with `status_id` — permission `orders.update`. Admin can set any status (no agent transition graph). See **Update Order Status (Admin)** and scenario requests below.",
             "item": [
                 {
                     "name": "Order Stats",
@@ -5342,6 +5342,146 @@
                     }
                 },
                 {
+                    "name": "Update Order Status (Admin)",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status_id\": 3,\n  \"notes\": \"تم التحديث من لوحة الإدارة\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/{{order_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                "{{order_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Permission: `orders.update`\n\nAdmin override — change order status without agent transition restrictions.\n\n`{{order_id}}` — UUID. Auto-set from **List Orders**.\n\n**Body:**\n- `status_id` (required) — any valid `OrderStatusEnum` value (1–17, see folder status table)\n- `notes` (optional, max 500)\n- `collected_amount` + `collection_type` — required for statuses 5, 6, 7, 8 (delivery with collection)\n- `new_cod_amount` — required when `status_id=6` (price change → stored as `awaiting_approval`)\n- `postponed_date` — required when `status_id=15` (must be after today)\n\n**Collection types:** `1` COD · `2` shipping_fee · `3` partial\n\n**Admin vs agent:** admin can jump between any statuses (e.g. `pending` → `delivered`, `delivered` → `assigned`). Agent routes enforce a strict transition graph.\n\n**Agent required:** statuses that create collections, postpone, or request price approval require `delivery_agent_id` on the order — **422** otherwise.\n\n**Side effects (same as agent):**\n- Writes `order_status_history` (`changed_by` = admin user)\n- Creates `collections` row + updates agent balance when applicable\n- Notifies shipping company (`OrderStatusChanged`) except for price-change approval flow\n- `status_id=6` creates `approval_requests` and notifies company (`ApprovalRequested`)\n\n**Success (200) `data`:**\n```json\n{\n  \"order_id\": \"uuid\",\n  \"new_status\": { \"id\": 3, \"label\": \"قيد التوصيل\" },\n  \"collection_created\": false\n}\n```"
+                    }
+                },
+                {
+                    "name": "Admin — Confirm Delivery",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status_id\": 5,\n  \"collected_amount\": 850.00,\n  \"collection_type\": 1,\n  \"notes\": \"تم التسليم — تحديث من الإدارة\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/{{order_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                "{{order_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Permission: `orders.update`\n\nMark order as **delivered (5)** with COD collection. Order must have an assigned agent.\n\n**Body:** `status_id: 5`, `collected_amount`, `collection_type: 1`, `notes`\n\nCreates `collections` row and updates agent balance. Sets `delivered_at`."
+                    }
+                },
+                {
+                    "name": "Admin — Request Price Change",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status_id\": 6,\n  \"new_cod_amount\": 720.00,\n  \"collected_amount\": 720.00,\n  \"collection_type\": 1,\n  \"notes\": \"تغيير سعر — من الإدارة\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/{{order_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                "{{order_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Permission: `orders.update`\n\nRequest delivery with price change (`status_id: 6`). Order stored as **awaiting_approval (4)** until company approves via **Admin — Approval Requests**.\n\nCreates `approval_requests` (type 1, pending). Fires `ApprovalRequested` to shipping company."
+                    }
+                },
+                {
+                    "name": "Admin — Postpone Order",
+                    "request": {
+                        "method": "PATCH",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            },
+                            {
+                                "key": "Content-Type",
+                                "value": "application/json"
+                            }
+                        ],
+                        "body": {
+                            "mode": "raw",
+                            "raw": "{\n  \"status_id\": 15,\n  \"postponed_date\": \"2026-07-10\",\n  \"notes\": \"تأجيل من لوحة الإدارة\"\n}"
+                        },
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/orders/{{order_id}}/status",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "orders",
+                                "{{order_id}}",
+                                "status"
+                            ]
+                        },
+                        "description": "Permission: `orders.update`\n\nPostpone delivery (`status_id: 15`). Order must have an assigned agent.\n\n**Body:** `status_id: 15`, `postponed_date` (after today, Y-m-d), `notes`\n\nUpdates `order_schedules.postponed_date` and inserts `postponed_schedules`."
+                    }
+                },
+                {
                     "name": "Bulk Delete Orders",
                     "request": {
                         "method": "DELETE",
@@ -5371,7 +5511,7 @@
                                 "orders"
                             ]
                         },
-                        "description": "Auth: `auth:api` + `role:super_admin`.\n\nBulk soft delete shipments by `order_id` list.\n\n**409:** only orders in status `pending` (?????? ???????, status_id = 1) can be deleted."
+                        "description": "Permission: `orders.delete`\n\nBulk soft delete shipments by `order_id` list.\n\n**422:** only orders in status `pending` (بانتظار التوزيع, `status_id = 1`) can be deleted."
                     }
                 }
             ]

@@ -14,6 +14,7 @@ return [
     // Admin — Orders
     'stats_success'          => 'Statistics loaded successfully',
     'order_assigned'         => 'Agent assigned successfully',
+    'order_agent_required'   => 'An agent must be assigned to the order before applying this status',
     'orders_deleted'         => 'Orders deleted successfully',
     'order_not_found'        => 'Order not found',
     'order_delete_not_pending' => 'Only orders in pending status can be deleted.',

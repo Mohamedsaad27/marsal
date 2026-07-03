@@ -23,6 +23,7 @@ return [
     // Admin — Orders
     'stats_success'          => 'تم تحميل الإحصائيات بنجاح',
     'order_assigned'         => 'تم تعيين المندوب بنجاح',
+    'order_agent_required'   => 'يجب تعيين مندوب للطلب قبل تطبيق هذه الحالة',
     'orders_deleted'         => 'تم حذف الطلبات بنجاح',
     'order_not_found'        => 'الطلب غير موجود',
     'order_delete_not_pending' => 'لا يمكن حذف الطلب إلا وهو في حالة انتظار التوزيع.',

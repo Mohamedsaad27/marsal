@@ -33,6 +33,10 @@ Route::prefix('api/v1/admin')
             ->middleware('permission:orders.assign')
             ->name('admin.orders.assign');
 
+        Route::patch('orders/{orderId}/status', [AdminOrderController::class, 'updateStatus'])
+            ->middleware('permission:orders.update')
+            ->name('admin.orders.update-status');
+
         Route::delete('orders', [AdminOrderController::class, 'bulkDestroy'])
             ->middleware('permission:orders.delete')
             ->name('admin.orders.bulkDestroy');

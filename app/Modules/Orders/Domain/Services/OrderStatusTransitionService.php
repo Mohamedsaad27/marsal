@@ -69,6 +69,16 @@ class OrderStatusTransitionService
     }
 
     /**
+     * Admin can override the agent transition graph and set any valid status.
+     */
+    public function assertAdminCanTransition(OrderStatusEnum $from, OrderStatusEnum $to): void
+    {
+        if ($from === $to) {
+            return;
+        }
+    }
+
+    /**
      * Price-change requests store awaiting_approval until reviewed.
      */
     public function resolveStoredStatus(OrderStatusEnum $requested): OrderStatusEnum

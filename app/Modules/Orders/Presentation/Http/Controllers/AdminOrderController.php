@@ -13,12 +13,16 @@ use App\Modules\Orders\Application\UseCases\Admin\ExportOrdersUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\GetAdminOrderDetailUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\GetAdminOrderStatsUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\ListAdminOrdersUseCase;
+use App\Modules\Orders\Application\UseCases\Admin\UpdateAdminOrderStatusUseCase;
+use App\Modules\Orders\Application\DTOs\UpdateAdminOrderStatusDTO;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\AssignOrderRequest;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\BulkDeleteAdminOrdersRequest;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\ExportOrdersRequest;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\ListAdminOrdersRequest;
+use App\Modules\Orders\Presentation\Http\Requests\Admin\UpdateAdminOrderStatusRequest;
 use App\Modules\Orders\Presentation\Http\Resources\Admin\AdminOrderDetailResource;
 use App\Modules\Orders\Presentation\Http\Resources\Admin\AdminOrderListResource;
+use App\Modules\Orders\Presentation\Http\Resources\AgentOrderStatusUpdatedResource;
 use Illuminate\Http\JsonResponse;
 use Maatwebsite\Excel\Facades\Excel;
 use Symfony\Component\HttpFoundation\BinaryFileResponse;
@@ -32,6 +36,7 @@ class AdminOrderController extends Controller
         private ListAdminOrdersUseCase $listOrders,
         private GetAdminOrderDetailUseCase $getDetail,
         private AssignOrderUseCase $assignOrder,
+        private UpdateAdminOrderStatusUseCase $updateStatus,
         private BulkDeleteAdminOrdersUseCase $bulkDeleteOrders,
         private ExportOrdersUseCase $exportOrders,
     ) {}
@@ -86,6 +91,22 @@ class AdminOrderController extends Controller
         return $this->success(
             new AdminOrderDetailResource($order),
             __('orders::messages.order_assigned'),
+        );
+    }
+
+    public function updateStatus(UpdateAdminOrderStatusRequest $request, string $orderId): JsonResponse
+    {
+        $result = $this->updateStatus->execute(
+            UpdateAdminOrderStatusDTO::fromArray(
+                orderId: $orderId,
+                adminUserId: $request->user()->user_id,
+                data: $request->validated(),
+            ),
+        );
+
+        return $this->success(
+            new AgentOrderStatusUpdatedResource($result),
+            __('orders::messages.status_updated'),
         );
     }
 
