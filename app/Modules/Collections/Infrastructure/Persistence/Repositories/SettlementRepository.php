@@ -67,10 +67,7 @@ class SettlementRepository implements SettlementRepositoryInterface
 
         $paginator->getCollection()->transform(function (Settlement $settlement) {
             if ($settlement->settlement_status !== SettlementStatusEnum::Paid) {
-                $settlement->setAttribute(
-                    'eligible_collections_count',
-                    $this->countEligibleCollections($settlement),
-                );
+                $this->attachEligibleCollectionsCount($settlement);
             }
 
             return $settlement;
@@ -92,10 +89,7 @@ class SettlementRepository implements SettlementRepositoryInterface
         }
 
         if ($settlement->settlement_status !== SettlementStatusEnum::Paid) {
-            $settlement->setAttribute(
-                'eligible_collections_count',
-                $this->countEligibleCollections($settlement),
-            );
+            $this->attachEligibleCollectionsCount($settlement);
         }
 
         return $settlement;
@@ -137,7 +131,7 @@ class SettlementRepository implements SettlementRepositoryInterface
         ]);
 
         $settlement->load(self::LIST_RELATIONS);
-        $settlement->setAttribute('eligible_collections_count', $collections->count());
+        $this->attachEligibleCollectionsCount($settlement, $collections->count());
 
         return $settlement;
     }
@@ -241,10 +235,7 @@ class SettlementRepository implements SettlementRepositoryInterface
         }
 
         if ($settlement->settlement_status !== SettlementStatusEnum::Paid) {
-            $settlement->setAttribute(
-                'eligible_collections_count',
-                $this->countEligibleCollections($settlement),
-            );
+            $this->attachEligibleCollectionsCount($settlement);
         }
 
         return $settlement;
@@ -302,6 +293,16 @@ class SettlementRepository implements SettlementRepositoryInterface
         }
 
         return $query;
+    }
+
+    private function attachEligibleCollectionsCount(Settlement $settlement, ?int $count = null): void
+    {
+        $settlement->setAttribute(
+            'eligible_collections_count',
+            $count ?? $this->countEligibleCollections($settlement),
+        );
+
+        $settlement->syncOriginalAttribute('eligible_collections_count');
     }
 
     private function applyFilters(Builder $query, SettlementFilterDTO $filter): void
