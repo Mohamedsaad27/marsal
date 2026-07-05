@@ -7071,6 +7071,142 @@
                     }
                 }
             ]
+        },
+        {
+            "name": "Admin — Reports",
+            "description": "Admin reports — read-only access to all reports.\n\n**Base path:** `/api/v1/admin/reports/*`\n\n**Auth:** JWT Bearer + `permission:reports.view` (super_admin has all permissions; staff_member needs `reports.view` seeded).\n\nAdmin cannot create/update/delete reports — only list and read existing reports.\n\n**Workflow:**\n1. **Auth → Login** as super_admin\n2. **List All Reports** (optional filters)\n3. **Get Report by ID**",
+            "item": [
+                {
+                    "name": "Orders Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/orders",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "orders"
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nList of all orders across the platform — for admin monitoring dashboard.\n\nSaves first `order_id`.\n\nSame item shape as agent/company list endpoints."
+                    }
+                },
+                {
+                    "name": "Collections Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/collections",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "collections"
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nList of all collections across the platform — for admin monitoring dashboard.\n\nSaves first `collection_id`.\n\nSame item shape as agent/company list endpoints."
+                    }
+                },
+                {
+                    "name": "Settlements Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/settlements",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "settlements"
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nList of all settlements across the platform — for admin monitoring dashboard.\n\nSaves first `settlement_id`.\n\nSame item shape as agent/company list endpoints."
+                    }
+                },
+                {
+                    "name": "Delivery Agents Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/delivery-agents",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "delivery-agents"
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nList of all delivery agents across the platform — for admin monitoring dashboard.\n\nSaves first `delivery_agent_id`.\n\nSame item shape as agent/company list endpoints."
+                    }
+                },
+                {
+                    "name": "Shipping Companies Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/shipping-companies",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "shipping-companies"
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nList of all shipping companies across the platform — for admin monitoring dashboard.\n\nSaves first `shipping_company_id`.\n\nSame item shape as agent/company list endpoints."
+                    }
+                }   
+            ]
         }
     ]
 }
