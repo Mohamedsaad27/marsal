@@ -6899,6 +6899,382 @@
             ]
         },
         {
+            "name": "Admin — Reports",
+            "description": "Paginated analytics reports for admin — orders, collections, settlements, delivery agents, and shipping companies.\n\n**Base path:** `/api/v1/admin/reports/*`\n\n**Auth:** JWT Bearer + `permission:reports.view` (super_admin has all permissions).\n\n**Common filters:** `date_from`, `date_to`, `agent_id`, `company_id`, `search`, `per_page`, `page`.\n\nEach report returns a `summary` object with aggregated totals and a paginated `items` array.\n\n**Workflow:**\n1. **Auth → Login** as super_admin\n2. Call any report endpoint with optional filters\n3. Use `summary` for KPIs and `items` for the paginated list",
+            "item": [
+                {
+                    "name": "Orders Report",
+                    "event": [
+                        {
+                            "listen": "test",
+                            "script": {
+                                "exec": [
+                                    "if (pm.response.code === 200) {",
+                                    "    const json = pm.response.json();",
+                                    "    const items = json.data?.items || [];",
+                                    "    if (items.length > 0 && items[0].id) {",
+                                    "        pm.collectionVariables.set('order_id', items[0].id);",
+                                    "    }",
+                                    "}"
+                                ],
+                                "type": "text/javascript"
+                            }
+                        }
+                    ],
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/orders?per_page=15&page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "orders"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "Items per page (max 100)"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "",
+                                    "description": "Filter by order status code (integer)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "agent_id",
+                                    "value": "{{delivery_agent_id}}",
+                                    "description": "Filter by delivery agent UUID",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "company_id",
+                                    "value": "{{shipping_company_id}}",
+                                    "description": "Filter by shipping company UUID",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "governorate_id",
+                                    "value": "{{governorate_id}}",
+                                    "description": "Filter by governorate UUID",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_from",
+                                    "value": "2026-01-01",
+                                    "description": "Start date (YYYY-MM-DD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_to",
+                                    "value": "2026-12-31",
+                                    "description": "End date (YYYY-MM-DD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Search by reference_code, reference_no, customer name/phone, company name, or agent name",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nPaginated orders report with financial summary.\n\n**Response `data.summary`:**\n```json\n{\n  \"total_orders\": 120,\n  \"terminal_orders\": 90,\n  \"pending_orders\": 30,\n  \"total_original_amount\": \"15000.00\",\n  \"total_collected_amount\": \"14200.00\",\n  \"total_net_due_company\": \"13500.00\"\n}\n```\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"reference_code\": \"ORD-001\",\n  \"reference_no\": \"REF-001\",\n  \"status\": { \"code\": 5, \"label\": \"تم التسليم\", \"color\": \"green\" },\n  \"customer\": { \"name\": \"أحمد محمد\", \"phone\": \"0501234567\" },\n  \"company\": { \"id\": \"uuid\", \"name\": \"سمسا للشحن\" },\n  \"agent\": { \"id\": \"uuid\", \"name\": \"خالد العتيبي\" },\n  \"address\": { \"governorate\": \"الرياض\", \"city\": \"الرياض\", \"address_line\": \"حي النزهة\" },\n  \"financials\": {\n    \"original_amount\": \"500.00\",\n    \"collected_amount\": \"500.00\",\n    \"commission_amount\": \"25.00\",\n    \"net_due_company\": \"475.00\",\n    \"is_settled\": true\n  },\n  \"assigned_at\": \"2026-05-01T08:00:00.000000Z\",\n  \"delivered_at\": \"2026-05-02T14:00:00.000000Z\",\n  \"created_at\": \"2026-05-01T07:00:00.000000Z\"\n}\n```"
+                    }
+                },
+                {
+                    "name": "Collections Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/collections?per_page=15&page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "collections"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "Items per page (max 100)"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "collection_type",
+                                    "value": "",
+                                    "description": "Filter by collection type (integer enum)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "agent_id",
+                                    "value": "{{delivery_agent_id}}",
+                                    "description": "Filter by delivery agent UUID",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "company_id",
+                                    "value": "{{shipping_company_id}}",
+                                    "description": "Filter by shipping company UUID",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_from",
+                                    "value": "2026-01-01",
+                                    "description": "Start date based on collected_at (YYYY-MM-DD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_to",
+                                    "value": "2026-12-31",
+                                    "description": "End date based on collected_at (YYYY-MM-DD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Search by collection_id, order reference_code, agent name, or company name",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nPaginated collections report with financial summary.\n\n**Response `data.summary`:**\n```json\n{\n  \"total_collections\": 85,\n  \"total_collected_amount\": \"42500.00\",\n  \"total_commission_amount\": \"2125.00\",\n  \"total_net_due\": \"40375.00\",\n  \"pending_cash_count\": 5,\n  \"settled_count\": 80\n}\n```\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"order\": { \"id\": \"uuid\", \"reference_code\": \"ORD-001\" },\n  \"agent\": { \"id\": \"uuid\", \"name\": \"خالد العتيبي\" },\n  \"company\": { \"id\": \"uuid\", \"name\": \"سمسا للشحن\" },\n  \"collection_type\": { \"code\": 1, \"label\": \"نقدي\" },\n  \"collected_amount\": \"500.00\",\n  \"commission_amount\": \"25.00\",\n  \"net_due\": \"475.00\",\n  \"cash_received_at\": \"2026-05-03T10:00:00.000000Z\",\n  \"settlement_id\": \"uuid\",\n  \"collected_at\": \"2026-05-02T14:00:00.000000Z\"\n}\n```"
+                    }
+                },
+                {
+                    "name": "Settlements Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/settlements?per_page=15&page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "settlements"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "Items per page (max 100)"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "status",
+                                    "value": "",
+                                    "description": "Filter by settlement status (integer enum)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "settlement_type",
+                                    "value": "",
+                                    "description": "1=agent settlement | 2=company settlement",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "agent_id",
+                                    "value": "{{delivery_agent_id}}",
+                                    "description": "Filter by delivery agent UUID",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "company_id",
+                                    "value": "{{shipping_company_id}}",
+                                    "description": "Filter by shipping company UUID",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_from",
+                                    "value": "2026-01-01",
+                                    "description": "Start date based on created_at (YYYY-MM-DD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_to",
+                                    "value": "2026-12-31",
+                                    "description": "End date based on created_at (YYYY-MM-DD)",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Search by settlement_id, payment_reference, agent name, or company name",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nPaginated settlements report with financial summary.\n\n**Response `data.summary`:**\n```json\n{\n  \"total_settlements\": 20,\n  \"total_collections\": 40375.00,\n  \"total_commissions\": 2125.00,\n  \"net_amount\": 38250.00\n}\n```\n\n**Response `data.items[]`:** see Admin — Settlements → List Settlements for full shape."
+                    }
+                },
+                {
+                    "name": "Delivery Agents Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/delivery-agents?per_page=15&page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "delivery-agents"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "Items per page (max 100)"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "is_active",
+                                    "value": "1",
+                                    "description": "1=available agents only | 0=unavailable agents only",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_from",
+                                    "value": "2026-01-01",
+                                    "description": "Filter agent metrics (orders/collections) from this date",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_to",
+                                    "value": "2026-12-31",
+                                    "description": "Filter agent metrics (orders/collections) to this date",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Search by national_id, vehicle_plate_number, agent name, phone, or email",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nPaginated delivery agents report with per-agent performance metrics.\n\n**Response `data.summary`:**\n```json\n{\n  \"total_agents\": 15,\n  \"available_agents\": 10,\n  \"total_balance\": \"3200.00\",\n  \"total_orders\": 340,\n  \"total_collected_amount\": \"85000.00\"\n}\n```\n\n**Response `data.items[]`:** Each agent item includes a `report_metrics` field:\n```json\n{\n  \"id\": \"uuid\",\n  \"name\": \"خالد العتيبي\",\n  \"phone\": \"0501234567\",\n  \"is_available\": true,\n  \"balance\": \"250.00\",\n  \"report_metrics\": {\n    \"total_orders\": 45,\n    \"terminal_orders\": 40,\n    \"total_collected_amount\": \"22500.00\",\n    \"total_commission_amount\": \"1125.00\",\n    \"total_net_due\": \"21375.00\"\n  }\n}\n```"
+                    }
+                },
+                {
+                    "name": "Shipping Companies Report",
+                    "request": {
+                        "method": "GET",
+                        "header": [
+                            {
+                                "key": "Accept",
+                                "value": "application/json"
+                            }
+                        ],
+                        "url": {
+                            "raw": "{{base_url}}/api/v1/admin/reports/shipping-companies?per_page=15&page=1",
+                            "host": [
+                                "{{base_url}}"
+                            ],
+                            "path": [
+                                "api",
+                                "v1",
+                                "admin",
+                                "reports",
+                                "shipping-companies"
+                            ],
+                            "query": [
+                                {
+                                    "key": "per_page",
+                                    "value": "15",
+                                    "description": "Items per page (max 100)"
+                                },
+                                {
+                                    "key": "page",
+                                    "value": "1"
+                                },
+                                {
+                                    "key": "is_active",
+                                    "value": "1",
+                                    "description": "1=active companies only | 0=inactive companies only",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_from",
+                                    "value": "2026-01-01",
+                                    "description": "Filter company metrics (orders/collections) from this date",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "date_to",
+                                    "value": "2026-12-31",
+                                    "description": "Filter company metrics (orders/collections) to this date",
+                                    "disabled": true
+                                },
+                                {
+                                    "key": "search",
+                                    "value": "",
+                                    "description": "Search by company_name, commercial_reg, owner name, phone, or email",
+                                    "disabled": true
+                                }
+                            ]
+                        },
+                        "description": "Permission: `reports.view`\n\nPaginated shipping companies report with per-company performance metrics.\n\n**Response `data.summary`:**\n```json\n{\n  \"total_companies\": 8,\n  \"active_companies\": 7,\n  \"total_balance\": \"12500.00\",\n  \"total_orders\": 520,\n  \"total_collected_amount\": \"260000.00\"\n}\n```\n\n**Response `data.items[]`:** Each company item includes a `report_metrics` field:\n```json\n{\n  \"id\": \"uuid\",\n  \"company_name\": \"سمسا للشحن\",\n  \"is_active\": true,\n  \"balance\": \"1800.00\",\n  \"report_metrics\": {\n    \"total_orders\": 120,\n    \"terminal_orders\": 105,\n    \"total_collected_amount\": \"60000.00\",\n    \"total_commission_amount\": \"3000.00\",\n    \"total_net_due\": \"57000.00\"\n  }\n}\n```"
+                    }
+                }
+            ]
+        },
+        {
             "name": "Admin — Chat",
             "description": "Admin chat monitor — read-only access to all agent↔company conversations.\n\n**Base path:** `/api/v1/admin/chat/*`\n\n**Auth:** JWT Bearer + `permission:chat.view` (super_admin has all permissions; staff_member needs `chat.view` seeded).\n\nAdmin cannot send messages — only list conversations, open by order, and read message history.\n\n**Workflow:**\n1. **Auth → Login** as super_admin\n2. **List All Conversations** (optional filters)\n3. **Get Conversation by Order** or **Get Conversation** → saves `{{conversation_id}}`\n4. **List Messages**",
             "item": [
@@ -7070,142 +7446,6 @@
                         "description": "Permission: `chat.view`\n\nRead-only message history for monitoring. Admin read does not update `last_read_at` on participants.\n\nIncludes text body and media attachment URLs for image/voice messages."
                     }
                 }
-            ]
-        },
-        {
-            "name": "Admin — Reports",
-            "description": "Admin reports — read-only access to all reports.\n\n**Base path:** `/api/v1/admin/reports/*`\n\n**Auth:** JWT Bearer + `permission:reports.view` (super_admin has all permissions; staff_member needs `reports.view` seeded).\n\nAdmin cannot create/update/delete reports — only list and read existing reports.\n\n**Workflow:**\n1. **Auth → Login** as super_admin\n2. **List All Reports** (optional filters)\n3. **Get Report by ID**",
-            "item": [
-                {
-                    "name": "Orders Report",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/api/v1/admin/reports/orders",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "api",
-                                "v1",
-                                "admin",
-                                "reports",
-                                "orders"
-                            ]
-                        },
-                        "description": "Permission: `reports.view`\n\nList of all orders across the platform — for admin monitoring dashboard.\n\nSaves first `order_id`.\n\nSame item shape as agent/company list endpoints."
-                    }
-                },
-                {
-                    "name": "Collections Report",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/api/v1/admin/reports/collections",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "api",
-                                "v1",
-                                "admin",
-                                "reports",
-                                "collections"
-                            ]
-                        },
-                        "description": "Permission: `reports.view`\n\nList of all collections across the platform — for admin monitoring dashboard.\n\nSaves first `collection_id`.\n\nSame item shape as agent/company list endpoints."
-                    }
-                },
-                {
-                    "name": "Settlements Report",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/api/v1/admin/reports/settlements",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "api",
-                                "v1",
-                                "admin",
-                                "reports",
-                                "settlements"
-                            ]
-                        },
-                        "description": "Permission: `reports.view`\n\nList of all settlements across the platform — for admin monitoring dashboard.\n\nSaves first `settlement_id`.\n\nSame item shape as agent/company list endpoints."
-                    }
-                },
-                {
-                    "name": "Delivery Agents Report",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/api/v1/admin/reports/delivery-agents",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "api",
-                                "v1",
-                                "admin",
-                                "reports",
-                                "delivery-agents"
-                            ]
-                        },
-                        "description": "Permission: `reports.view`\n\nList of all delivery agents across the platform — for admin monitoring dashboard.\n\nSaves first `delivery_agent_id`.\n\nSame item shape as agent/company list endpoints."
-                    }
-                },
-                {
-                    "name": "Shipping Companies Report",
-                    "request": {
-                        "method": "GET",
-                        "header": [
-                            {
-                                "key": "Accept",
-                                "value": "application/json"
-                            }
-                        ],
-                        "url": {
-                            "raw": "{{base_url}}/api/v1/admin/reports/shipping-companies",
-                            "host": [
-                                "{{base_url}}"
-                            ],
-                            "path": [
-                                "api",
-                                "v1",
-                                "admin",
-                                "reports",
-                                "shipping-companies"
-                            ]
-                        },
-                        "description": "Permission: `reports.view`\n\nList of all shipping companies across the platform — for admin monitoring dashboard.\n\nSaves first `shipping_company_id`.\n\nSame item shape as agent/company list endpoints."
-                    }
-                }   
             ]
         }
     ]

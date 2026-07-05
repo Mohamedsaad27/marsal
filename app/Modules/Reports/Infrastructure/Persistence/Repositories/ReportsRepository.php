@@ -112,6 +112,7 @@ class ReportsRepository implements ReportsRepositoryInterface
             ->count();
 
         $money = (clone $query)
+            ->reorder()
             ->leftJoin('order_financials', 'orders.order_id', '=', 'order_financials.order_id')
             ->selectRaw('COALESCE(SUM(order_financials.original_amount), 0) as original_amount')
             ->selectRaw('COALESCE(SUM(order_financials.collected_amount), 0) as collected_amount')
@@ -131,6 +132,7 @@ class ReportsRepository implements ReportsRepositoryInterface
     private function collectionsSummary(Builder $query): array
     {
         $money = (clone $query)
+            ->reorder()
             ->selectRaw('COUNT(*) as total_collections')
             ->selectRaw('COALESCE(SUM(collected_amount), 0) as collected_amount')
             ->selectRaw('COALESCE(SUM(commission_amount), 0) as commission_amount')
