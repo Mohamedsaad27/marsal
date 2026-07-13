@@ -26,6 +26,9 @@ class CreateSettlementUseCase
             settlementId: $settlement->settlement_id,
             entityLabel: $this->resolveEntityLabel($settlement),
             netAmount: number_format((float) $settlement->net_amount, 2, '.', ''),
+            settlementType: $settlement->settlement_type,
+            agentUserId: $settlement->deliveryAgent?->user?->user_id,
+            companyUserId: $settlement->shippingCompany?->user?->user_id,
         ));
 
         return $settlement;

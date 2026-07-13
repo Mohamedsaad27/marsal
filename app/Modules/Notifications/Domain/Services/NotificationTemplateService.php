@@ -133,6 +133,12 @@ class NotificationTemplateService
      * PostponedReminder (8):
      *   {{order_code}}, {{date}}
      *
+     * Collected (9):
+     *   {{agent_name}}, {{order_code}}, {{collected_amount}}
+     *
+     * Settled (10):
+     *   {{settlement_action}}, {{entity_label}}, {{net_amount}}
+     *
      * @return array{0: string, 1: string}
      */
     private function templates(NotificationTypeEnum $type): array
@@ -185,6 +191,16 @@ class NotificationTemplateService
             NotificationTypeEnum::PostponedReminder => [
                 '📅 تذكير بموعد تأجيل التسليم',
                 'تذكير: لديك طلب {{order_code}} تم تأجيل تسليمه إلى اليوم {{date}} — يرجى التحضير والتوجه فوراً',
+            ],
+
+            NotificationTypeEnum::Collected => [
+                '💰 تم استلام التحصيل',
+                'تم تأكيد استلام {{collected_amount}} جنيه من {{agent_name}} للطلب {{order_code}}',
+            ],
+
+            NotificationTypeEnum::Settled => [
+                '🧾 تسوية مالية',
+                '{{settlement_action}} — {{entity_label}} بقيمة {{net_amount}} جنيه',
             ],
         };
     }

@@ -3,6 +3,7 @@
 namespace App\Modules\Notifications\Infrastructure\Providers;
 
 use App\Modules\Notifications\Application\Listeners\HandleApprovalRequested;
+use App\Modules\Notifications\Application\Listeners\HandleCollectionCashReceived;
 use App\Modules\Notifications\Application\Listeners\HandleNewMessageSent;
 use App\Modules\Notifications\Application\Listeners\HandleOrderAssigned;
 use App\Modules\Notifications\Application\Listeners\HandleOrderStatusChanged;
@@ -10,6 +11,7 @@ use App\Modules\Notifications\Application\Listeners\HandlePhoneUpdated;
 use App\Modules\Notifications\Application\Listeners\HandlePostponedReminderDue;
 use App\Modules\Notifications\Application\Listeners\HandleRefusalTimerExpired;
 use App\Modules\Notifications\Application\Listeners\HandleRefusalTimerStarted;
+use App\Modules\Notifications\Application\Listeners\HandleSettlementCreated;
 use App\Modules\Notifications\Application\Listeners\SuperAdmin\NotifySuperAdminsOnAgentOrderStatusChanged;
 use App\Modules\Notifications\Application\Listeners\SuperAdmin\NotifySuperAdminsOnApprovalRequested;
 use App\Modules\Notifications\Application\Listeners\SuperAdmin\NotifySuperAdminsOnCollectionRecorded;
@@ -22,6 +24,7 @@ use App\Modules\Notifications\Application\Listeners\SuperAdmin\NotifySuperAdmins
 use App\Modules\Notifications\Application\Listeners\SuperAdmin\NotifySuperAdminsOnSettlementPaid;
 use App\Modules\Notifications\Domain\Events\AgentOrderStatusChanged;
 use App\Modules\Notifications\Domain\Events\ApprovalRequested;
+use App\Modules\Notifications\Domain\Events\CollectionCashReceived;
 use App\Modules\Notifications\Domain\Events\CollectionRecorded;
 use App\Modules\Notifications\Domain\Events\NewMessageSent;
 use App\Modules\Notifications\Domain\Events\OrderAssigned;
@@ -83,6 +86,9 @@ class NotificationsServiceProvider extends ServiceProvider
 
         // 8. تذكير بموعد تسليم مؤجل
         Event::listen(PostponedReminderDue::class, HandlePostponedReminderDue::class);
+
+        Event::listen(SettlementCreated::class, HandleSettlementCreated::class);
+        Event::listen(CollectionCashReceived::class, HandleCollectionCashReceived::class);
 
         // ── Super-admin notifications ───────────────────────────────────────
         Event::listen(AgentOrderStatusChanged::class, NotifySuperAdminsOnAgentOrderStatusChanged::class);
