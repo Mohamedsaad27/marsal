@@ -207,13 +207,26 @@ class AgentOrderRepository implements AgentOrderRepositoryInterface
         $filter = $statusFilter ?: 'all';
 
         match ($filter) {
-            'new' => $query->whereIn('status', [
-                OrderStatusEnum::Pending->value,
-                OrderStatusEnum::Assigned->value,
-            ]),
+            'all' => null,
+            'new' => $query->where('status', OrderStatusEnum::Assigned->value),
             'in_delivery' => $query->where('status', OrderStatusEnum::OutForDelivery->value),
             'postponed' => $query->where('status', OrderStatusEnum::Postponed->value),
-            default => $query->whereIn('status', OrderStatusEnum::activeIds()),
+            'finished_orders' => $query->whereIn('status', [
+                OrderStatusEnum::Delivered->value,
+                OrderStatusEnum::DeliveredPriceChanged->value,
+                OrderStatusEnum::PartialDelivery->value,
+                OrderStatusEnum::RefusedPaidShipping->value,
+                OrderStatusEnum::RefusedNoPayment->value,
+            ]),
+            'returned_orders' => $query->whereIn('status', [
+                OrderStatusEnum::PartialDelivery->value,
+                OrderStatusEnum::RefusedPaidShipping->value,
+                OrderStatusEnum::RefusedNoPayment->value,
+                OrderStatusEnum::CustomerCancelled->value,
+                OrderStatusEnum::UnsafeArea->value,
+                OrderStatusEnum::OutsideGovernorate->value,
+            ]),
+            default => null,
         };
     }
 

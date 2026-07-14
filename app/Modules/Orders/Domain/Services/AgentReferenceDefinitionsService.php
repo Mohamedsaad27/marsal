@@ -86,13 +86,15 @@ class AgentReferenceDefinitionsService
             [
                 'key' => 'all',
                 'label_ar' => 'الكل',
-                'status_ids' => OrderStatusEnum::activeIds(),
+                'status_ids' => array_map(
+                    static fn (OrderStatusEnum $status) => $status->value,
+                    OrderStatusEnum::cases(),
+                ),
             ],
             [
                 'key' => 'new',
                 'label_ar' => 'جديد',
                 'status_ids' => [
-                    OrderStatusEnum::Pending->value,
                     OrderStatusEnum::Assigned->value,
                 ],
             ],
@@ -105,6 +107,29 @@ class AgentReferenceDefinitionsService
                 'key' => 'postponed',
                 'label_ar' => 'مؤجل',
                 'status_ids' => [OrderStatusEnum::Postponed->value],
+            ],
+            [
+                'key' => 'finished_orders',
+                'label_ar' => 'الطلبات المنتهية',
+                'status_ids' => [
+                    OrderStatusEnum::Delivered->value,
+                    OrderStatusEnum::DeliveredPriceChanged->value,
+                    OrderStatusEnum::PartialDelivery->value,
+                    OrderStatusEnum::RefusedPaidShipping->value,
+                    OrderStatusEnum::RefusedNoPayment->value,
+                ],
+            ],
+            [
+                'key' => 'returned_orders',
+                'label_ar' => 'الطلبات المرتجعة',
+                'status_ids' => [
+                    OrderStatusEnum::PartialDelivery->value,
+                    OrderStatusEnum::RefusedPaidShipping->value,
+                    OrderStatusEnum::RefusedNoPayment->value,
+                    OrderStatusEnum::CustomerCancelled->value,
+                    OrderStatusEnum::UnsafeArea->value,
+                    OrderStatusEnum::OutsideGovernorate->value,
+                ],
             ],
         ];
     }
