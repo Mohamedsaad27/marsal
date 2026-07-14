@@ -29,6 +29,12 @@ class OrderStatusTransitionService
             OrderStatusEnum::AwaitingApproval => [
                 'call_customer',
             ],
+            OrderStatusEnum::NoAnswer,
+            OrderStatusEnum::PhoneOff,
+            OrderStatusEnum::WrongPhone,
+            OrderStatusEnum::Postponed => [
+                'start_delivery',
+            ],
             default => [],
         };
     }
@@ -57,6 +63,12 @@ class OrderStatusTransitionService
                 OrderStatusEnum::OutsideGovernorate,
                 OrderStatusEnum::WrongPhone,
                 OrderStatusEnum::Postponed,
+            ],
+            OrderStatusEnum::NoAnswer,
+            OrderStatusEnum::PhoneOff,
+            OrderStatusEnum::WrongPhone,
+            OrderStatusEnum::Postponed => [
+                OrderStatusEnum::OutForDelivery,
             ],
             default => [],
         };
