@@ -96,8 +96,8 @@ enum OrderStatusEnum: int
             self::Assigned, self::OutForDelivery, self::AwaitingApproval => 'blue',
             self::Postponed => 'orange',
             self::Delivered, self::DeliveredPriceChanged, self::PartialDelivery => 'green',
-            self::RefusedPaidShipping, self::RefusedNoPayment, self::CustomerCancelled => 'red',
-            self::UnsafeArea, self::OutsideGovernorate, self::WrongPhone => 'orange',
+            self::RefusedPaidShipping, self::RefusedNoPayment, self::CustomerCancelled, self::NoAnswer, self::PhoneOff, self::WrongPhone => 'red',
+            self::UnsafeArea, self::OutsideGovernorate => 'orange',
             default => 'gray',
         };
     }
