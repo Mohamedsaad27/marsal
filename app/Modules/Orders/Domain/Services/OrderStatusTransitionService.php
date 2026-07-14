@@ -41,6 +41,12 @@ class OrderStatusTransitionService
 
     public function assertCanTransition(OrderStatusEnum $from, OrderStatusEnum $to): void
     {
+        if ($this->isLockedForAgent($from)) {
+            throw new \InvalidArgumentException(
+                "Transition from {$from->name} is locked for delivery agents.",
+            );
+        }
+
         if ($from === $to) {
             return;
         }
@@ -78,6 +84,14 @@ class OrderStatusTransitionService
                 "Transition from {$from->name} to {$to->name} is not allowed.",
             );
         }
+    }
+
+    private function isLockedForAgent(OrderStatusEnum $status): bool
+    {
+        return in_array($status, [
+            OrderStatusEnum::UnsafeArea,
+            OrderStatusEnum::OutsideGovernorate,
+        ], true);
     }
 
     /**

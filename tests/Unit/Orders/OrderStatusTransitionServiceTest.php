@@ -19,6 +19,24 @@ class OrderStatusTransitionServiceTest extends TestCase
         }
     }
 
+    public function test_locked_agent_statuses_cannot_be_updated_by_agent(): void
+    {
+        $service = new OrderStatusTransitionService();
+
+        foreach ([OrderStatusEnum::UnsafeArea, OrderStatusEnum::OutsideGovernorate] as $status) {
+            $this->assertSame([], $service->availableActions($status));
+
+            foreach ([$status, OrderStatusEnum::OutForDelivery] as $targetStatus) {
+                try {
+                    $service->assertCanTransition($status, $targetStatus);
+                    $this->fail("Expected {$status->name} to reject agent transition.");
+                } catch (\InvalidArgumentException $exception) {
+                    $this->assertStringContainsString('locked for delivery agents', $exception->getMessage());
+                }
+            }
+        }
+    }
+
     /**
      * @return list<OrderStatusEnum>
      */
