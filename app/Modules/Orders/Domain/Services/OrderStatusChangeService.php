@@ -50,6 +50,8 @@ class OrderStatusChangeService
                 $collectionMeta = $this->recordCollection($order, $payload, $now);
                 $collectionCreated = true;
                 $this->updateCollectedAmount($order, $payload->collectedAmount ?? 0.0, $now);
+            } elseif (! $storedStatus->requiresCollection()) {
+                $this->reverseOpenCollection($order, $now);
             }
 
             $this->persistOrderStatus($order, $storedStatus, $now);
@@ -153,6 +155,7 @@ class OrderStatusChangeService
         DateTimeInterface $now,
     ): array {
         $collectedAmount = $payload->collectedAmount ?? 0.0;
+        $collectionType = $payload->collectionType?->value ?? CollectionTypeEnum::Cod->value;
         $commissionValue = $this->resolveAgentCommissionValue($payload->deliveryAgentId);
 
         $commission = $this->commissionCalculator->calculate(
@@ -160,25 +163,44 @@ class OrderStatusChangeService
             commissionValue: $commissionValue,
         );
 
-        $collectionId = (string) Str::uuid();
+        $existingCollection = DB::table('collections')
+            ->where('order_id', $order->order_id)
+            ->whereNull('deleted_at')
+            ->whereNull('settlement_id')
+            ->lockForUpdate()
+            ->first();
 
-        DB::table('collections')->insert([
-            'collection_id' => $collectionId,
-            'order_id' => $order->order_id,
+        $previousCollectedAmount = (float) ($existingCollection->collected_amount ?? 0);
+        $collectionId = $existingCollection->collection_id ?? (string) Str::uuid();
+
+        $attributes = [
             'delivery_agent_id' => $payload->deliveryAgentId,
             'shipping_company_id' => $order->shipping_company_id,
-            'collection_type' => $payload->collectionType?->value ?? CollectionTypeEnum::Cod->value,
+            'collection_type' => $collectionType,
             'collected_amount' => $collectedAmount,
             'commission_amount' => $commission['commission_amount'],
             'net_due' => $commission['net_due'],
+            'cash_received_at' => null,
+            'cash_received_by' => null,
             'collected_at' => $now,
-            'created_at' => $now,
             'updated_at' => $now,
-        ]);
+        ];
+
+        if ($existingCollection === null) {
+            DB::table('collections')->insert(array_merge($attributes, [
+                'collection_id' => $collectionId,
+                'order_id' => $order->order_id,
+                'created_at' => $now,
+            ]));
+        } else {
+            DB::table('collections')
+                ->where('collection_id', $collectionId)
+                ->update($attributes);
+        }
 
         DeliveryAgent::query()
             ->whereKey($payload->deliveryAgentId)
-            ->increment('balance', $collectedAmount);
+            ->increment('balance', $collectedAmount - $previousCollectedAmount);
 
         return [
             'collection_id' => $collectionId,
@@ -208,6 +230,43 @@ class OrderStatusChangeService
             ]);
     }
 
+    private function reverseOpenCollection(Order $order, DateTimeInterface $now): void
+    {
+        $collection = DB::table('collections')
+            ->where('order_id', $order->order_id)
+            ->whereNull('deleted_at')
+            ->whereNull('settlement_id')
+            ->lockForUpdate()
+            ->first();
+
+        if ($collection === null) {
+            $this->updateCollectedAmount($order, 0.0, $now);
+
+            return;
+        }
+
+        $collectedAmount = (float) $collection->collected_amount;
+
+        if ($collectedAmount > 0 && $collection->delivery_agent_id !== null) {
+            DeliveryAgent::query()
+                ->whereKey($collection->delivery_agent_id)
+                ->decrement('balance', $collectedAmount);
+        }
+
+        DB::table('collections')
+            ->where('collection_id', $collection->collection_id)
+            ->update([
+                'collected_amount' => 0,
+                'commission_amount' => 0,
+                'net_due' => 0,
+                'cash_received_at' => null,
+                'cash_received_by' => null,
+                'updated_at' => $now,
+            ]);
+
+        $this->updateCollectedAmount($order, 0.0, $now);
+    }
+
     private function persistOrderStatus(
         Order $order,
         OrderStatusEnum $storedStatus,
@@ -217,6 +276,8 @@ class OrderStatusChangeService
 
         if ($storedStatus->isTerminal()) {
             $order->delivered_at = $now;
+        } else {
+            $order->delivered_at = null;
         }
 
         $order->save();
