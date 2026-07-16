@@ -5,6 +5,7 @@ namespace App\Modules\Chat\Presentation\Http\Resources;
 use App\Modules\Chat\Domain\Enums\MessageTypeEnum;
 use App\Modules\Chat\Infrastructure\Database\Models\Message;
 use App\Modules\Core\Presentation\Http\Resources\MediaFileResource;
+use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -19,6 +20,7 @@ class MessageResource extends JsonResource
             'sender' => $this->whenLoaded('sender', fn () => [
                 'id' => $this->sender?->user_id,
                 'name' => $this->sender?->name,
+                'type' => $this->senderType(),
             ]),
             'body' => $this->body,
             'type' => [
@@ -35,5 +37,14 @@ class MessageResource extends JsonResource
             ),
             'created_at' => $this->created_at?->toIso8601String(),
         ];
+    }
+
+    private function senderType(): ?string
+    {
+        return match ($this->sender?->resolveAccountType()) {
+            AccountTypeEnum::ShippingCompany => 'company',
+            AccountTypeEnum::DeliveryAgent => 'agent',
+            default => null,
+        };
     }
 }

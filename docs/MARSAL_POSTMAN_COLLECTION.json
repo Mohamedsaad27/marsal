@@ -4178,7 +4178,7 @@
                                 }
                             ]
                         },
-                        "description": "Paginated messages for a conversation — newest first.\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"conversation_id\": \"uuid\",\n  \"sender\": { \"id\": \"uuid\", \"name\": \"أحمد محمد\" },\n  \"body\": \"مرحباً\",\n  \"type\": { \"code\": 1, \"label\": \"نص\" },\n  \"attachment\": null,\n  \"created_at\": \"2026-07-02T10:30:00+00:00\"\n}\n```\n\nFor image/voice messages, `attachment` is a `MediaFileResource` with `url`, `mime_type`, `original_name`, etc."
+                        "description": "Paginated messages for a conversation — newest first.\n\n**Response `data.items[]`:**\n```json\n{\n  \"id\": \"uuid\",\n  \"conversation_id\": \"uuid\",\n  \"sender\": { \"id\": \"uuid\", \"name\": \"أحمد محمد\", \"type\": \"agent\" },\n  \"body\": \"مرحباً\",\n  \"type\": { \"code\": 1, \"label\": \"نص\" },\n  \"attachment\": null,\n  \"created_at\": \"2026-07-02T10:30:00+00:00\"\n}\n```\n\n`sender.type` is `company` for shipping-company users and `agent` for delivery-agent users.\n\nFor image/voice messages, `attachment` is a `MediaFileResource` with `url`, `mime_type`, `original_name`, etc."
                     }
                 },
                 {
