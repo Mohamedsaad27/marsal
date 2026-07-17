@@ -36,17 +36,36 @@ class AuthJwtTest extends TestCase
     public function test_login_with_phone_returns_jwt(): void
     {
         $response = $this->postJson('/api/v1/auth/login', [
-            'identifier' => env('SUPER_ADMIN_PHONE', '01098001021'),
+            'identifier' => '01098001021',
             'password' => env('SUPER_ADMIN_PASSWORD', 'Admin@123'),
         ]);
 
         $response->assertOk()->assertJsonPath('isSuccess', true);
     }
 
+    public function test_login_updates_fcm_token_when_provided(): void
+    {
+        $email = env('SUPER_ADMIN_EMAIL', 'superadmin@marsal.com');
+        $fcmToken = 'test-fcm-token';
+
+        $response = $this->postJson('/api/v1/auth/login', [
+            'identifier' => $email,
+            'password' => env('SUPER_ADMIN_PASSWORD', 'Admin@123'),
+            'fcm_token' => $fcmToken,
+        ]);
+
+        $response->assertOk()->assertJsonPath('isSuccess', true);
+
+        $this->assertDatabaseHas('users', [
+            'email' => $email,
+            'fcm_token' => $fcmToken,
+        ]);
+    }
+
     public function test_login_fails_with_wrong_password(): void
     {
         $response = $this->postJson('/api/v1/auth/login', [
-            'login' => env('SUPER_ADMIN_EMAIL', 'admin@shipops.local'),
+            'identifier' => env('SUPER_ADMIN_EMAIL', 'superadmin@marsal.com'),
             'password' => 'wrong-password',
         ]);
 

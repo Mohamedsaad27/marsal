@@ -22,6 +22,7 @@ class LoginRequest extends BaseFormRequest
         return [
             'identifier' => ['required', 'string', 'max:255'],
             'password' => ['required', 'string', 'min:6'],
+            'fcm_token' => ['nullable', 'string', 'max:500'],
         ];
     }
 
@@ -30,6 +31,7 @@ class LoginRequest extends BaseFormRequest
         return new LoginDTO(
             identifier: $this->string('identifier')->toString(),
             password: $this->string('password')->toString(),
+            fcmToken: $this->filled('fcm_token') ? $this->string('fcm_token')->toString() : null,
         );
     }
 }

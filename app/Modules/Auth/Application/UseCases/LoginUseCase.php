@@ -29,6 +29,10 @@ class LoginUseCase
 
         $this->userRepository->updateLastLogin($user);
 
+        if ($dto->fcmToken !== null) {
+            $this->userRepository->update($user, ['fcm_token' => $dto->fcmToken]);
+        }
+
         $this->recordAudit->execute(
             userId:        $user->user_id,
             event:         AuditEventEnum::Login,

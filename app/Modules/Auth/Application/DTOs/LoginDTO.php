@@ -7,5 +7,6 @@ readonly class LoginDTO
     public function __construct(
         public string $identifier,
         public string $password,
+        public ?string $fcmToken = null,
     ) {}
 }
