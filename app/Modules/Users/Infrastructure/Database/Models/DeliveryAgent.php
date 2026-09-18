@@ -76,4 +76,8 @@ class DeliveryAgent extends Model
     {
         return $this->supervisor_agent_id === null;
     }
+    public function getDeliveryAgentActualBalance(): float
+    {
+        return $this->balance - $this->commission_value;
+    }
 }

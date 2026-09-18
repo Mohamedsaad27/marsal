@@ -47,7 +47,7 @@ class AgentProfileResource extends JsonResource
                 'commission_value' => $agent->commission_value !== null
                     ? (float) $agent->commission_value
                     : null,
-                'balance' => (float) $agent->balance,
+                'balance' => (float) $agent->getDeliveryAgentActualBalance(),
                 'is_active' => (bool) $user->is_active,
             ],
             'stats' => [
