@@ -29,6 +29,7 @@ class StoreShippingCompanyRequest extends BaseFormRequest
             'profile' => ['nullable', 'array'],
             'profile.company_name' => ['required', 'string', 'max:200'],
             'profile.commercial_reg' => ['nullable', 'string', 'max:100'],
+            'profile.commission_value' => ['nullable', 'numeric', 'min:0', 'max:100'],
             ...$this->addressRules(),
         ];
     }
