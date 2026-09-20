@@ -24,7 +24,8 @@ class OrderFinancial extends Model
         'approved_amount',
         'collected_amount',
         'shipping_fee',
-        'commission_amount',
+        'agent_commission_amount',
+        'system_commission_amount',
         'net_due_company',
         'is_settled',
     ];
@@ -36,7 +37,8 @@ class OrderFinancial extends Model
             'approved_amount' => 'decimal:2',
             'collected_amount' => 'decimal:2',
             'shipping_fee' => 'decimal:2',
-            'commission_amount' => 'decimal:2',
+            'agent_commission_amount' => 'decimal:2',
+            'system_commission_amount' => 'decimal:2',
             'net_due_company' => 'decimal:2',
             'is_settled' => 'boolean',
         ];

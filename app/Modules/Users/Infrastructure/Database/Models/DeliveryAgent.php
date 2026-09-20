@@ -2,15 +2,14 @@
 
 namespace App\Modules\Users\Infrastructure\Database\Models;
 
+use App\Modules\AuditLog\Infrastructure\Traits\Auditable;
+use App\Modules\Core\Infrastructure\Traits\HasUuid;
 use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
 use App\Modules\Users\Domain\Enums\VehicleTypeEnum;
-use App\Modules\Core\Infrastructure\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use App\Modules\AuditLog\Infrastructure\Traits\Auditable;
-
 
 class DeliveryAgent extends Model
 {
@@ -76,8 +75,20 @@ class DeliveryAgent extends Model
     {
         return $this->supervisor_agent_id === null;
     }
-    public function getDeliveryAgentActualBalance(): float
+
+    public function balanceDirection(): string
     {
-        return $this->balance - $this->commission_value;
+        $balance = round((float) $this->balance, 2);
+
+        if ($balance === 0.0) {
+            return 'settled';
+        }
+
+        return $balance > 0 ? 'agent_owes_system' : 'system_owes_agent';
+    }
+
+    public function balanceAmount(): float
+    {
+        return abs(round((float) $this->balance, 2));
     }
 }

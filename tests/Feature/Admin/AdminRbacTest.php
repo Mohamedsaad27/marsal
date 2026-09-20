@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Modules\Departments\Infrastructure\Database\Seeders\DepartmentSeeder;
 use App\Modules\Roles\Infrastructure\Database\Seeders\RolesAndPermissionsSeeder;
 use App\Modules\Users\Infrastructure\Database\Seeders\SuperAdminSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -19,6 +20,7 @@ class AdminRbacTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(DepartmentSeeder::class);
         $this->seed(SuperAdminSeeder::class);
 
         $login = $this->postJson('/api/v1/auth/login', [

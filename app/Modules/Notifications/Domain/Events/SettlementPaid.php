@@ -7,6 +7,7 @@ readonly class SettlementPaid
     public function __construct(
         public string $settlementId,
         public string $entityLabel,
-        public string $netAmount,
+        public string $paymentDirection,
+        public string $payableAmount,
     ) {}
 }

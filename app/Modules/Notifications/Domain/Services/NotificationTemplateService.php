@@ -27,7 +27,7 @@ class NotificationTemplateService
      * Build a ready-to-use Arabic notification message for the given type.
      *
      * @param  NotificationTypeEnum  $type  The notification category
-     * @param  array<string, string> $vars  Runtime values to substitute into the template
+     * @param  array<string, string>  $vars  Runtime values to substitute into the template
      */
     public function build(NotificationTypeEnum $type, array $vars = []): NotificationMessageDTO
     {
@@ -35,7 +35,7 @@ class NotificationTemplateService
 
         return new NotificationMessageDTO(
             titleAr: $this->interpolate($titleTemplate, $vars),
-            bodyAr:  $this->interpolate($bodyTemplate, $vars),
+            bodyAr: $this->interpolate($bodyTemplate, $vars),
         );
     }
 
@@ -50,7 +50,7 @@ class NotificationTemplateService
 
         return new NotificationMessageDTO(
             titleAr: $this->interpolate($titleTemplate, $vars),
-            bodyAr:  $this->interpolate($bodyTemplate, $vars),
+            bodyAr: $this->interpolate($bodyTemplate, $vars),
         );
     }
 
@@ -86,7 +86,7 @@ class NotificationTemplateService
             ],
             NotificationTypeEnum::Settled => [
                 '🧾 تسوية مالية',
-                '{{settlement_action}} — {{entity_label}} بقيمة {{net_amount}} جنيه',
+                '{{settlement_action}} — {{entity_label}} — {{payment_direction}} بقيمة {{payable_amount}} جنيه',
             ],
             NotificationTypeEnum::Returned => [
                 '📦 مرتجع',
@@ -137,7 +137,7 @@ class NotificationTemplateService
      *   {{agent_name}}, {{order_code}}, {{collected_amount}}
      *
      * Settled (10):
-     *   {{settlement_action}}, {{entity_label}}, {{net_amount}}
+     *   {{settlement_action}}, {{entity_label}}, {{payment_direction}}, {{payable_amount}}
      *
      * @return array{0: string, 1: string}
      */
@@ -200,7 +200,7 @@ class NotificationTemplateService
 
             NotificationTypeEnum::Settled => [
                 '🧾 تسوية مالية',
-                '{{settlement_action}} — {{entity_label}} بقيمة {{net_amount}} جنيه',
+                '{{settlement_action}} — {{entity_label}} — {{payment_direction}} بقيمة {{payable_amount}} جنيه',
             ],
         };
     }
@@ -213,12 +213,12 @@ class NotificationTemplateService
      * Replace all {{key}} placeholders with their corresponding values.
      * Unrecognised placeholders are left unchanged.
      *
-     * @param  array<string, string> $vars
+     * @param  array<string, string>  $vars
      */
     private function interpolate(string $template, array $vars): string
     {
         foreach ($vars as $key => $value) {
-            $template = str_replace('{{' . $key . '}}', (string) $value, $template);
+            $template = str_replace('{{'.$key.'}}', (string) $value, $template);
         }
 
         return $template;

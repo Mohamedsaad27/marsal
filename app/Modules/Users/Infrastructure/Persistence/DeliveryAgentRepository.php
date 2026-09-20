@@ -2,10 +2,10 @@
 
 namespace App\Modules\Users\Infrastructure\Persistence;
 
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Users\Application\DTOs\ListDeliveryAgentSupervisorsDTO;
 use App\Modules\Users\Domain\Interfaces\DeliveryAgentRepositoryInterface;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
-use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 

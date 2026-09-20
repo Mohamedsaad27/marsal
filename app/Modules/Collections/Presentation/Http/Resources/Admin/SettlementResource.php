@@ -15,7 +15,7 @@ class SettlementResource extends JsonResource
     {
         return [
             'id' => $this->settlement_id,
-            'reference' => 'STL-' . strtoupper(substr(str_replace('-', '', $this->settlement_id), 0, 8)),
+            'reference' => 'STL-'.strtoupper(substr(str_replace('-', '', $this->settlement_id), 0, 8)),
             'settlement_type' => [
                 'code' => $this->settlement_type?->value,
                 'label' => $this->settlement_type?->labelAr(),
@@ -31,6 +31,8 @@ class SettlementResource extends JsonResource
             'total_collections' => $this->total_collections,
             'total_commissions' => $this->total_commissions,
             'net_amount' => $this->net_amount,
+            'payment_direction' => $this->paymentDirection(),
+            'payable_amount' => $this->payableAmount(),
             'payment_method' => $this->payment_method,
             'payment_reference' => $this->payment_reference,
             'paid_at' => $this->paid_at?->toISOString(),

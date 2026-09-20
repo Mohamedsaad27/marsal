@@ -18,6 +18,8 @@ class ShippingCompanyResource extends JsonResource
             'logo_url' => $this->logo_url,
             'commission' => $this->formatCommission(),
             'balance' => $this->balance,
+            'balance_direction' => $this->balanceDirection(),
+            'balance_amount' => $this->balanceAmount(),
             'is_active' => (bool) $this->is_active,
             'created_at' => $this->created_at?->toIso8601String(),
             'updated_at' => $this->updated_at?->toIso8601String(),

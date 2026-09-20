@@ -16,16 +16,15 @@ class CreateSettlementUseCase
 
     public function execute(CreateSettlementDTO $dto): Settlement
     {
-        $collections = $this->repository->findEligibleCollections($dto);
-
-        $settlement = $this->repository->createFromCollections($dto, $collections);
+        $settlement = $this->repository->createFromEligibleCollections($dto);
 
         $settlement->load(['deliveryAgent.user', 'shippingCompany']);
 
         event(new SettlementCreated(
             settlementId: $settlement->settlement_id,
             entityLabel: $this->resolveEntityLabel($settlement),
-            netAmount: number_format((float) $settlement->net_amount, 2, '.', ''),
+            paymentDirection: $settlement->paymentDirection(),
+            payableAmount: number_format($settlement->payableAmount(), 2, '.', ''),
             settlementType: $settlement->settlement_type,
             agentUserId: $settlement->deliveryAgent?->user?->user_id,
             companyUserId: $settlement->shippingCompany?->user?->user_id,

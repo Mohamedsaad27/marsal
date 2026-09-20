@@ -18,13 +18,15 @@ class GetCompanyWalletUseCase
         $lastSettlement = $this->settlementRepository->getLastPaidForCompany($companyId);
 
         return [
-            'balance'                   => $balance,
-            'total_collected'           => $aggregates['total_collected'],
-            'total_commissions'         => $aggregates['total_commissions'],
-            'total_net_due'             => $aggregates['total_net_due'],
+            'balance' => $balance,
+            'total_collected' => $aggregates['total_collected'],
+            'total_commissions' => $aggregates['total_commissions'],
+            'total_net_due' => $aggregates['total_net_due'],
+            'amount_payable_to_company' => $aggregates['amount_payable_to_company'],
+            'amount_receivable_from_company' => $aggregates['amount_receivable_from_company'],
             'pending_settlement_amount' => $aggregates['pending_settlement_amount'],
-            'pending_collection_count'  => $aggregates['pending_collection_count'],
-            'last_settlement'           => $lastSettlement,
+            'pending_collection_count' => $aggregates['pending_collection_count'],
+            'last_settlement' => $lastSettlement,
         ];
     }
 }

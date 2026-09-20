@@ -3,6 +3,8 @@
 namespace App\Modules\Collections\Presentation\Http\Resources;
 
 use App\Modules\Collections\Domain\Enums\CollectionTypeEnum;
+use App\Modules\Collections\Domain\Enums\SettlementStatusEnum;
+use App\Modules\Collections\Domain\Enums\SettlementTypeEnum;
 use App\Modules\Collections\Infrastructure\Database\Models\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -32,9 +34,24 @@ class AgentCollectionListResource extends JsonResource
                 'label' => $collectionType?->labelAr(),
             ],
             'collected_amount' => (float) $this->collected_amount,
-            'is_settled' => $this->settlement_id !== null,
-            'settlement_id' => $this->settlement_id,
+            'agent_commission_amount' => (float) $this->agent_commission_amount,
+            'agent_net_due' => (float) $this->agent_net_due,
+            'agent_settlement_status' => $this->agentSettlementStatus(),
             'collected_at' => $this->collected_at?->toISOString(),
+        ];
+    }
+
+    private function agentSettlementStatus(): ?array
+    {
+        $status = $this->settlementStatusFor(SettlementTypeEnum::Agent);
+
+        if (! $status instanceof SettlementStatusEnum) {
+            return null;
+        }
+
+        return [
+            'code' => $status->value,
+            'label' => $status->labelAr(),
         ];
     }
 }

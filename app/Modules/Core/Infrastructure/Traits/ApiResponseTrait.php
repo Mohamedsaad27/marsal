@@ -7,7 +7,7 @@ use Illuminate\Http\JsonResponse;
 
 trait ApiResponseTrait
 {
-    protected function success(mixed $data = null, string $message = null, int $statusCode = 200): JsonResponse
+    protected function success(mixed $data = null, ?string $message = null, int $statusCode = 200): JsonResponse
     {
         return ApiResponse::success($data, $message, $statusCode);
     }
@@ -27,4 +27,3 @@ trait ApiResponseTrait
         return ApiResponse::paginatedWithData($paginatedData, $additionalData, $resourceCollection, $message, $statusCode);
     }
 }
-

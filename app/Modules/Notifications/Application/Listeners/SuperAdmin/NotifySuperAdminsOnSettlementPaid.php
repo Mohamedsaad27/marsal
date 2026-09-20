@@ -27,9 +27,25 @@ class NotifySuperAdminsOnSettlementPaid implements ShouldQueue
             templateVars: [
                 'settlement_action' => 'تم دفع تسوية',
                 'entity_label' => $event->entityLabel,
-                'net_amount' => $event->netAmount,
+                'payment_direction' => $this->directionLabel($event->paymentDirection),
+                'payable_amount' => $event->payableAmount,
             ],
-            data: ['settlement_id' => $event->settlementId],
+            data: [
+                'settlement_id' => $event->settlementId,
+                'payment_direction' => $event->paymentDirection,
+                'payable_amount' => $event->payableAmount,
+            ],
         );
+    }
+
+    private function directionLabel(string $direction): string
+    {
+        return match ($direction) {
+            'agent_to_system' => 'من المندوب إلى النظام',
+            'system_to_agent' => 'من النظام إلى المندوب',
+            'system_to_company' => 'من النظام إلى الشركة',
+            'company_to_system' => 'من الشركة إلى النظام',
+            default => 'لا توجد دفعة',
+        };
     }
 }

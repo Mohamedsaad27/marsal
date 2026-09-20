@@ -64,7 +64,7 @@ class CompanyOrderRepository implements CompanyOrderRepositoryInterface
         }
 
         if ($filter->search !== null && trim($filter->search) !== '') {
-            $term = '%' . trim($filter->search) . '%';
+            $term = '%'.trim($filter->search).'%';
             $query->where(function ($q) use ($term) {
                 $q->where('reference_code', 'like', $term)
                     ->orWhere('reference_no', 'like', $term)
@@ -101,14 +101,14 @@ class CompanyOrderRepository implements CompanyOrderRepositoryInterface
         $collectedToday = (float) CollectionModel::query()
             ->where('shipping_company_id', $companyId)
             ->whereDate('collected_at', Carbon::today())
-            ->sum('net_due');
+            ->sum('company_net_due');
 
         $deliveryRatePercent = $this->calcDeliveryRate($companyId);
 
         return [
-            'total_orders'          => $total,
-            'in_delivery_count'     => $inDeliveryCount,
-            'collected_today'       => round($collectedToday, 2),
+            'total_orders' => $total,
+            'in_delivery_count' => $inDeliveryCount,
+            'collected_today' => round($collectedToday, 2),
             'delivery_rate_percent' => $deliveryRatePercent,
         ];
     }
@@ -132,7 +132,7 @@ class CompanyOrderRepository implements CompanyOrderRepositoryInterface
             ->count();
 
         return [
-            'total_orders'          => $total,
+            'total_orders' => $total,
             'delivery_rate_percent' => $this->calcDeliveryRate($companyId),
         ];
     }
@@ -142,22 +142,29 @@ class CompanyOrderRepository implements CompanyOrderRepositoryInterface
         $base = CollectionModel::query()->where('shipping_company_id', $companyId);
 
         $totalCollected = (float) (clone $base)->sum('collected_amount');
-        $totalCommissions = (float) (clone $base)->sum('commission_amount');
-        $totalNetDue = (float) (clone $base)->sum('net_due');
+        $totalCommissions = (float) (clone $base)->sum('system_commission_amount');
+        $totalNetDue = (float) (clone $base)->sum('company_net_due');
+        $amountPayableToCompany = (float) (clone $base)
+            ->where('company_net_due', '>', 0)
+            ->sum('company_net_due');
+        $amountReceivableFromCompany = abs((float) (clone $base)
+            ->where('company_net_due', '<', 0)
+            ->sum('company_net_due'));
 
         $pendingQuery = (clone $base)
-            ->whereNotNull('cash_received_at')
-            ->whereNull('settlement_id');
+            ->whereDoesntHave('companySettlementItem');
 
-        $pendingSettlementAmount = (float) (clone $pendingQuery)->sum('net_due');
+        $pendingSettlementAmount = (float) (clone $pendingQuery)->sum('company_net_due');
         $pendingCollectionCount = (int) (clone $pendingQuery)->count();
 
         return [
-            'total_collected'           => round($totalCollected, 2),
-            'total_commissions'         => round($totalCommissions, 2),
-            'total_net_due'             => round($totalNetDue, 2),
+            'total_collected' => round($totalCollected, 2),
+            'total_commissions' => round($totalCommissions, 2),
+            'total_net_due' => round($totalNetDue, 2),
+            'amount_payable_to_company' => round($amountPayableToCompany, 2),
+            'amount_receivable_from_company' => round($amountReceivableFromCompany, 2),
             'pending_settlement_amount' => round($pendingSettlementAmount, 2),
-            'pending_collection_count'  => $pendingCollectionCount,
+            'pending_collection_count' => $pendingCollectionCount,
         ];
     }
 
@@ -187,18 +194,18 @@ class CompanyOrderRepository implements CompanyOrderRepositoryInterface
     private function applyStatusFilter($query, string $status): void
     {
         match ($status) {
-            'pending'     => $query->where('status', OrderStatusEnum::Pending->value),
+            'pending' => $query->where('status', OrderStatusEnum::Pending->value),
             'in_delivery' => $query->whereIn('status', array_map(
                 fn ($s) => $s->value, self::IN_DELIVERY_STATUSES
             )),
-            'delivered'   => $query->whereIn('status', array_map(
+            'delivered' => $query->whereIn('status', array_map(
                 fn ($s) => $s->value, self::DELIVERED_STATUSES
             )),
-            'returned'    => $query->whereIn('status', [
+            'returned' => $query->whereIn('status', [
                 OrderStatusEnum::RefusedNoPayment->value,
                 OrderStatusEnum::CustomerCancelled->value,
             ]),
-            default       => null,
+            default => null,
         };
     }
 }

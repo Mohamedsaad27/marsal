@@ -76,8 +76,31 @@ class Settlement extends Model
         return $this->belongsTo(User::class, 'initiated_by', 'user_id');
     }
 
-    public function collections(): HasMany
+    public function items(): HasMany
     {
-        return $this->hasMany(Collection::class, 'settlement_id', 'settlement_id');
+        return $this->hasMany(SettlementItem::class, 'settlement_id', 'settlement_id');
+    }
+
+    public function paymentDirection(): string
+    {
+        $netAmount = round((float) $this->net_amount, 2);
+
+        if ($netAmount === 0.0) {
+            return 'no_payment';
+        }
+
+        return match ($this->settlement_type) {
+            SettlementTypeEnum::Agent => $netAmount > 0
+                ? 'agent_to_system'
+                : 'system_to_agent',
+            SettlementTypeEnum::Company => $netAmount > 0
+                ? 'system_to_company'
+                : 'company_to_system',
+        };
+    }
+
+    public function payableAmount(): float
+    {
+        return abs(round((float) $this->net_amount, 2));
     }
 }

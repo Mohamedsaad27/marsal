@@ -15,14 +15,15 @@ return new class extends Migration
 
             // Exactly one of these two will be non-null depending on settlement_type.
             $table->foreignUuid('delivery_agent_id')->nullable()
-                  ->references('delivery_agent_id')->on('delivery_agents')->onDelete('set null');
+                ->references('delivery_agent_id')->on('delivery_agents')->onDelete('set null');
             $table->foreignUuid('shipping_company_id')->nullable()
-                  ->references('shipping_company_id')->on('shipping_companies')->onDelete('set null');
+                ->references('shipping_company_id')->on('shipping_companies')->onDelete('set null');
 
             $table->foreignUuid('initiated_by')->nullable()->references('user_id')->on('users')->onDelete('set null');
             $table->decimal('total_collections', 15, 2)->default(0);
             $table->decimal('total_commissions', 15, 2)->default(0);
-            $table->decimal('net_amount', 15, 2)->default(0)->comment('total_collections − total_commissions');
+            $table->decimal('net_amount', 15, 2)->default(0)
+                ->comment('Signed net: direction depends on settlement_type');
             $table->date('period_from');
             $table->date('period_to');
             $table->string('payment_method', 100)->nullable()->comment('e.g. bank_transfer, cash, instapay');

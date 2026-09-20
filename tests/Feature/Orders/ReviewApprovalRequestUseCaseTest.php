@@ -24,7 +24,7 @@ class ReviewApprovalRequestUseCaseTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_approving_price_change_updates_order_financials_and_agent_collection(): void
+    public function test_approving_price_change_uses_shared_collection_financial_effect(): void
     {
         $this->mock(SendNotificationUseCase::class, function (MockInterface $mock): void {
             $mock->shouldReceive('execute')->once()->andReturn([]);
@@ -47,13 +47,15 @@ class ReviewApprovalRequestUseCaseTest extends TestCase
             'delivery_agent_id' => (string) Str::uuid(),
             'user_id' => $agentUser->user_id,
             'commission_value' => 25,
-            'balance' => 100,
+            'balance' => 0,
         ]);
 
         $company = ShippingCompany::query()->forceCreate([
             'shipping_company_id' => (string) Str::uuid(),
             'user_id' => $companyUser->user_id,
             'company_name' => 'Acme Logistics',
+            'commission_value' => 30,
+            'balance' => 0,
         ]);
 
         $order = Order::query()->forceCreate([
@@ -92,8 +94,10 @@ class ReviewApprovalRequestUseCaseTest extends TestCase
         );
 
         $agent->refresh();
+        $company->refresh();
 
-        $this->assertSame('750.00', $agent->balance);
+        $this->assertSame('625.00', $agent->balance);
+        $this->assertSame('620.00', $company->balance);
         $this->assertDatabaseHas('orders', [
             'order_id' => $order->order_id,
             'status' => OrderStatusEnum::DeliveredPriceChanged->value,
@@ -102,16 +106,19 @@ class ReviewApprovalRequestUseCaseTest extends TestCase
             'order_id' => $order->order_id,
             'approved_amount' => 650,
             'collected_amount' => 650,
-            'commission_amount' => 25,
-            'net_due_company' => 625,
+            'agent_commission_amount' => 25,
+            'system_commission_amount' => 30,
+            'net_due_company' => 620,
         ]);
         $this->assertDatabaseHas('collections', [
             'order_id' => $order->order_id,
             'delivery_agent_id' => $agent->delivery_agent_id,
             'collection_type' => CollectionTypeEnum::Cod->value,
             'collected_amount' => 650,
-            'commission_amount' => 25,
-            'net_due' => 625,
+            'agent_commission_amount' => 25,
+            'agent_net_due' => 625,
+            'system_commission_amount' => 30,
+            'company_net_due' => 620,
         ]);
     }
 }

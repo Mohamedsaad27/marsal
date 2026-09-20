@@ -3,6 +3,7 @@
 namespace App\Modules\Users\Infrastructure\Persistence;
 
 use App\Modules\Collections\Domain\Enums\SettlementStatusEnum;
+use App\Modules\Collections\Domain\Enums\SettlementTypeEnum;
 use App\Modules\Users\Application\DTOs\GetUsersDTO;
 use App\Modules\Users\Application\DTOs\ImportUserRowDTO;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
@@ -13,6 +14,7 @@ use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class UserRepository implements UserRepositoryInterface
 {
@@ -140,6 +142,15 @@ class UserRepository implements UserRepositoryInterface
             $query->whereHas('staffMember', fn ($q) => $q->where('department_id', $dto->departmentId));
         }
 
+        if ($dto->department !== null) {
+            $department = $this->normalizeDepartment($dto->department);
+
+            $query->whereHas(
+                'staffMember.department',
+                fn ($q) => $q->whereRaw('LOWER(name_en) = ?', [$department]),
+            );
+        }
+
         if ($dto->cityId !== null) {
             $query->whereHas('addresses', fn ($q) => $q->where('city_id', $dto->cityId));
         }
@@ -161,6 +172,20 @@ class UserRepository implements UserRepositoryInterface
             'shipping_company' => ['roles', 'shippingCompany', 'addresses.city'],
             'delivery_agent' => ['roles', 'deliveryAgent.supervisor.user', 'addresses'],
             default => ['roles', 'deliveryAgent', 'shippingCompany', 'staffMember.department', 'addresses'],
+        };
+    }
+
+    private function normalizeDepartment(string $department): string
+    {
+        $normalized = Str::of($department)
+            ->replace(['-', '_'], ' ')
+            ->squish()
+            ->lower()
+            ->toString();
+
+        return match ($normalized) {
+            'ops' => 'operations',
+            default => $normalized,
         };
     }
 
@@ -259,26 +284,33 @@ class UserRepository implements UserRepositoryInterface
 
     public function deliveryAgentHasUnsettledCollections(string $deliveryAgentId): bool
     {
-        return DB::table('collections')
-            ->where('delivery_agent_id', $deliveryAgentId)
-            ->whereNull('settlement_id')
-            ->whereNull('deleted_at')
+        return DB::table('collections as c')
+            ->where('c.delivery_agent_id', $deliveryAgentId)
+            ->whereNull('c.deleted_at')
+            ->whereNotExists(function ($query): void {
+                $query
+                    ->selectRaw('1')
+                    ->from('settlement_items as si')
+                    ->whereColumn('si.collection_id', 'c.collection_id')
+                    ->where('si.settlement_type', SettlementTypeEnum::Agent->value);
+            })
             ->exists();
     }
 
     public function deliveryAgentHasUnconfirmedCollections(string $deliveryAgentId): bool
     {
         return DB::table('collections as c')
-            ->leftJoin('settlements as s', function ($join) {
-                $join->on('c.settlement_id', '=', 's.settlement_id')
-                    ->whereNull('s.deleted_at');
-            })
             ->where('c.delivery_agent_id', $deliveryAgentId)
             ->whereNull('c.deleted_at')
-            ->where(function ($query) {
-                $query->whereNull('c.settlement_id')
-                    ->orWhereNull('s.settlement_id')
-                    ->orWhere('s.settlement_status', '!=', SettlementStatusEnum::Paid->value);
+            ->whereNotExists(function ($query): void {
+                $query
+                    ->selectRaw('1')
+                    ->from('settlement_items as si')
+                    ->join('settlements as s', 's.settlement_id', '=', 'si.settlement_id')
+                    ->whereColumn('si.collection_id', 'c.collection_id')
+                    ->where('si.settlement_type', SettlementTypeEnum::Agent->value)
+                    ->where('s.settlement_status', SettlementStatusEnum::Paid->value)
+                    ->whereNull('s.deleted_at');
             })
             ->exists();
     }
@@ -287,7 +319,7 @@ class UserRepository implements UserRepositoryInterface
     {
         return DB::table('delivery_agents')
             ->where('delivery_agent_id', $deliveryAgentId)
-            ->where('balance', '>', 0)
+            ->where('balance', '<>', 0)
             ->exists();
     }
 
@@ -311,26 +343,33 @@ class UserRepository implements UserRepositoryInterface
 
     public function shippingCompanyHasUnsettledCollections(string $shippingCompanyId): bool
     {
-        return DB::table('collections')
-            ->where('shipping_company_id', $shippingCompanyId)
-            ->whereNull('settlement_id')
-            ->whereNull('deleted_at')
+        return DB::table('collections as c')
+            ->where('c.shipping_company_id', $shippingCompanyId)
+            ->whereNull('c.deleted_at')
+            ->whereNotExists(function ($query): void {
+                $query
+                    ->selectRaw('1')
+                    ->from('settlement_items as si')
+                    ->whereColumn('si.collection_id', 'c.collection_id')
+                    ->where('si.settlement_type', SettlementTypeEnum::Company->value);
+            })
             ->exists();
     }
 
     public function shippingCompanyHasUnconfirmedCollections(string $shippingCompanyId): bool
     {
         return DB::table('collections as c')
-            ->leftJoin('settlements as s', function ($join) {
-                $join->on('c.settlement_id', '=', 's.settlement_id')
-                    ->whereNull('s.deleted_at');
-            })
             ->where('c.shipping_company_id', $shippingCompanyId)
             ->whereNull('c.deleted_at')
-            ->where(function ($query) {
-                $query->whereNull('c.settlement_id')
-                    ->orWhereNull('s.settlement_id')
-                    ->orWhere('s.settlement_status', '!=', SettlementStatusEnum::Paid->value);
+            ->whereNotExists(function ($query): void {
+                $query
+                    ->selectRaw('1')
+                    ->from('settlement_items as si')
+                    ->join('settlements as s', 's.settlement_id', '=', 'si.settlement_id')
+                    ->whereColumn('si.collection_id', 'c.collection_id')
+                    ->where('si.settlement_type', SettlementTypeEnum::Company->value)
+                    ->where('s.settlement_status', SettlementStatusEnum::Paid->value)
+                    ->whereNull('s.deleted_at');
             })
             ->exists();
     }
@@ -339,7 +378,7 @@ class UserRepository implements UserRepositoryInterface
     {
         return DB::table('shipping_companies')
             ->where('shipping_company_id', $shippingCompanyId)
-            ->where('balance', '>', 0)
+            ->where('balance', '<>', 0)
             ->exists();
     }
 }

@@ -2,6 +2,8 @@
 
 namespace App\Modules\Collections\Presentation\Http\Resources\Admin;
 
+use App\Modules\Collections\Domain\Enums\SettlementStatusEnum;
+use App\Modules\Collections\Domain\Enums\SettlementTypeEnum;
 use App\Modules\Collections\Infrastructure\Database\Models\Collection;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
@@ -39,8 +41,12 @@ class AdminCollectionResource extends JsonResource
                 'label' => $this->collection_type?->labelAr(),
             ],
             'collected_amount' => $this->collected_amount,
-            'commission_amount' => $this->commission_amount,
-            'net_due' => $this->net_due,
+            'agent_commission_amount' => $this->agent_commission_amount,
+            'agent_net_due' => $this->agent_net_due,
+            'system_commission_amount' => $this->system_commission_amount,
+            'company_net_due' => $this->company_net_due,
+            'agent_settlement_status' => $this->settlementStatus(SettlementTypeEnum::Agent),
+            'company_settlement_status' => $this->settlementStatus(SettlementTypeEnum::Company),
             'cash_received_at' => $this->cash_received_at?->toISOString(),
             'cash_received_by' => $this->when(
                 $this->relationLoaded('cashReceivedBy') && $this->cashReceivedBy !== null,
@@ -49,8 +55,21 @@ class AdminCollectionResource extends JsonResource
                     'name' => $this->cashReceivedBy->name,
                 ],
             ),
-            'settlement_id' => $this->settlement_id,
             'collected_at' => $this->collected_at?->toISOString(),
+        ];
+    }
+
+    private function settlementStatus(SettlementTypeEnum $type): ?array
+    {
+        $status = $this->settlementStatusFor($type);
+
+        if (! $status instanceof SettlementStatusEnum) {
+            return null;
+        }
+
+        return [
+            'code' => $status->value,
+            'label' => $status->labelAr(),
         ];
     }
 }

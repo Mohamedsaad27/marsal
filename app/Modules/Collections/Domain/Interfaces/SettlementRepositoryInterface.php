@@ -4,10 +4,8 @@ namespace App\Modules\Collections\Domain\Interfaces;
 
 use App\Modules\Collections\Application\DTOs\CreateSettlementDTO;
 use App\Modules\Collections\Application\DTOs\SettlementFilterDTO;
-use App\Modules\Collections\Infrastructure\Database\Models\Collection;
 use App\Modules\Collections\Infrastructure\Database\Models\Settlement;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection as SupportCollection;
 
 interface SettlementRepositoryInterface
 {
@@ -17,9 +15,7 @@ interface SettlementRepositoryInterface
 
     public function findOrFail(string $settlementId): Settlement;
 
-    public function findEligibleCollections(CreateSettlementDTO $dto): SupportCollection;
-
-    public function createFromCollections(CreateSettlementDTO $dto, SupportCollection $collections): Settlement;
+    public function createFromEligibleCollections(CreateSettlementDTO $dto): Settlement;
 
     public function approve(string $settlementId): Settlement;
 
@@ -30,15 +26,13 @@ interface SettlementRepositoryInterface
         ?string $notes,
     ): Settlement;
 
-    public function countEligibleCollections(Settlement $settlement): int;
-
     public function findForCompany(string $settlementId, string $companyId): ?Settlement;
 
     /**
-     * Returns settlement reference, net_amount, and paid_at for the last paid company settlement,
+     * Returns settlement reference, signed net amount, direction, payable amount, and paid_at,
      * or null if none exists.
      *
-     * @return array{reference: string, net_amount: float, paid_at: string}|null
+     * @return array{reference: string, net_amount: float, payment_direction: string, payable_amount: float, paid_at: string}|null
      */
     public function getLastPaidForCompany(string $companyId): ?array;
 }

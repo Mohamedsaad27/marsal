@@ -2,10 +2,13 @@
 
 namespace Database\Seeders;
 
-use App\Modules\Dashboard\Domain\Enums\OrderStatusEnum;
+use App\Modules\Collections\Domain\Enums\CollectionTypeEnum;
 use App\Modules\Locations\Infrastructure\Database\Models\City;
 use App\Modules\Locations\Infrastructure\Database\Models\Governorate;
 use App\Modules\Orders\Application\Services\ReferenceCodeGeneratorService;
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
+use App\Modules\Orders\Domain\Services\RecordCollectionService;
+use App\Modules\Orders\Infrastructure\Database\Models\Order;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use Carbon\Carbon;
@@ -19,6 +22,8 @@ class OrderSeeder extends Seeder
     private int $counter = 1;
 
     private ReferenceCodeGeneratorService $codeGenerator;
+
+    private RecordCollectionService $recordCollection;
 
     /** @var array<string> */
     private array $governorateIds = [];
@@ -59,22 +64,26 @@ class OrderSeeder extends Seeder
     public function run(): void
     {
         $this->codeGenerator = app(ReferenceCodeGeneratorService::class);
+        $this->recordCollection = app(RecordCollectionService::class);
 
         if (DB::table('orders')->count() > 0) {
             $this->command->info('Orders already seeded. Skipping.');
+
             return;
         }
 
         $this->companies = ShippingCompany::all();
-        $this->agents    = DeliveryAgent::all();
+        $this->agents = DeliveryAgent::all();
 
         if ($this->companies->isEmpty()) {
             $this->command->error('No shipping companies found. Run ShippingCompanySeeder first.');
+
             return;
         }
 
         if ($this->agents->isEmpty()) {
             $this->command->error('No delivery agents found. Run DeliveryAgentSeeder first.');
+
             return;
         }
 
@@ -82,18 +91,19 @@ class OrderSeeder extends Seeder
 
         if (empty($this->governorateIds)) {
             $this->command->error('No governorates found. Run EgyptLocationsSeeder first.');
+
             return;
         }
 
         $now = Carbon::now();
 
         // Week start (Saturday-based — matches GetShipmentsChartQuery)
-        $thisWeekStart  = $now->copy()->startOfWeek(Carbon::SATURDAY)->startOfDay();
-        $lastWeekStart  = $thisWeekStart->copy()->subWeek();
+        $thisWeekStart = $now->copy()->startOfWeek(Carbon::SATURDAY)->startOfDay();
+        $lastWeekStart = $thisWeekStart->copy()->subWeek();
 
         $thisMonthStart = $now->copy()->startOfMonth();
         $lastMonthStart = $now->copy()->subMonth()->startOfMonth();
-        $lastMonthEnd   = $now->copy()->subMonth()->endOfMonth();
+        $lastMonthEnd = $now->copy()->subMonth()->endOfMonth();
 
         $this->command->info('Seeding orders…');
 
@@ -106,10 +116,10 @@ class OrderSeeder extends Seeder
                 $created = Carbon::today()->setHour(rand(7, 10))->setMinute(rand(0, 59));
                 $updated = $created->copy()->addHours(rand(2, 5));
                 $this->insertOrder(
-                    status:      OrderStatusEnum::Delivered->value,
-                    agent:       $agent,
-                    createdAt:   $created,
-                    updatedAt:   $updated,
+                    status: OrderStatusEnum::Delivered->value,
+                    agent: $agent,
+                    createdAt: $created,
+                    updatedAt: $updated,
                     deliveredAt: $updated,
                 );
             }
@@ -119,8 +129,8 @@ class OrderSeeder extends Seeder
         for ($i = 0; $i < 5; $i++) {
             $created = Carbon::today()->setHour(rand(9, 15))->setMinute(rand(0, 59));
             $this->insertOrder(
-                status:    OrderStatusEnum::Pending->value,
-                agent:     null,
+                status: OrderStatusEnum::Pending->value,
+                agent: null,
                 createdAt: $created,
                 updatedAt: $created,
             );
@@ -137,10 +147,10 @@ class OrderSeeder extends Seeder
                 $created = $date->copy()->setHour(rand(7, 11))->setMinute(rand(0, 59));
                 $updated = $created->copy()->addHours(rand(3, 9)); // TIMESTAMPDIFF basis
                 $this->insertOrder(
-                    status:      OrderStatusEnum::Delivered->value,
-                    agent:       $this->agents->random(),
-                    createdAt:   $created,
-                    updatedAt:   $updated,
+                    status: OrderStatusEnum::Delivered->value,
+                    agent: $this->agents->random(),
+                    createdAt: $created,
+                    updatedAt: $updated,
                     deliveredAt: $updated,
                 );
             }
@@ -149,8 +159,8 @@ class OrderSeeder extends Seeder
             for ($i = 0; $i < 4; $i++) {
                 $created = $date->copy()->setHour(rand(9, 15))->setMinute(rand(0, 59));
                 $this->insertOrder(
-                    status:    OrderStatusEnum::Pending->value,
-                    agent:     null,
+                    status: OrderStatusEnum::Pending->value,
+                    agent: null,
                     createdAt: $created,
                     updatedAt: $created,
                 );
@@ -161,8 +171,8 @@ class OrderSeeder extends Seeder
                 $created = $date->copy()->setHour(rand(8, 13))->setMinute(rand(0, 59));
                 $updated = $created->copy()->addHours(1);
                 $this->insertOrder(
-                    status:    OrderStatusEnum::Postponed->value,
-                    agent:     $this->agents->random(),
+                    status: OrderStatusEnum::Postponed->value,
+                    agent: $this->agents->random(),
                     createdAt: $created,
                     updatedAt: $updated,
                 );
@@ -178,10 +188,10 @@ class OrderSeeder extends Seeder
                 $created = $date->copy()->setHour(rand(8, 12))->setMinute(rand(0, 59));
                 $updated = $created->copy()->addHours(rand(5, 12)); // slightly slower last week
                 $this->insertOrder(
-                    status:      OrderStatusEnum::Delivered->value,
-                    agent:       $this->agents->random(),
-                    createdAt:   $created,
-                    updatedAt:   $updated,
+                    status: OrderStatusEnum::Delivered->value,
+                    agent: $this->agents->random(),
+                    createdAt: $created,
+                    updatedAt: $updated,
                     deliveredAt: $updated,
                 );
             }
@@ -190,8 +200,8 @@ class OrderSeeder extends Seeder
             for ($i = 0; $i < 3; $i++) {
                 $created = $date->copy()->setHour(rand(10, 16))->setMinute(rand(0, 59));
                 $this->insertOrder(
-                    status:    OrderStatusEnum::Pending->value,
-                    agent:     null,
+                    status: OrderStatusEnum::Pending->value,
+                    agent: null,
                     createdAt: $created,
                     updatedAt: $created,
                 );
@@ -200,22 +210,22 @@ class OrderSeeder extends Seeder
 
         // ── E. Failed + Rejected (for GetDeliveryPerformanceQuery) ───────────
         for ($i = 0; $i < 12; $i++) {
-            $date    = $now->copy()->subDays(rand(1, 25));
+            $date = $now->copy()->subDays(rand(1, 25));
             $updated = $date->copy()->addHours(rand(1, 4));
             $this->insertOrder(
-                status:    OrderStatusEnum::Failed->value,
-                agent:     $this->agents->random(),
+                status: OrderStatusEnum::RefusedNoPayment->value,
+                agent: $this->agents->random(),
                 createdAt: $date,
                 updatedAt: $updated,
             );
         }
 
         for ($i = 0; $i < 6; $i++) {
-            $date    = $now->copy()->subDays(rand(1, 25));
+            $date = $now->copy()->subDays(rand(1, 25));
             $updated = $date->copy()->addHours(rand(1, 3));
             $this->insertOrder(
-                status:    OrderStatusEnum::Rejected->value,
-                agent:     $this->agents->random(),
+                status: OrderStatusEnum::CustomerCancelled->value,
+                agent: $this->agents->random(),
                 createdAt: $date,
                 updatedAt: $updated,
             );
@@ -225,8 +235,8 @@ class OrderSeeder extends Seeder
         for ($i = 0; $i < 8; $i++) {
             $created = $now->copy()->subHours(rand(1, 6));
             $this->insertOrder(
-                status:    OrderStatusEnum::InDelivery->value,
-                agent:     $this->agents->random(),
+                status: OrderStatusEnum::OutForDelivery->value,
+                agent: $this->agents->random(),
                 createdAt: $created,
                 updatedAt: $created,
             );
@@ -235,7 +245,7 @@ class OrderSeeder extends Seeder
         // ── G. Last month orders (for GetDashboardSummaryQuery month comparison)
         $lastMonthDays = $lastMonthEnd->day;
         for ($i = 0; $i < 40; $i++) {
-            $day  = rand(1, $lastMonthDays);
+            $day = rand(1, $lastMonthDays);
             $date = Carbon::create(
                 $lastMonthStart->year,
                 $lastMonthStart->month,
@@ -245,14 +255,14 @@ class OrderSeeder extends Seeder
             );
 
             $isDelivered = ($i % 3 === 0);
-            $status      = $isDelivered ? OrderStatusEnum::Delivered->value : OrderStatusEnum::Pending->value;
-            $updated     = $isDelivered ? $date->copy()->addHours(rand(3, 8)) : $date;
+            $status = $isDelivered ? OrderStatusEnum::Delivered->value : OrderStatusEnum::Pending->value;
+            $updated = $isDelivered ? $date->copy()->addHours(rand(3, 8)) : $date;
 
             $this->insertOrder(
-                status:      $status,
-                agent:       $isDelivered ? $this->agents->random() : null,
-                createdAt:   $date,
-                updatedAt:   $updated,
+                status: $status,
+                agent: $isDelivered ? $this->agents->random() : null,
+                createdAt: $date,
+                updatedAt: $updated,
                 deliveredAt: $isDelivered ? $updated : null,
             );
         }
@@ -272,122 +282,156 @@ class OrderSeeder extends Seeder
         Carbon $updatedAt,
         ?Carbon $deliveredAt = null,
     ): void {
-        $orderId       = Str::uuid()->toString();
-        $company       = $this->companies->random();
-        $pad           = str_pad((string) $this->counter, 6, '0', STR_PAD_LEFT);
-        $referenceNo   = 'REF-' . $pad;
+        $orderId = Str::uuid()->toString();
+        $company = $this->companies->random();
+        $pad = str_pad((string) $this->counter, 6, '0', STR_PAD_LEFT);
+        $referenceNo = 'REF-'.$pad;
         $referenceCode = $this->codeGenerator->generate(
-            companyName:    $company->company_name,
+            companyName: $company->company_name,
             excelOrderCode: $referenceNo,
-            date:           $createdAt,
+            date: $createdAt,
         );
 
         // ── orders ───────────────────────────────────────────────────────────
         DB::table('orders')->insert([
-            'order_id'            => $orderId,
-            'reference_no'        => $referenceNo,
-            'reference_code'      => $referenceCode,
+            'order_id' => $orderId,
+            'reference_no' => $referenceNo,
+            'reference_code' => $referenceCode,
             'shipping_company_id' => $company->shipping_company_id,
-            'delivery_agent_id'   => $agent?->delivery_agent_id,
-            'status'              => $status,
-            'assigned_at'         => $agent
+            'delivery_agent_id' => $agent?->delivery_agent_id,
+            'status' => $status,
+            'assigned_at' => $agent
                 ? $createdAt->copy()->addMinutes(rand(10, 60))->toDateTimeString()
                 : null,
-            'delivered_at'        => $deliveredAt?->toDateTimeString(),
-            'created_at'          => $createdAt->toDateTimeString(),
-            'updated_at'          => $updatedAt->toDateTimeString(),
+            'delivered_at' => $deliveredAt?->toDateTimeString(),
+            'created_at' => $createdAt->toDateTimeString(),
+            'updated_at' => $updatedAt->toDateTimeString(),
         ]);
 
         // ── order_customer_info ───────────────────────────────────────────────
         DB::table('order_customer_info')->insert([
             'order_customer_info_id' => Str::uuid()->toString(),
-            'order_id'               => $orderId,
-            'customer_name'          => $this->sample($this->customerNames),
-            'customer_phone'         => '010' . rand(10000000, 99999999),
-            'phone_alt'              => rand(0, 1) ? '011' . rand(10000000, 99999999) : null,
-            'created_at'             => $createdAt->toDateTimeString(),
-            'updated_at'             => $createdAt->toDateTimeString(),
+            'order_id' => $orderId,
+            'customer_name' => $this->sample($this->customerNames),
+            'customer_phone' => '010'.rand(10000000, 99999999),
+            'phone_alt' => rand(0, 1) ? '011'.rand(10000000, 99999999) : null,
+            'created_at' => $createdAt->toDateTimeString(),
+            'updated_at' => $createdAt->toDateTimeString(),
         ]);
 
         // ── order_addresses ───────────────────────────────────────────────────
         [$govId, $cityId] = $this->randomLocation();
         DB::table('order_addresses')->insert([
             'order_address_id' => Str::uuid()->toString(),
-            'order_id'         => $orderId,
-            'governorate_id'   => $govId,
-            'city_id'          => $cityId,
-            'address_line'     => $this->sample($this->streetNames)
-                . '، عمارة ' . rand(1, 99)
-                . '، شقة ' . rand(1, 20),
-            'created_at'       => $createdAt->toDateTimeString(),
-            'updated_at'       => $createdAt->toDateTimeString(),
+            'order_id' => $orderId,
+            'governorate_id' => $govId,
+            'city_id' => $cityId,
+            'address_line' => $this->sample($this->streetNames)
+                .'، عمارة '.rand(1, 99)
+                .'، شقة '.rand(1, 20),
+            'created_at' => $createdAt->toDateTimeString(),
+            'updated_at' => $createdAt->toDateTimeString(),
         ]);
 
         // ── order_financials ──────────────────────────────────────────────────
-        $originalAmount    = round(rand(150, 3000) + (rand(0, 99) / 100), 2);
-        $commissionRate    = (float) $company->commission_value;
-        $commissionAmount  = $commissionRate;
-        $collectedAmount   = ($status === OrderStatusEnum::Delivered->value)
+        $originalAmount = round(rand(150, 3000) + (rand(0, 99) / 100), 2);
+        $statusEnum = OrderStatusEnum::tryFrom($status);
+        $collectedAmount = $statusEnum?->requiresCollection() === true
             ? $originalAmount
-            : null;
-        $netDueCompany     = $collectedAmount !== null
-            ? round($collectedAmount - $commissionAmount, 2)
             : null;
 
         DB::table('order_financials')->insert([
             'order_financial_id' => Str::uuid()->toString(),
-            'order_id'           => $orderId,
-            'original_amount'    => $originalAmount,
-            'approved_amount'    => null,
-            'collected_amount'   => $collectedAmount,
-            'shipping_fee'       => null,
-            'commission_amount'  => $commissionAmount,
-            'net_due_company'    => $netDueCompany,
-            'is_settled'         => 0,
-            'created_at'         => $createdAt->toDateTimeString(),
-            'updated_at'         => $updatedAt->toDateTimeString(),
+            'order_id' => $orderId,
+            'original_amount' => $originalAmount,
+            'approved_amount' => null,
+            'collected_amount' => null,
+            'shipping_fee' => null,
+            'agent_commission_amount' => null,
+            'system_commission_amount' => null,
+            'net_due_company' => null,
+            'is_settled' => 0,
+            'created_at' => $createdAt->toDateTimeString(),
+            'updated_at' => $updatedAt->toDateTimeString(),
         ]);
 
         // ── order_items ───────────────────────────────────────────────────────
-        $qty          = rand(1, 6);
+        $qty = rand(1, 6);
         $deliveredQty = ($status === OrderStatusEnum::Delivered->value) ? $qty : null;
-        $returnedQty  = null;
+        $returnedQty = null;
 
         DB::table('order_items')->insert([
-            'order_item_id'       => Str::uuid()->toString(),
-            'order_id'            => $orderId,
-            'item_description'    => $this->sample($this->itemDescriptions),
-            'total_quantity'      => $qty,
-            'delivered_quantity'  => $deliveredQty,
-            'returned_quantity'   => $returnedQty,
-            'created_at'          => $createdAt->toDateTimeString(),
-            'updated_at'          => $createdAt->toDateTimeString(),
+            'order_item_id' => Str::uuid()->toString(),
+            'order_id' => $orderId,
+            'item_description' => $this->sample($this->itemDescriptions),
+            'total_quantity' => $qty,
+            'delivered_quantity' => $deliveredQty,
+            'returned_quantity' => $returnedQty,
+            'created_at' => $createdAt->toDateTimeString(),
+            'updated_at' => $createdAt->toDateTimeString(),
+        ]);
+
+        DB::table('order_schedules')->insert([
+            'order_schedule_id' => Str::uuid()->toString(),
+            'order_id' => $orderId,
+            'expected_delivery_date' => $createdAt->copy()->addDay()->toDateString(),
+            'postponed_date' => $status === OrderStatusEnum::Postponed->value
+                ? $updatedAt->copy()->addDay()->toDateString()
+                : null,
+            'schedule_notes' => null,
+            'created_at' => $createdAt->toDateTimeString(),
+            'updated_at' => $updatedAt->toDateTimeString(),
+        ]);
+
+        DB::table('order_approvals')->insert([
+            'order_approval_id' => Str::uuid()->toString(),
+            'order_id' => $orderId,
+            'requires_approval' => 0,
+            'approval_granted' => null,
+            'approved_by' => null,
+            'approved_at' => null,
+            'created_at' => $createdAt->toDateTimeString(),
+            'updated_at' => $updatedAt->toDateTimeString(),
         ]);
 
         // ── order_status_history — creation entry ─────────────────────────────
         DB::table('order_status_history')->insert([
             'order_status_history_id' => Str::uuid()->toString(),
-            'order_id'                => $orderId,
-            'from_status_id'          => null,
-            'to_status_id'            => OrderStatusEnum::Pending->value,
-            'changed_by'              => null,
-            'notes'                   => 'تم إنشاء الطلب',
-            'created_at'              => $createdAt->toDateTimeString(),
-            'updated_at'              => $createdAt->toDateTimeString(),
+            'order_id' => $orderId,
+            'from_status_id' => null,
+            'to_status_id' => OrderStatusEnum::Pending->value,
+            'changed_by' => null,
+            'notes' => 'تم إنشاء الطلب',
+            'created_at' => $createdAt->toDateTimeString(),
+            'updated_at' => $createdAt->toDateTimeString(),
         ]);
 
         // ── order_status_history — transition to current status ───────────────
         if ($status !== OrderStatusEnum::Pending->value) {
             DB::table('order_status_history')->insert([
                 'order_status_history_id' => Str::uuid()->toString(),
-                'order_id'                => $orderId,
-                'from_status_id'          => OrderStatusEnum::Pending->value,
-                'to_status_id'            => $status,
-                'changed_by'              => null,
-                'notes'                   => null,
-                'created_at'              => $updatedAt->toDateTimeString(),
-                'updated_at'              => $updatedAt->toDateTimeString(),
+                'order_id' => $orderId,
+                'from_status_id' => OrderStatusEnum::Pending->value,
+                'to_status_id' => $status,
+                'changed_by' => null,
+                'notes' => null,
+                'created_at' => $updatedAt->toDateTimeString(),
+                'updated_at' => $updatedAt->toDateTimeString(),
             ]);
+        }
+
+        if ($collectedAmount !== null && $agent !== null) {
+            $collectionType = $status === OrderStatusEnum::RefusedPaidShipping->value
+                ? CollectionTypeEnum::ShippingFee
+                : CollectionTypeEnum::Cod;
+
+            $this->recordCollection->record(
+                order: Order::query()->findOrFail($orderId),
+                deliveryAgentId: $agent->delivery_agent_id,
+                collectionType: $collectionType,
+                collectedAmount: $collectedAmount,
+                collectedAt: $deliveredAt ?? $updatedAt,
+            );
         }
 
         $this->counter++;
@@ -415,7 +459,7 @@ class OrderSeeder extends Seeder
     /** @return array{0: string, 1: string|null} [governorate_id, city_id|null] */
     private function randomLocation(): array
     {
-        $govId  = $this->governorateIds[array_rand($this->governorateIds)];
+        $govId = $this->governorateIds[array_rand($this->governorateIds)];
         $cities = $this->cityMap[$govId] ?? [];
         $cityId = ! empty($cities) ? $cities[array_rand($cities)] : null;
 

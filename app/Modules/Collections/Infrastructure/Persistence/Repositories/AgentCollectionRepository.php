@@ -15,6 +15,7 @@ class AgentCollectionRepository implements AgentCollectionRepositoryInterface
 {
     private const LIST_RELATIONS = [
         'order.customerInfo',
+        'agentSettlementItem.settlement',
     ];
 
     public function paginateForAgent(
@@ -29,15 +30,18 @@ class AgentCollectionRepository implements AgentCollectionRepositoryInterface
                 'delivery_agent_id',
                 'collection_type',
                 'collected_amount',
-                'settlement_id',
+                'agent_commission_amount',
+                'agent_net_due',
                 'collected_at',
             ])
             ->with(self::LIST_RELATIONS)
             ->where('delivery_agent_id', $deliveryAgentId)
             ->when(
                 $settled,
-                fn ($query) => $query->whereNotNull('settlement_id'),
-                fn ($query) => $query->whereNull('settlement_id'),
+                fn ($query) => $query->whereHas('agentSettlementItem.settlement', fn ($settlement) => $settlement
+                    ->where('settlement_status', SettlementStatusEnum::Paid->value)),
+                fn ($query) => $query->whereDoesntHave('agentSettlementItem.settlement', fn ($settlement) => $settlement
+                    ->where('settlement_status', SettlementStatusEnum::Paid->value)),
             )
             ->orderByDesc('collected_at')
             ->orderByDesc('created_at')
@@ -46,12 +50,14 @@ class AgentCollectionRepository implements AgentCollectionRepositoryInterface
 
     public function getSummaryForAgent(string $deliveryAgentId): array
     {
-        $aggregates = DB::table('collections')
+        $aggregates = Collection::query()
             ->where('delivery_agent_id', $deliveryAgentId)
-            ->whereNull('settlement_id')
-            ->whereNull('deleted_at')
+            ->whereDoesntHave('agentSettlementItem.settlement', fn ($settlement) => $settlement
+                ->where('settlement_status', SettlementStatusEnum::Paid->value))
             ->selectRaw('COUNT(*) as unsettled_count')
-            ->selectRaw('COALESCE(SUM(collected_amount), 0) as total_unsettled')
+            ->selectRaw('COALESCE(SUM(agent_net_due), 0) as total_agent_net_due')
+            ->selectRaw('COALESCE(SUM(CASE WHEN agent_net_due > 0 THEN agent_net_due ELSE 0 END), 0) as agent_to_system_amount')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN agent_net_due < 0 THEN agent_net_due ELSE 0 END), 0)) as system_to_agent_amount')
             ->selectRaw(
                 'COALESCE(SUM(CASE WHEN collection_type = ? THEN collected_amount ELSE 0 END), 0) as cod_total',
                 [CollectionTypeEnum::Cod->value],
@@ -79,7 +85,9 @@ class AgentCollectionRepository implements AgentCollectionRepositoryInterface
             ->value(DB::raw('DATE(COALESCE(paid_at, period_to))'));
 
         return [
-            'total_unsettled' => round((float) ($aggregates->total_unsettled ?? 0), 2),
+            'total_agent_net_due' => round((float) ($aggregates->total_agent_net_due ?? 0), 2),
+            'agent_to_system_amount' => round((float) ($aggregates->agent_to_system_amount ?? 0), 2),
+            'system_to_agent_amount' => round((float) ($aggregates->system_to_agent_amount ?? 0), 2),
             'unsettled_count' => (int) ($aggregates->unsettled_count ?? 0),
             'breakdown' => [
                 'cod' => round((float) ($aggregates->cod_total ?? 0), 2),
@@ -88,6 +96,10 @@ class AgentCollectionRepository implements AgentCollectionRepositoryInterface
             ],
             'last_settlement_date' => $lastSettlementDate,
             'agent_balance' => round($agentBalance, 2),
+            'agent_balance_direction' => $agentBalance > 0
+                ? 'agent_owes_system'
+                : ($agentBalance < 0 ? 'system_owes_agent' : 'settled'),
+            'agent_balance_amount' => abs(round($agentBalance, 2)),
         ];
     }
 }

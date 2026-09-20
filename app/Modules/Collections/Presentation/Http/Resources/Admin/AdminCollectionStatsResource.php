@@ -11,8 +11,14 @@ class AdminCollectionStatsResource extends JsonResource
     {
         return [
             'total_collected' => $this->resource['total_collected'],
-            'total_commissions' => $this->resource['total_commissions'],
-            'net_due_to_companies' => $this->resource['net_due_to_companies'],
+            'total_agent_commission_amount' => $this->resource['total_agent_commission_amount'],
+            'total_agent_net_due' => $this->resource['total_agent_net_due'],
+            'total_system_commission_amount' => $this->resource['total_system_commission_amount'],
+            'total_company_net_due' => $this->resource['total_company_net_due'],
+            'agent_to_system_amount' => $this->resource['agent_to_system_amount'],
+            'system_to_agent_amount' => $this->resource['system_to_agent_amount'],
+            'system_to_company_amount' => $this->resource['system_to_company_amount'],
+            'company_to_system_amount' => $this->resource['company_to_system_amount'],
             'pending_cash_count' => $this->resource['pending_cash_count'],
         ];
     }

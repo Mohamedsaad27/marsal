@@ -8,6 +8,7 @@ use App\Modules\Users\Presentation\Http\Requests\Concerns\ValidatesUserAddress;
 class StoreStaffMemberRequest extends BaseFormRequest
 {
     use ValidatesUserAddress;
+
     protected function translationNamespace(): string
     {
         return 'users';
@@ -28,6 +29,7 @@ class StoreStaffMemberRequest extends BaseFormRequest
             'role' => ['required', 'string', 'max:100'],
             'profile' => ['nullable', 'array'],
             'profile.department_id' => ['nullable', 'uuid', 'exists:departments,department_id'],
+            'profile.department' => ['nullable', 'string', 'max:100'],
             'profile.job_title' => ['nullable', 'string', 'max:150'],
             'profile.notes' => ['nullable', 'string'],
             ...$this->addressRules(),

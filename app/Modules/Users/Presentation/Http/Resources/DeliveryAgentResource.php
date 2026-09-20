@@ -21,6 +21,8 @@ class DeliveryAgentResource extends JsonResource
             'vehicle' => $this->formatVehicle(),
             'commission' => $this->formatCommission(),
             'balance' => $this->balance,
+            'balance_direction' => $this->balanceDirection(),
+            'balance_amount' => $this->balanceAmount(),
             'is_available' => (bool) $this->is_available,
             'supervisor' => $this->when(
                 $this->supervisor_agent_id !== null && $this->relationLoaded('supervisor'),

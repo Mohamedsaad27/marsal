@@ -16,6 +16,7 @@ return [
     'settlement_paid' => 'Settlement marked as paid successfully',
     'settlement_not_found' => 'Settlement not found',
     'settlement_invalid_status_transition' => 'This action cannot be performed on the current settlement status',
+    'settlement_items_mismatch' => 'Settlement totals do not match its stored items',
     'no_collections_found_for_period' => 'No eligible collections found for the selected period',
     'company_profile_not_found' => 'Company profile not found',
 ];

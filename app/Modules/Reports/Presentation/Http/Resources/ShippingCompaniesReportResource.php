@@ -18,6 +18,8 @@ class ShippingCompaniesReportResource extends JsonResource
             'commercial_reg' => $this->commercial_reg,
             'is_active' => (bool) $this->is_active,
             'balance' => $this->balance,
+            'balance_direction' => $this->balanceDirection(),
+            'balance_amount' => $this->balanceAmount(),
             'metrics' => $this->report_metrics ?? [],
             'created_at' => $this->created_at?->toISOString(),
         ];

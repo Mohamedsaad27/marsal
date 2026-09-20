@@ -136,7 +136,7 @@ Use this table for frontend routing and deep links.
 | `7` (`phone_updated`) | `{}` | Static informational alert |
 | `8` (`postponed_reminder`) | `{ "order_id": "uuid" }` | Open postponed order |
 | `9` (`collected`) | `{ "order_id": "uuid", "collection_id": "uuid" }` | Super admin collections context |
-| `10` (`settled`) | `{ "settlement_id": "uuid" }` | Settlement created/paid |
+| `10` (`settled`) | `{ "settlement_id": "uuid", "payment_direction": "system_to_company", "payable_amount": "920.00" }` | Settlement created/paid |
 | `11` (`returned`) | `{ "return_id": "uuid", "order_id": "uuid" }` | Return workflow |
 | `12` (`order_reassigned`) | `{ "order_id": "uuid" }` | Reassignment tracking |
 
@@ -204,7 +204,9 @@ Use this table for frontend routing and deep links.
 {
   "type": { "code": 10, "label": "تسوية مالية" },
   "data": {
-    "settlement_id": "uuid"
+    "settlement_id": "uuid",
+    "payment_direction": "system_to_company",
+    "payable_amount": "920.00"
   }
 }
 ```

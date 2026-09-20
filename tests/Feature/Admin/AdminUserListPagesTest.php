@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Modules\Departments\Infrastructure\Database\Seeders\DepartmentSeeder;
 use App\Modules\Locations\Infrastructure\Database\Models\Address;
 use App\Modules\Locations\Infrastructure\Database\Models\City;
 use App\Modules\Locations\Infrastructure\Database\Models\Governorate;
@@ -24,6 +25,7 @@ class AdminUserListPagesTest extends TestCase
         parent::setUp();
 
         $this->seed(RolesAndPermissionsSeeder::class);
+        $this->seed(DepartmentSeeder::class);
         $this->seed(SuperAdminSeeder::class);
 
         $login = $this->postJson('/api/v1/auth/login', [

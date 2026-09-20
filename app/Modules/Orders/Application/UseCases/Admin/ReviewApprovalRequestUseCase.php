@@ -10,11 +10,10 @@ use App\Modules\Orders\Domain\Enums\ApprovalStatusEnum;
 use App\Modules\Orders\Domain\Enums\ApprovalTypeEnum;
 use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Orders\Domain\Interfaces\ApprovalRequestRepositoryInterface;
-use App\Modules\Orders\Domain\Services\CommissionCalculatorService;
+use App\Modules\Orders\Domain\Services\RecordCollectionService;
 use App\Modules\Orders\Infrastructure\Database\Models\ApprovalRequest;
 use App\Modules\Orders\Infrastructure\Database\Models\Order;
 use App\Modules\Orders\Infrastructure\Database\Models\OrderStatusHistory;
-use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -24,7 +23,7 @@ class ReviewApprovalRequestUseCase
 {
     public function __construct(
         private ApprovalRequestRepositoryInterface $repository,
-        private CommissionCalculatorService $commissionCalculator,
+        private RecordCollectionService $collectionRecorder,
         private SendNotificationUseCase $sendNotification,
     ) {}
 
@@ -81,7 +80,7 @@ class ReviewApprovalRequestUseCase
 
         $toStatus = match (true) {
             $action === 'approve' => $this->resolveApprovedStatus($record->approval_type),
-            default               => OrderStatusEnum::OutForDelivery->value,
+            default => OrderStatusEnum::OutForDelivery->value,
         };
 
         $toStatusEnum = OrderStatusEnum::from($toStatus);
@@ -97,11 +96,11 @@ class ReviewApprovalRequestUseCase
 
         OrderStatusHistory::create([
             'order_status_history_id' => (string) Str::uuid(),
-            'order_id'                => $order->order_id,
-            'from_status_id'          => $fromStatus,
-            'to_status_id'            => $toStatus,
-            'changed_by'              => $adminUserId,
-            'notes'                   => $record->review_notes,
+            'order_id' => $order->order_id,
+            'from_status_id' => $fromStatus,
+            'to_status_id' => $toStatus,
+            'changed_by' => $adminUserId,
+            'notes' => $record->review_notes,
         ]);
     }
 
@@ -112,81 +111,15 @@ class ReviewApprovalRequestUseCase
         }
 
         $collectedAmount = (float) $record->requested_amount;
-        $commissionValue = $this->resolveAgentCommissionValue($order->delivery_agent_id);
-        $commission = $this->commissionCalculator->calculate(
-            collectedAmount: $collectedAmount,
-            commissionValue: $commissionValue,
-        );
 
-        $this->upsertCollectionForApproval(
+        $this->collectionRecorder->record(
             order: $order,
-            record: $record,
+            deliveryAgentId: $order->delivery_agent_id,
+            collectionType: $this->resolveCollectionType($record->approval_type),
             collectedAmount: $collectedAmount,
-            commissionAmount: (float) $commission['commission_amount'],
-            netDue: (float) $commission['net_due'],
+            collectedAt: now(),
+            approvedAmount: $collectedAmount,
         );
-
-        $order->financials?->update([
-            'approved_amount' => $record->requested_amount,
-            'collected_amount' => $collectedAmount,
-            'commission_amount' => $commission['commission_amount'],
-            'net_due_company' => $commission['net_due'],
-        ]);
-    }
-
-    private function upsertCollectionForApproval(
-        Order $order,
-        ApprovalRequest $record,
-        float $collectedAmount,
-        float $commissionAmount,
-        float $netDue,
-    ): void {
-        $collection = DB::table('collections')
-            ->where('order_id', $order->order_id)
-            ->whereNull('deleted_at')
-            ->whereNull('settlement_id')
-            ->lockForUpdate()
-            ->first();
-
-        $previousCollectedAmount = (float) ($collection->collected_amount ?? 0);
-        $collectionId = $collection->collection_id ?? (string) Str::uuid();
-        $now = now();
-
-        $attributes = [
-            'delivery_agent_id' => $order->delivery_agent_id,
-            'shipping_company_id' => $order->shipping_company_id,
-            'collection_type' => $this->resolveCollectionType($record->approval_type)->value,
-            'collected_amount' => $collectedAmount,
-            'commission_amount' => $commissionAmount,
-            'net_due' => $netDue,
-            'cash_received_at' => null,
-            'cash_received_by' => null,
-            'collected_at' => $now,
-            'updated_at' => $now,
-        ];
-
-        if ($collection === null) {
-            DB::table('collections')->insert(array_merge($attributes, [
-                'collection_id' => $collectionId,
-                'order_id' => $order->order_id,
-                'created_at' => $now,
-            ]));
-        } else {
-            DB::table('collections')
-                ->where('collection_id', $collectionId)
-                ->update($attributes);
-        }
-
-        DeliveryAgent::query()
-            ->whereKey($order->delivery_agent_id)
-            ->increment('balance', $collectedAmount - $previousCollectedAmount);
-    }
-
-    private function resolveAgentCommissionValue(string $deliveryAgentId): float
-    {
-        return (float) DeliveryAgent::query()
-            ->whereKey($deliveryAgentId)
-            ->value('commission_value');
     }
 
     private function resolveCollectionType(ApprovalTypeEnum $type): CollectionTypeEnum
@@ -201,9 +134,9 @@ class ReviewApprovalRequestUseCase
     private function resolveApprovedStatus(ApprovalTypeEnum $type): int
     {
         return match ($type) {
-            ApprovalTypeEnum::PriceChange   => OrderStatusEnum::DeliveredPriceChanged->value,
+            ApprovalTypeEnum::PriceChange => OrderStatusEnum::DeliveredPriceChanged->value,
             ApprovalTypeEnum::PartialAmount => OrderStatusEnum::PartialDelivery->value,
-            ApprovalTypeEnum::ShippingFee   => OrderStatusEnum::RefusedPaidShipping->value,
+            ApprovalTypeEnum::ShippingFee => OrderStatusEnum::RefusedPaidShipping->value,
         };
     }
 
@@ -220,12 +153,12 @@ class ReviewApprovalRequestUseCase
             : 'تم الرفض';
 
         $this->sendNotification->execute(new SendNotificationDTO(
-            userId:           $companyUser->user_id,
+            userId: $companyUser->user_id,
             notificationType: NotificationTypeEnum::StatusChange,
-            titleAr:          "تحديث طلب الموافقة — {$statusLabel}",
-            bodyAr:           "طلب الموافقة على الطلب #{$record->order?->reference_code} — {$statusLabel}",
-            data:             [
-                'order_id'            => $record->order_id,
+            titleAr: "تحديث طلب الموافقة — {$statusLabel}",
+            bodyAr: "طلب الموافقة على الطلب #{$record->order?->reference_code} — {$statusLabel}",
+            data: [
+                'order_id' => $record->order_id,
                 'approval_request_id' => $record->approval_request_id,
             ],
             sendViaFcm: true,

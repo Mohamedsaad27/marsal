@@ -16,6 +16,7 @@ return [
     'settlement_paid' => 'تم تسجيل دفع التسوية بنجاح',
     'settlement_not_found' => 'التسوية غير موجودة',
     'settlement_invalid_status_transition' => 'لا يمكن تنفيذ هذا الإجراء على حالة التسوية الحالية',
+    'settlement_items_mismatch' => 'إجماليات التسوية لا تطابق البنود المالية المحفوظة',
     'no_collections_found_for_period' => 'لا توجد تحصيلات مؤهلة للتسوية في الفترة المحددة',
     'company_profile_not_found' => 'لم يتم العثور على ملف الشركة',
 ];

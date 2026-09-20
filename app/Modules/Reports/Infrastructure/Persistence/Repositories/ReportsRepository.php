@@ -3,6 +3,7 @@
 namespace App\Modules\Reports\Infrastructure\Persistence\Repositories;
 
 use App\Modules\Collections\Domain\Enums\SettlementStatusEnum;
+use App\Modules\Collections\Domain\Enums\SettlementTypeEnum;
 use App\Modules\Collections\Infrastructure\Database\Models\Collection;
 use App\Modules\Collections\Infrastructure\Database\Models\Settlement;
 use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
@@ -14,6 +15,7 @@ use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
+
 class ReportsRepository implements ReportsRepositoryInterface
 {
     public function orders(ReportFilterDTO $filter): array
@@ -27,7 +29,7 @@ class ReportsRepository implements ReportsRepositoryInterface
                 'shippingCompany.user',
                 'deliveryAgent.user',
             ])
-            ->orderByDesc('orders.created_at'); 
+            ->orderByDesc('orders.created_at');
 
         $this->applyOrderFilters($query, $filter);
 
@@ -40,7 +42,13 @@ class ReportsRepository implements ReportsRepositoryInterface
     public function collections(ReportFilterDTO $filter): array
     {
         $query = Collection::query()
-            ->with(['order', 'deliveryAgent.user', 'shippingCompany.user', 'settlement'])
+            ->with([
+                'order',
+                'deliveryAgent.user',
+                'shippingCompany.user',
+                'agentSettlementItem.settlement',
+                'companySettlementItem.settlement',
+            ])
             ->orderByDesc('collected_at')
             ->orderByDesc('created_at');
 
@@ -56,7 +64,7 @@ class ReportsRepository implements ReportsRepositoryInterface
     {
         $query = Settlement::query()
             ->with(['deliveryAgent.user', 'shippingCompany.user', 'initiatedBy'])
-            ->withCount('collections')
+            ->withCount(['items as collections_count'])
             ->orderByDesc('settlements.created_at'); // ← fix الـ ambiguous من قبل
 
         $this->applySettlementFilters($query, $filter);
@@ -116,7 +124,14 @@ class ReportsRepository implements ReportsRepositoryInterface
             ->leftJoin('order_financials', 'orders.order_id', '=', 'order_financials.order_id')
             ->selectRaw('COALESCE(SUM(order_financials.original_amount), 0) as original_amount')
             ->selectRaw('COALESCE(SUM(order_financials.collected_amount), 0) as collected_amount')
-            ->selectRaw('COALESCE(SUM(order_financials.net_due_company), 0) as net_due_company')
+            ->selectRaw('COALESCE(SUM(order_financials.agent_commission_amount), 0) as agent_commission_amount')
+            ->selectRaw('COALESCE(SUM(order_financials.collected_amount - order_financials.agent_commission_amount), 0) as agent_net_due')
+            ->selectRaw('COALESCE(SUM(order_financials.system_commission_amount), 0) as system_commission_amount')
+            ->selectRaw('COALESCE(SUM(order_financials.net_due_company), 0) as company_net_due')
+            ->selectRaw('COALESCE(SUM(CASE WHEN order_financials.collected_amount - order_financials.agent_commission_amount > 0 THEN order_financials.collected_amount - order_financials.agent_commission_amount ELSE 0 END), 0) as agent_to_system_amount')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN order_financials.collected_amount - order_financials.agent_commission_amount < 0 THEN order_financials.collected_amount - order_financials.agent_commission_amount ELSE 0 END), 0)) as system_to_agent_amount')
+            ->selectRaw('COALESCE(SUM(CASE WHEN order_financials.net_due_company > 0 THEN order_financials.net_due_company ELSE 0 END), 0) as system_to_company_amount')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN order_financials.net_due_company < 0 THEN order_financials.net_due_company ELSE 0 END), 0)) as company_to_system_amount')
             ->first();
 
         return [
@@ -125,7 +140,14 @@ class ReportsRepository implements ReportsRepositoryInterface
             'pending_orders' => max($total - $terminal, 0),
             'total_original_amount' => $this->money($money?->original_amount),
             'total_collected_amount' => $this->money($money?->collected_amount),
-            'total_net_due_company' => $this->money($money?->net_due_company),
+            'total_agent_commission_amount' => $this->money($money?->agent_commission_amount),
+            'total_agent_net_due' => $this->money($money?->agent_net_due),
+            'total_system_commission_amount' => $this->money($money?->system_commission_amount),
+            'total_company_net_due' => $this->money($money?->company_net_due),
+            'agent_to_system_amount' => $this->money($money?->agent_to_system_amount),
+            'system_to_agent_amount' => $this->money($money?->system_to_agent_amount),
+            'system_to_company_amount' => $this->money($money?->system_to_company_amount),
+            'company_to_system_amount' => $this->money($money?->company_to_system_amount),
         ];
     }
 
@@ -135,17 +157,39 @@ class ReportsRepository implements ReportsRepositoryInterface
             ->reorder()
             ->selectRaw('COUNT(*) as total_collections')
             ->selectRaw('COALESCE(SUM(collected_amount), 0) as collected_amount')
-            ->selectRaw('COALESCE(SUM(commission_amount), 0) as commission_amount')
-            ->selectRaw('COALESCE(SUM(net_due), 0) as net_due')
+            ->selectRaw('COALESCE(SUM(agent_commission_amount), 0) as agent_commission_amount')
+            ->selectRaw('COALESCE(SUM(agent_net_due), 0) as agent_net_due')
+            ->selectRaw('COALESCE(SUM(system_commission_amount), 0) as system_commission_amount')
+            ->selectRaw('COALESCE(SUM(company_net_due), 0) as company_net_due')
+            ->selectRaw('COALESCE(SUM(CASE WHEN agent_net_due > 0 THEN agent_net_due ELSE 0 END), 0) as agent_to_system_amount')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN agent_net_due < 0 THEN agent_net_due ELSE 0 END), 0)) as system_to_agent_amount')
+            ->selectRaw('COALESCE(SUM(CASE WHEN company_net_due > 0 THEN company_net_due ELSE 0 END), 0) as system_to_company_amount')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN company_net_due < 0 THEN company_net_due ELSE 0 END), 0)) as company_to_system_amount')
             ->first();
 
         return [
             'total_collections' => (int) ($money?->total_collections ?? 0),
             'total_collected_amount' => $this->money($money?->collected_amount),
-            'total_commission_amount' => $this->money($money?->commission_amount),
-            'total_net_due' => $this->money($money?->net_due),
-            'pending_cash_count' => (clone $query)->whereNull('cash_received_at')->count(),
-            'settled_count' => (clone $query)->whereNotNull('settlement_id')->count(),
+            'total_agent_commission_amount' => $this->money($money?->agent_commission_amount),
+            'total_agent_net_due' => $this->money($money?->agent_net_due),
+            'total_system_commission_amount' => $this->money($money?->system_commission_amount),
+            'total_company_net_due' => $this->money($money?->company_net_due),
+            'agent_to_system_amount' => $this->money($money?->agent_to_system_amount),
+            'system_to_agent_amount' => $this->money($money?->system_to_agent_amount),
+            'system_to_company_amount' => $this->money($money?->system_to_company_amount),
+            'company_to_system_amount' => $this->money($money?->company_to_system_amount),
+            'pending_cash_count' => (clone $query)
+                ->whereNull('cash_received_at')
+                ->where('agent_net_due', '>', 0)
+                ->count(),
+            'agent_settled_count' => $this->paidSettlementCount(clone $query, SettlementTypeEnum::Agent),
+            'company_settled_count' => $this->paidSettlementCount(clone $query, SettlementTypeEnum::Company),
+            'fully_settled_count' => (clone $query)
+                ->whereHas('agentSettlementItem.settlement', fn (Builder $settlement) => $settlement
+                    ->where('settlement_status', SettlementStatusEnum::Paid->value))
+                ->whereHas('companySettlementItem.settlement', fn (Builder $settlement) => $settlement
+                    ->where('settlement_status', SettlementStatusEnum::Paid->value))
+                ->count(),
         ];
     }
 
@@ -158,16 +202,43 @@ class ReportsRepository implements ReportsRepositoryInterface
 
         $summary = $summaryQuery->selectRaw('
             COUNT(*) as total_settlements,
-            COALESCE(SUM(total_collections), 0) as total_collections,
-            COALESCE(SUM(total_commissions), 0) as total_commissions,
-            COALESCE(SUM(net_amount), 0) as net_amount
-        ')->first();
+            COALESCE(SUM(CASE WHEN settlement_type = ? THEN total_collections ELSE 0 END), 0) as agent_total_collections,
+            COALESCE(SUM(CASE WHEN settlement_type = ? THEN total_commissions ELSE 0 END), 0) as total_agent_commission_amount,
+            COALESCE(SUM(CASE WHEN settlement_type = ? THEN net_amount ELSE 0 END), 0) as total_agent_net_amount,
+            COALESCE(SUM(CASE WHEN settlement_type = ? THEN total_collections ELSE 0 END), 0) as company_total_collections,
+            COALESCE(SUM(CASE WHEN settlement_type = ? THEN total_commissions ELSE 0 END), 0) as total_system_commission_amount,
+            COALESCE(SUM(CASE WHEN settlement_type = ? THEN net_amount ELSE 0 END), 0) as total_company_net_amount,
+            COALESCE(SUM(CASE WHEN settlement_type = ? AND net_amount > 0 THEN net_amount ELSE 0 END), 0) as agent_to_system_amount,
+            ABS(COALESCE(SUM(CASE WHEN settlement_type = ? AND net_amount < 0 THEN net_amount ELSE 0 END), 0)) as system_to_agent_amount,
+            COALESCE(SUM(CASE WHEN settlement_type = ? AND net_amount > 0 THEN net_amount ELSE 0 END), 0) as system_to_company_amount,
+            ABS(COALESCE(SUM(CASE WHEN settlement_type = ? AND net_amount < 0 THEN net_amount ELSE 0 END), 0)) as company_to_system_amount,
+            SUM(CASE WHEN net_amount = 0 THEN 1 ELSE 0 END) as no_payment_count
+        ', [
+            SettlementTypeEnum::Agent->value,
+            SettlementTypeEnum::Agent->value,
+            SettlementTypeEnum::Agent->value,
+            SettlementTypeEnum::Company->value,
+            SettlementTypeEnum::Company->value,
+            SettlementTypeEnum::Company->value,
+            SettlementTypeEnum::Agent->value,
+            SettlementTypeEnum::Agent->value,
+            SettlementTypeEnum::Company->value,
+            SettlementTypeEnum::Company->value,
+        ])->first();
 
         return [
             'total_settlements' => (int) $summary->total_settlements,
-            'total_collections' => (float) $summary->total_collections,
-            'total_commissions' => (float) $summary->total_commissions,
-            'net_amount'        => (float) $summary->net_amount,
+            'agent_total_collections' => $this->money($summary->agent_total_collections),
+            'total_agent_commission_amount' => $this->money($summary->total_agent_commission_amount),
+            'total_agent_net_amount' => $this->money($summary->total_agent_net_amount),
+            'company_total_collections' => $this->money($summary->company_total_collections),
+            'total_system_commission_amount' => $this->money($summary->total_system_commission_amount),
+            'total_company_net_amount' => $this->money($summary->total_company_net_amount),
+            'agent_to_system_amount' => $this->money($summary->agent_to_system_amount),
+            'system_to_agent_amount' => $this->money($summary->system_to_agent_amount),
+            'system_to_company_amount' => $this->money($summary->system_to_company_amount),
+            'company_to_system_amount' => $this->money($summary->company_to_system_amount),
+            'no_payment_count' => (int) $summary->no_payment_count,
         ];
     }
 
@@ -178,7 +249,13 @@ class ReportsRepository implements ReportsRepositoryInterface
         return [
             'total_agents' => count($agentIds),
             'available_agents' => (clone $query)->where('is_available', 1)->count(),
-            'total_balance' => $this->money((clone $query)->sum('balance')),
+            'signed_total_balance' => $this->money((clone $query)->sum('balance')),
+            'agent_owes_system_amount' => $this->money((clone $query)
+                ->where('balance', '>', 0)
+                ->sum('balance')),
+            'system_owes_agents_amount' => $this->money(abs((float) (clone $query)
+                ->where('balance', '<', 0)
+                ->sum('balance'))),
             'total_orders' => $this->countOrdersForEntities('delivery_agent_id', $agentIds, $filter),
             'total_collected_amount' => $this->sumCollectionsForEntities('delivery_agent_id', $agentIds, 'collected_amount', $filter),
         ];
@@ -191,7 +268,13 @@ class ReportsRepository implements ReportsRepositoryInterface
         return [
             'total_companies' => count($companyIds),
             'active_companies' => (clone $query)->where('is_active', 1)->count(),
-            'total_balance' => $this->money((clone $query)->sum('balance')),
+            'signed_total_balance' => $this->money((clone $query)->sum('balance')),
+            'system_owes_companies_amount' => $this->money((clone $query)
+                ->where('balance', '>', 0)
+                ->sum('balance')),
+            'companies_owe_system_amount' => $this->money(abs((float) (clone $query)
+                ->where('balance', '<', 0)
+                ->sum('balance'))),
             'total_orders' => $this->countOrdersForEntities('shipping_company_id', $companyIds, $filter),
             'total_collected_amount' => $this->sumCollectionsForEntities('shipping_company_id', $companyIds, 'collected_amount', $filter),
         ];
@@ -200,25 +283,35 @@ class ReportsRepository implements ReportsRepositoryInterface
     private function attachAgentMetrics(LengthAwarePaginator $paginator, ReportFilterDTO $filter): void
     {
         $ids = $paginator->getCollection()->pluck('delivery_agent_id')->all();
-        $metrics = $this->entityMetrics('delivery_agent_id', $ids, $filter);
+        $metrics = $this->entityMetrics('delivery_agent_id', $ids, $filter, SettlementTypeEnum::Agent);
 
         $paginator->getCollection()->each(function (DeliveryAgent $agent) use ($metrics): void {
-            $agent->setAttribute('report_metrics', $metrics[$agent->delivery_agent_id] ?? $this->emptyMetrics());
+            $agent->setAttribute(
+                'report_metrics',
+                $metrics[$agent->delivery_agent_id] ?? $this->emptyMetrics(SettlementTypeEnum::Agent),
+            );
         });
     }
 
     private function attachCompanyMetrics(LengthAwarePaginator $paginator, ReportFilterDTO $filter): void
     {
         $ids = $paginator->getCollection()->pluck('shipping_company_id')->all();
-        $metrics = $this->entityMetrics('shipping_company_id', $ids, $filter);
+        $metrics = $this->entityMetrics('shipping_company_id', $ids, $filter, SettlementTypeEnum::Company);
 
         $paginator->getCollection()->each(function (ShippingCompany $company) use ($metrics): void {
-            $company->setAttribute('report_metrics', $metrics[$company->shipping_company_id] ?? $this->emptyMetrics());
+            $company->setAttribute(
+                'report_metrics',
+                $metrics[$company->shipping_company_id] ?? $this->emptyMetrics(SettlementTypeEnum::Company),
+            );
         });
     }
 
-    private function entityMetrics(string $entityColumn, array $ids, ReportFilterDTO $filter): array
-    {
+    private function entityMetrics(
+        string $entityColumn,
+        array $ids,
+        ReportFilterDTO $filter,
+        SettlementTypeEnum $type,
+    ): array {
         if ($ids === []) {
             return [];
         }
@@ -226,7 +319,7 @@ class ReportsRepository implements ReportsRepositoryInterface
         $orders = Order::query()
             ->select($entityColumn)
             ->selectRaw('COUNT(*) as total_orders')
-            ->selectRaw('SUM(CASE WHEN status IN (' . $this->terminalStatusList() . ') THEN 1 ELSE 0 END) as terminal_orders')
+            ->selectRaw('SUM(CASE WHEN status IN ('.$this->terminalStatusList().') THEN 1 ELSE 0 END) as terminal_orders')
             ->whereIn($entityColumn, $ids);
         $this->applyMetricDateFilter($orders, $filter, 'created_at');
 
@@ -235,11 +328,18 @@ class ReportsRepository implements ReportsRepositoryInterface
             ->get()
             ->keyBy($entityColumn);
 
+        $commissionColumn = $type === SettlementTypeEnum::Agent
+            ? 'agent_commission_amount'
+            : 'system_commission_amount';
+        $netColumn = $type === SettlementTypeEnum::Agent ? 'agent_net_due' : 'company_net_due';
+
         $collections = Collection::query()
             ->select($entityColumn)
             ->selectRaw('COALESCE(SUM(collected_amount), 0) as collected_amount')
-            ->selectRaw('COALESCE(SUM(commission_amount), 0) as commission_amount')
-            ->selectRaw('COALESCE(SUM(net_due), 0) as net_due')
+            ->selectRaw("COALESCE(SUM({$commissionColumn}), 0) as commission_amount")
+            ->selectRaw("COALESCE(SUM({$netColumn}), 0) as net_due")
+            ->selectRaw("COALESCE(SUM(CASE WHEN {$netColumn} > 0 THEN {$netColumn} ELSE 0 END), 0) as positive_net_due")
+            ->selectRaw("ABS(COALESCE(SUM(CASE WHEN {$netColumn} < 0 THEN {$netColumn} ELSE 0 END), 0)) as negative_net_due")
             ->whereIn($entityColumn, $ids);
         $this->applyMetricDateFilter($collections, $filter, 'collected_at');
 
@@ -254,13 +354,25 @@ class ReportsRepository implements ReportsRepositoryInterface
             $orderMetric = $orderMetrics->get($id);
             $collectionMetric = $collectionMetrics->get($id);
 
-            $metrics[$id] = [
+            $commonMetrics = [
                 'total_orders' => (int) ($orderMetric?->total_orders ?? 0),
                 'terminal_orders' => (int) ($orderMetric?->terminal_orders ?? 0),
                 'total_collected_amount' => $this->money($collectionMetric?->collected_amount),
-                'total_commission_amount' => $this->money($collectionMetric?->commission_amount),
-                'total_net_due' => $this->money($collectionMetric?->net_due),
             ];
+
+            $metrics[$id] = $type === SettlementTypeEnum::Agent
+                ? array_merge($commonMetrics, [
+                    'total_agent_commission_amount' => $this->money($collectionMetric?->commission_amount),
+                    'total_agent_net_due' => $this->money($collectionMetric?->net_due),
+                    'agent_to_system_amount' => $this->money($collectionMetric?->positive_net_due),
+                    'system_to_agent_amount' => $this->money($collectionMetric?->negative_net_due),
+                ])
+                : array_merge($commonMetrics, [
+                    'total_system_commission_amount' => $this->money($collectionMetric?->commission_amount),
+                    'total_company_net_due' => $this->money($collectionMetric?->net_due),
+                    'system_to_company_amount' => $this->money($collectionMetric?->positive_net_due),
+                    'company_to_system_amount' => $this->money($collectionMetric?->negative_net_due),
+                ]);
         }
 
         return $metrics;
@@ -287,7 +399,7 @@ class ReportsRepository implements ReportsRepositoryInterface
         $this->applyMetricDateFilter($query, $filter, 'created_at');
 
         if ($filter->search !== null && trim($filter->search) !== '') {
-            $search = '%' . trim($filter->search) . '%';
+            $search = '%'.trim($filter->search).'%';
 
             $query->where(function (Builder $builder) use ($search): void {
                 $builder
@@ -321,7 +433,7 @@ class ReportsRepository implements ReportsRepositoryInterface
         $this->applyMetricDateFilter($query, $filter, 'collected_at');
 
         if ($filter->search !== null && trim($filter->search) !== '') {
-            $search = '%' . trim($filter->search) . '%';
+            $search = '%'.trim($filter->search).'%';
 
             $query->where(function (Builder $builder) use ($search): void {
                 $builder
@@ -356,7 +468,7 @@ class ReportsRepository implements ReportsRepositoryInterface
         $this->applyMetricDateFilter($query, $filter, 'created_at');
 
         if ($filter->search !== null && trim($filter->search) !== '') {
-            $search = '%' . trim($filter->search) . '%';
+            $search = '%'.trim($filter->search).'%';
 
             $query->where(function (Builder $builder) use ($search): void {
                 $builder
@@ -377,7 +489,7 @@ class ReportsRepository implements ReportsRepositoryInterface
         }
 
         if ($filter->search !== null && trim($filter->search) !== '') {
-            $search = '%' . trim($filter->search) . '%';
+            $search = '%'.trim($filter->search).'%';
 
             $query->where(function (Builder $builder) use ($search): void {
                 $builder
@@ -398,7 +510,7 @@ class ReportsRepository implements ReportsRepositoryInterface
         }
 
         if ($filter->search !== null && trim($filter->search) !== '') {
-            $search = '%' . trim($filter->search) . '%';
+            $search = '%'.trim($filter->search).'%';
 
             $query->where(function (Builder $builder) use ($search): void {
                 $builder
@@ -455,15 +567,39 @@ class ReportsRepository implements ReportsRepositoryInterface
             ->implode(',');
     }
 
-    private function emptyMetrics(): array
+    private function emptyMetrics(SettlementTypeEnum $type): array
     {
-        return [
+        $commonMetrics = [
             'total_orders' => 0,
             'terminal_orders' => 0,
             'total_collected_amount' => $this->money(0),
-            'total_commission_amount' => $this->money(0),
-            'total_net_due' => $this->money(0),
         ];
+
+        return $type === SettlementTypeEnum::Agent
+            ? array_merge($commonMetrics, [
+                'total_agent_commission_amount' => $this->money(0),
+                'total_agent_net_due' => $this->money(0),
+                'agent_to_system_amount' => $this->money(0),
+                'system_to_agent_amount' => $this->money(0),
+            ])
+            : array_merge($commonMetrics, [
+                'total_system_commission_amount' => $this->money(0),
+                'total_company_net_due' => $this->money(0),
+                'system_to_company_amount' => $this->money(0),
+                'company_to_system_amount' => $this->money(0),
+            ]);
+    }
+
+    private function paidSettlementCount(Builder $query, SettlementTypeEnum $type): int
+    {
+        $relationship = $type === SettlementTypeEnum::Agent
+            ? 'agentSettlementItem.settlement'
+            : 'companySettlementItem.settlement';
+
+        return $query
+            ->whereHas($relationship, fn (Builder $settlement) => $settlement
+                ->where('settlement_status', SettlementStatusEnum::Paid->value))
+            ->count();
     }
 
     private function money(mixed $value): string

@@ -12,7 +12,7 @@ class SettlementsReportResource extends JsonResource
     {
         return [
             'id' => $this->settlement_id,
-            'reference' => 'STL-' . strtoupper(substr(str_replace('-', '', $this->settlement_id), 0, 8)),
+            'reference' => 'STL-'.strtoupper(substr(str_replace('-', '', $this->settlement_id), 0, 8)),
             'settlement_type' => [
                 'code' => $this->settlement_type?->value,
                 'label' => $this->settlement_type?->labelAr(),
@@ -26,6 +26,8 @@ class SettlementsReportResource extends JsonResource
             'total_collections' => $this->total_collections,
             'total_commissions' => $this->total_commissions,
             'net_amount' => $this->net_amount,
+            'payment_direction' => $this->paymentDirection(),
+            'payable_amount' => $this->payableAmount(),
             'period_from' => $this->period_from?->toDateString(),
             'period_to' => $this->period_to?->toDateString(),
             'payment_method' => $this->payment_method,
@@ -35,7 +37,7 @@ class SettlementsReportResource extends JsonResource
         ];
     }
 
-    private function entity(): ?array
+    private function entity(): mixed
     {
         if ($this->settlement_type === SettlementTypeEnum::Agent) {
             return $this->whenLoaded('deliveryAgent', fn () => $this->deliveryAgent === null ? null : [

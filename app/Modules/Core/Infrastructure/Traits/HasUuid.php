@@ -1,4 +1,4 @@
-<?php 
+<?php
 
 namespace App\Modules\Core\Infrastructure\Traits;
 

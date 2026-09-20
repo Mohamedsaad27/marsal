@@ -30,6 +30,7 @@ interface CompanyOrderRepositoryInterface
 
     /**
      * Returns: total_collected, total_commissions, total_net_due,
+     *          amount_payable_to_company, amount_receivable_from_company,
      *          pending_settlement_amount, pending_collection_count
      */
     public function getWalletAggregates(string $companyId): array;

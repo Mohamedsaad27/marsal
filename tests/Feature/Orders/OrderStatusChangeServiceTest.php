@@ -21,7 +21,7 @@ class OrderStatusChangeServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_reverting_collected_order_to_non_collection_status_deducts_agent_collection(): void
+    public function test_reverting_collected_order_removes_signed_agent_and_company_balances(): void
     {
         Event::fake();
 
@@ -42,13 +42,15 @@ class OrderStatusChangeServiceTest extends TestCase
             'delivery_agent_id' => (string) Str::uuid(),
             'user_id' => $agentUser->user_id,
             'commission_value' => 25,
-            'balance' => 750,
+            'balance' => 475,
         ]);
 
         $company = ShippingCompany::query()->forceCreate([
             'shipping_company_id' => (string) Str::uuid(),
             'user_id' => $companyUser->user_id,
             'company_name' => 'Acme Logistics',
+            'commission_value' => 40,
+            'balance' => 460,
         ]);
 
         $order = Order::query()->forceCreate([
@@ -66,6 +68,9 @@ class OrderStatusChangeServiceTest extends TestCase
             'order_id' => $order->order_id,
             'original_amount' => 500,
             'collected_amount' => 500,
+            'agent_commission_amount' => 25,
+            'system_commission_amount' => 40,
+            'net_due_company' => 460,
             'created_at' => now(),
             'updated_at' => now(),
         ]);
@@ -77,8 +82,10 @@ class OrderStatusChangeServiceTest extends TestCase
             'shipping_company_id' => $company->shipping_company_id,
             'collection_type' => CollectionTypeEnum::Cod->value,
             'collected_amount' => 500,
-            'commission_amount' => 25,
-            'net_due' => 475,
+            'agent_commission_amount' => 25,
+            'agent_net_due' => 475,
+            'system_commission_amount' => 40,
+            'company_net_due' => 460,
             'collected_at' => now(),
             'created_at' => now(),
             'updated_at' => now(),
@@ -92,8 +99,11 @@ class OrderStatusChangeServiceTest extends TestCase
         ));
 
         $agent->refresh();
+        $company->refresh();
 
-        $this->assertSame('250.00', $agent->balance);
+        $this->assertSame('0.00', $agent->balance);
+        $this->assertSame('0.00', $company->balance);
+        $this->assertSame(0.0, (float) $agent->balance);
         $this->assertDatabaseHas('orders', [
             'order_id' => $order->order_id,
             'status' => OrderStatusEnum::OutForDelivery->value,
@@ -102,12 +112,17 @@ class OrderStatusChangeServiceTest extends TestCase
         $this->assertDatabaseHas('order_financials', [
             'order_id' => $order->order_id,
             'collected_amount' => 0,
+            'agent_commission_amount' => 0,
+            'system_commission_amount' => 0,
+            'net_due_company' => 0,
         ]);
         $this->assertDatabaseHas('collections', [
             'order_id' => $order->order_id,
             'collected_amount' => 0,
-            'commission_amount' => 0,
-            'net_due' => 0,
+            'agent_commission_amount' => 0,
+            'agent_net_due' => 0,
+            'system_commission_amount' => 0,
+            'company_net_due' => 0,
         ]);
     }
 }

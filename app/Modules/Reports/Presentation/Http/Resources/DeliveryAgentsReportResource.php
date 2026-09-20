@@ -18,6 +18,8 @@ class DeliveryAgentsReportResource extends JsonResource
             'vehicle_plate_number' => $this->vehicle_plate_number,
             'is_available' => (bool) $this->is_available,
             'balance' => $this->balance,
+            'balance_direction' => $this->balanceDirection(),
+            'balance_amount' => $this->balanceAmount(),
             'supervisor' => $this->whenLoaded('supervisor', fn () => $this->supervisor === null ? null : [
                 'id' => $this->supervisor->delivery_agent_id,
                 'name' => $this->supervisor->user?->name,

@@ -6,20 +6,22 @@ use App\Modules\Collections\Application\DTOs\CreateSettlementDTO;
 use App\Modules\Collections\Application\DTOs\SettlementFilterDTO;
 use App\Modules\Collections\Application\Exceptions\NoCollectionsFoundForPeriodException;
 use App\Modules\Collections\Application\Exceptions\SettlementInvalidStatusTransitionException;
+use App\Modules\Collections\Application\Exceptions\SettlementItemsMismatchException;
 use App\Modules\Collections\Application\Exceptions\SettlementNotFoundException;
 use App\Modules\Collections\Domain\Enums\SettlementStatusEnum;
 use App\Modules\Collections\Domain\Enums\SettlementTypeEnum;
 use App\Modules\Collections\Domain\Interfaces\SettlementRepositoryInterface;
 use App\Modules\Collections\Infrastructure\Database\Models\Collection;
 use App\Modules\Collections\Infrastructure\Database\Models\Settlement;
+use App\Modules\Collections\Infrastructure\Database\Models\SettlementItem;
 use App\Modules\Orders\Infrastructure\Database\Models\OrderFinancial;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 class SettlementRepository implements SettlementRepositoryInterface
 {
@@ -33,24 +35,18 @@ class SettlementRepository implements SettlementRepositoryInterface
     {
         $base = Settlement::query();
 
-        $totalAmount = (clone $base)->sum('net_amount');
-        $pendingApproval = (clone $base)
-            ->where('settlement_status', SettlementStatusEnum::Draft->value)
-            ->sum('net_amount');
-        $approvedUnpaid = (clone $base)
-            ->where('settlement_status', SettlementStatusEnum::Approved->value)
-            ->sum('net_amount');
+        $pendingApproval = (clone $base)->where('settlement_status', SettlementStatusEnum::Draft->value);
+        $approvedUnpaid = (clone $base)->where('settlement_status', SettlementStatusEnum::Approved->value);
         $paidThisMonth = (clone $base)
             ->where('settlement_status', SettlementStatusEnum::Paid->value)
             ->whereMonth('paid_at', Carbon::now()->month)
-            ->whereYear('paid_at', Carbon::now()->year)
-            ->sum('net_amount');
+            ->whereYear('paid_at', Carbon::now()->year);
 
         return [
-            'total_amount' => number_format((float) $totalAmount, 2, '.', ''),
-            'pending_approval' => number_format((float) $pendingApproval, 2, '.', ''),
-            'approved_unpaid' => number_format((float) $approvedUnpaid, 2, '.', ''),
-            'paid_this_month' => number_format((float) $paidThisMonth, 2, '.', ''),
+            'all' => $this->directionalTotals(clone $base),
+            'pending_approval' => $this->directionalTotals($pendingApproval),
+            'approved_unpaid' => $this->directionalTotals($approvedUnpaid),
+            'paid_this_month' => $this->directionalTotals($paidThisMonth),
         ];
     }
 
@@ -58,7 +54,7 @@ class SettlementRepository implements SettlementRepositoryInterface
     {
         $query = Settlement::query()
             ->with(self::LIST_RELATIONS)
-            ->withCount('collections')
+            ->withCount(['items as collections_count'])
             ->orderByDesc('created_at');
 
         $this->applyFilters($query, $filter);
@@ -66,9 +62,7 @@ class SettlementRepository implements SettlementRepositoryInterface
         $paginator = $query->paginate($filter->perPage);
 
         $paginator->getCollection()->transform(function (Settlement $settlement) {
-            if ($settlement->settlement_status !== SettlementStatusEnum::Paid) {
-                $this->attachEligibleCollectionsCount($settlement);
-            }
+            $this->attachItemCount($settlement);
 
             return $settlement;
         });
@@ -80,75 +74,117 @@ class SettlementRepository implements SettlementRepositoryInterface
     {
         $settlement = Settlement::query()
             ->with(self::LIST_RELATIONS)
-            ->withCount('collections')
+            ->withCount(['items as collections_count'])
             ->where('settlement_id', $settlementId)
             ->first();
 
         if ($settlement === null) {
-            throw new SettlementNotFoundException();
+            throw new SettlementNotFoundException;
         }
 
-        if ($settlement->settlement_status !== SettlementStatusEnum::Paid) {
-            $this->attachEligibleCollectionsCount($settlement);
-        }
+        $this->attachItemCount($settlement);
 
         return $settlement;
     }
 
-    public function findEligibleCollections(CreateSettlementDTO $dto): SupportCollection
+    public function createFromEligibleCollections(CreateSettlementDTO $dto): Settlement
     {
-        return $this->eligibleCollectionsQuery($dto)
-            ->orderBy('collected_at')
-            ->get();
-    }
+        return DB::transaction(function () use ($dto): Settlement {
+            $collections = $this->eligibleCollectionsQuery($dto)
+                ->orderBy('collected_at')
+                ->lockForUpdate()
+                ->get();
 
-    public function createFromCollections(CreateSettlementDTO $dto, SupportCollection $collections): Settlement
-    {
-        if ($collections->isEmpty()) {
-            throw new NoCollectionsFoundForPeriodException();
-        }
+            if ($collections->isEmpty()) {
+                throw new NoCollectionsFoundForPeriodException;
+            }
 
-        $totalCollections = round((float) $collections->sum('collected_amount'), 2);
-        $totalCommissions = round((float) $collections->sum('commission_amount'), 2);
-        $netAmount = round((float) $collections->sum('net_due'), 2);
+            $settlement = Settlement::query()->create([
+                'settlement_id' => (string) Str::uuid(),
+                'settlement_type' => $dto->settlementType->value,
+                'settlement_status' => SettlementStatusEnum::Draft->value,
+                'delivery_agent_id' => $dto->settlementType === SettlementTypeEnum::Agent
+                    ? $dto->referenceEntityId
+                    : null,
+                'shipping_company_id' => $dto->settlementType === SettlementTypeEnum::Company
+                    ? $dto->referenceEntityId
+                    : null,
+                'initiated_by' => $dto->initiatedBy,
+                'total_collections' => 0,
+                'total_commissions' => 0,
+                'net_amount' => 0,
+                'period_from' => $dto->periodFrom,
+                'period_to' => $dto->periodTo,
+                'notes' => $dto->notes,
+            ]);
 
-        $settlement = Settlement::query()->create([
-            'settlement_type' => $dto->settlementType->value,
-            'settlement_status' => SettlementStatusEnum::Draft->value,
-            'delivery_agent_id' => $dto->settlementType === SettlementTypeEnum::Agent
-                ? $dto->referenceEntityId
-                : null,
-            'shipping_company_id' => $dto->settlementType === SettlementTypeEnum::Company
-                ? $dto->referenceEntityId
-                : null,
-            'initiated_by' => $dto->initiatedBy,
-            'total_collections' => $totalCollections,
-            'total_commissions' => $totalCommissions,
-            'net_amount' => $netAmount,
-            'period_from' => $dto->periodFrom,
-            'period_to' => $dto->periodTo,
-            'notes' => $dto->notes,
-        ]);
+            foreach ($collections as $collection) {
+                SettlementItem::query()->create([
+                    'settlement_item_id' => (string) Str::uuid(),
+                    'settlement_id' => $settlement->settlement_id,
+                    'collection_id' => $collection->collection_id,
+                    'settlement_type' => $dto->settlementType->value,
+                    'gross_amount' => $collection->collected_amount,
+                    'commission_amount' => $dto->settlementType === SettlementTypeEnum::Agent
+                        ? $collection->agent_commission_amount
+                        : $collection->system_commission_amount,
+                    'net_amount' => $dto->settlementType === SettlementTypeEnum::Agent
+                        ? $collection->agent_net_due
+                        : $collection->company_net_due,
+                ]);
+            }
 
-        $settlement->load(self::LIST_RELATIONS);
-        $this->attachEligibleCollectionsCount($settlement, $collections->count());
+            $totals = SettlementItem::query()
+                ->where('settlement_id', $settlement->settlement_id)
+                ->selectRaw('COALESCE(SUM(gross_amount), 0) as total_collections')
+                ->selectRaw('COALESCE(SUM(commission_amount), 0) as total_commissions')
+                ->selectRaw('COALESCE(SUM(net_amount), 0) as net_amount')
+                ->firstOrFail();
 
-        return $settlement;
+            $settlement->update([
+                'total_collections' => round((float) $totals->total_collections, 2),
+                'total_commissions' => round((float) $totals->total_commissions, 2),
+                'net_amount' => round((float) $totals->net_amount, 2),
+            ]);
+
+            $settlement->load(array_merge(self::LIST_RELATIONS, ['items']));
+            $settlement->loadCount(['items as collections_count']);
+            $this->attachItemCount($settlement);
+
+            return $settlement;
+        });
     }
 
     public function approve(string $settlementId): Settlement
     {
-        $settlement = $this->findOrFail($settlementId);
+        return DB::transaction(function () use ($settlementId): Settlement {
+            $settlement = Settlement::query()
+                ->where('settlement_id', $settlementId)
+                ->lockForUpdate()
+                ->first();
 
-        if ($settlement->settlement_status !== SettlementStatusEnum::Draft) {
-            throw new SettlementInvalidStatusTransitionException();
-        }
+            if ($settlement === null) {
+                throw new SettlementNotFoundException;
+            }
 
-        $settlement->update([
-            'settlement_status' => SettlementStatusEnum::Approved->value,
-        ]);
+            if ($settlement->settlement_status !== SettlementStatusEnum::Draft) {
+                throw new SettlementInvalidStatusTransitionException;
+            }
 
-        return $settlement->fresh(array_merge(self::LIST_RELATIONS, ['collections']));
+            if (! SettlementItem::query()->where('settlement_id', $settlementId)->exists()) {
+                throw new NoCollectionsFoundForPeriodException;
+            }
+
+            $settlement->update([
+                'settlement_status' => SettlementStatusEnum::Approved->value,
+            ]);
+
+            $settlement = $settlement->fresh(array_merge(self::LIST_RELATIONS, ['items']));
+            $settlement->loadCount(['items as collections_count']);
+            $this->attachItemCount($settlement);
+
+            return $settlement;
+        });
     }
 
     public function markPaid(
@@ -164,67 +200,93 @@ class SettlementRepository implements SettlementRepositoryInterface
                 ->first();
 
             if ($settlement === null) {
-                throw new SettlementNotFoundException();
+                throw new SettlementNotFoundException;
             }
 
             if ($settlement->settlement_status !== SettlementStatusEnum::Approved) {
-                throw new SettlementInvalidStatusTransitionException();
+                throw new SettlementInvalidStatusTransitionException;
             }
 
-            $collections = $this->buildEligibleCollectionsQueryForSettlement($settlement)
+            $items = SettlementItem::query()
+                ->where('settlement_id', $settlement->settlement_id)
                 ->lockForUpdate()
                 ->get();
 
-            if ($collections->isEmpty()) {
-                throw new NoCollectionsFoundForPeriodException();
+            if ($items->isEmpty()) {
+                throw new NoCollectionsFoundForPeriodException;
             }
 
-            $orderIds = $collections->pluck('order_id')->filter()->all();
+            $itemTotals = [
+                'total_collections' => round((float) $items->sum('gross_amount'), 2),
+                'total_commissions' => round((float) $items->sum('commission_amount'), 2),
+                'net_amount' => round((float) $items->sum('net_amount'), 2),
+            ];
 
-            Collection::query()
-                ->whereIn('collection_id', $collections->pluck('collection_id'))
-                ->update(['settlement_id' => $settlement->settlement_id]);
-
-            if ($orderIds !== []) {
-                OrderFinancial::query()
-                    ->whereIn('order_id', $orderIds)
-                    ->update(['is_settled' => true]);
+            if (
+                $itemTotals['total_collections'] !== round((float) $settlement->total_collections, 2)
+                || $itemTotals['total_commissions'] !== round((float) $settlement->total_commissions, 2)
+                || $itemTotals['net_amount'] !== round((float) $settlement->net_amount, 2)
+            ) {
+                throw new SettlementItemsMismatchException;
             }
+
+            $signedNetAmount = round((float) $settlement->net_amount, 2);
 
             if ($settlement->settlement_type === SettlementTypeEnum::Agent && $settlement->delivery_agent_id !== null) {
-                DeliveryAgent::query()
+                $agent = DeliveryAgent::query()
                     ->whereKey($settlement->delivery_agent_id)
-                    ->decrement('balance', $settlement->net_amount);
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($signedNetAmount !== 0.0) {
+                    $agent->decrement('balance', $signedNetAmount);
+                }
             }
 
             if ($settlement->settlement_type === SettlementTypeEnum::Company && $settlement->shipping_company_id !== null) {
-                ShippingCompany::query()
+                $company = ShippingCompany::query()
                     ->whereKey($settlement->shipping_company_id)
-                    ->decrement('balance', $settlement->net_amount);
+                    ->lockForUpdate()
+                    ->firstOrFail();
+
+                if ($signedNetAmount !== 0.0) {
+                    $company->decrement('balance', $signedNetAmount);
+                }
             }
+
+            $isNoPayment = $signedNetAmount === 0.0;
 
             $settlement->update([
                 'settlement_status' => SettlementStatusEnum::Paid->value,
-                'payment_method' => $paymentMethod,
-                'payment_reference' => $paymentReference,
+                'payment_method' => $isNoPayment ? 'no_payment' : $paymentMethod,
+                'payment_reference' => $isNoPayment ? null : $paymentReference,
                 'notes' => $notes ?? $settlement->notes,
                 'paid_at' => Carbon::now(),
             ]);
 
-            return $settlement->fresh(array_merge(self::LIST_RELATIONS, ['collections']));
-        });
-    }
+            $orderIds = Collection::query()
+                ->whereIn('collection_id', $items->pluck('collection_id'))
+                ->pluck('order_id')
+                ->filter()
+                ->unique()
+                ->values()
+                ->all();
 
-    public function countEligibleCollections(Settlement $settlement): int
-    {
-        return $this->buildEligibleCollectionsQueryForSettlement($settlement)->count();
+            $this->syncOrderSettlementCompletion($orderIds);
+
+            $settlement = $settlement->fresh(array_merge(self::LIST_RELATIONS, ['items']));
+            $settlement->loadCount(['items as collections_count']);
+            $this->attachItemCount($settlement);
+
+            return $settlement;
+        });
     }
 
     public function findForCompany(string $settlementId, string $companyId): ?Settlement
     {
         $settlement = Settlement::query()
-            ->with(array_merge(self::LIST_RELATIONS, ['collections.order']))
-            ->withCount('collections')
+            ->with(array_merge(self::LIST_RELATIONS, ['items.collection.order']))
+            ->withCount(['items as collections_count'])
             ->where('settlement_id', $settlementId)
             ->where('shipping_company_id', $companyId)
             ->where('settlement_type', SettlementTypeEnum::Company->value)
@@ -234,9 +296,7 @@ class SettlementRepository implements SettlementRepositoryInterface
             return null;
         }
 
-        if ($settlement->settlement_status !== SettlementStatusEnum::Paid) {
-            $this->attachEligibleCollectionsCount($settlement);
-        }
+        $this->attachItemCount($settlement);
 
         return $settlement;
     }
@@ -248,61 +308,136 @@ class SettlementRepository implements SettlementRepositoryInterface
             ->where('settlement_type', SettlementTypeEnum::Company->value)
             ->where('settlement_status', SettlementStatusEnum::Paid->value)
             ->orderByDesc('paid_at')
-            ->first(['settlement_id', 'net_amount', 'paid_at']);
+            ->first(['settlement_id', 'settlement_type', 'net_amount', 'paid_at']);
 
         if ($settlement === null) {
             return null;
         }
 
         return [
-            'reference'  => 'STL-' . strtoupper(substr(str_replace('-', '', $settlement->settlement_id), 0, 8)),
+            'reference' => 'STL-'.strtoupper(substr(str_replace('-', '', $settlement->settlement_id), 0, 8)),
             'net_amount' => (float) $settlement->net_amount,
-            'paid_at'    => $settlement->paid_at?->toISOString(),
+            'payment_direction' => $settlement->paymentDirection(),
+            'payable_amount' => $settlement->payableAmount(),
+            'paid_at' => $settlement->paid_at?->toISOString(),
         ];
     }
 
     private function eligibleCollectionsQuery(CreateSettlementDTO $dto): Builder
     {
         $query = Collection::query()
-            ->whereNotNull('cash_received_at')
-            ->whereNull('settlement_id')
             ->whereDate('collected_at', '>=', $dto->periodFrom)
-            ->whereDate('collected_at', '<=', $dto->periodTo);
+            ->whereDate('collected_at', '<=', $dto->periodTo)
+            ->whereNotExists(function ($itemQuery) use ($dto): void {
+                $itemQuery
+                    ->selectRaw('1')
+                    ->from('settlement_items')
+                    ->whereColumn('settlement_items.collection_id', 'collections.collection_id')
+                    ->where('settlement_items.settlement_type', $dto->settlementType->value);
+            });
 
         if ($dto->settlementType === SettlementTypeEnum::Agent) {
-            $query->where('delivery_agent_id', $dto->referenceEntityId);
+            $query
+                ->where('delivery_agent_id', $dto->referenceEntityId)
+                ->where(function (Builder $eligibilityQuery): void {
+                    $eligibilityQuery
+                        ->where('agent_net_due', '<=', 0)
+                        ->orWhereNotNull('cash_received_at');
+                });
         } else {
-            $query->where('shipping_company_id', $dto->referenceEntityId);
+            $query
+                ->where('shipping_company_id', $dto->referenceEntityId)
+                ->where(function (Builder $eligibilityQuery): void {
+                    $eligibilityQuery
+                        ->where('company_net_due', '<=', 0)
+                        ->orWhereNotNull('cash_received_at');
+                });
         }
 
         return $query;
     }
 
-    private function buildEligibleCollectionsQueryForSettlement(Settlement $settlement): Builder
-    {
-        $query = Collection::query()
-            ->whereNotNull('cash_received_at')
-            ->whereNull('settlement_id')
-            ->whereDate('collected_at', '>=', $settlement->period_from)
-            ->whereDate('collected_at', '<=', $settlement->period_to);
-
-        if ($settlement->settlement_type === SettlementTypeEnum::Agent) {
-            $query->where('delivery_agent_id', $settlement->delivery_agent_id);
-        } else {
-            $query->where('shipping_company_id', $settlement->shipping_company_id);
-        }
-
-        return $query;
-    }
-
-    private function attachEligibleCollectionsCount(Settlement $settlement, ?int $count = null): void
+    private function attachItemCount(Settlement $settlement): void
     {
         $settlement->setAttribute(
             'eligible_collections_count',
-            $count ?? $this->countEligibleCollections($settlement),
+            (int) ($settlement->collections_count ?? $settlement->items()->count()),
         );
 
         $settlement->syncOriginalAttribute('eligible_collections_count');
+    }
+
+    private function directionalTotals(Builder $query): array
+    {
+        $totals = $query
+            ->selectRaw('COUNT(*) as settlements_count')
+            ->selectRaw(
+                'COALESCE(SUM(CASE WHEN settlement_type = ? AND net_amount > 0 THEN net_amount ELSE 0 END), 0) as agent_to_system_amount',
+                [SettlementTypeEnum::Agent->value],
+            )
+            ->selectRaw(
+                'ABS(COALESCE(SUM(CASE WHEN settlement_type = ? AND net_amount < 0 THEN net_amount ELSE 0 END), 0)) as system_to_agent_amount',
+                [SettlementTypeEnum::Agent->value],
+            )
+            ->selectRaw(
+                'COALESCE(SUM(CASE WHEN settlement_type = ? AND net_amount > 0 THEN net_amount ELSE 0 END), 0) as system_to_company_amount',
+                [SettlementTypeEnum::Company->value],
+            )
+            ->selectRaw(
+                'ABS(COALESCE(SUM(CASE WHEN settlement_type = ? AND net_amount < 0 THEN net_amount ELSE 0 END), 0)) as company_to_system_amount',
+                [SettlementTypeEnum::Company->value],
+            )
+            ->selectRaw('SUM(CASE WHEN net_amount = 0 THEN 1 ELSE 0 END) as no_payment_count')
+            ->first();
+
+        return [
+            'settlements_count' => (int) ($totals?->settlements_count ?? 0),
+            'agent_to_system_amount' => $this->money($totals?->agent_to_system_amount),
+            'system_to_agent_amount' => $this->money($totals?->system_to_agent_amount),
+            'system_to_company_amount' => $this->money($totals?->system_to_company_amount),
+            'company_to_system_amount' => $this->money($totals?->company_to_system_amount),
+            'no_payment_count' => (int) ($totals?->no_payment_count ?? 0),
+        ];
+    }
+
+    private function money(mixed $value): string
+    {
+        return number_format((float) ($value ?? 0), 2, '.', '');
+    }
+
+    /**
+     * @param  string[]  $orderIds
+     */
+    private function syncOrderSettlementCompletion(array $orderIds): void
+    {
+        if ($orderIds === []) {
+            return;
+        }
+
+        $paidTypesByOrder = DB::table('settlement_items as si')
+            ->join('settlements as s', 's.settlement_id', '=', 'si.settlement_id')
+            ->join('collections as c', 'c.collection_id', '=', 'si.collection_id')
+            ->whereIn('c.order_id', $orderIds)
+            ->where('s.settlement_status', SettlementStatusEnum::Paid->value)
+            ->whereNull('s.deleted_at')
+            ->whereNull('c.deleted_at')
+            ->select(['c.order_id', 'si.settlement_type'])
+            ->distinct()
+            ->get()
+            ->groupBy('order_id');
+
+        foreach ($orderIds as $orderId) {
+            $paidTypes = $paidTypesByOrder->get($orderId, collect())
+                ->pluck('settlement_type')
+                ->map(fn ($type): int => (int) $type);
+
+            OrderFinancial::query()
+                ->where('order_id', $orderId)
+                ->update([
+                    'is_settled' => $paidTypes->contains(SettlementTypeEnum::Agent->value)
+                        && $paidTypes->contains(SettlementTypeEnum::Company->value),
+                ]);
+        }
     }
 
     private function applyFilters(Builder $query, SettlementFilterDTO $filter): void
@@ -329,7 +464,7 @@ class SettlementRepository implements SettlementRepositoryInterface
         }
 
         if ($filter->search !== null && $filter->search !== '') {
-            $search = '%' . $filter->search . '%';
+            $search = '%'.$filter->search.'%';
 
             $query->where(function (Builder $builder) use ($search) {
                 $builder

@@ -9,7 +9,7 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('collections', function (Blueprint $table) {
-            $table->timestamp('cash_received_at')->nullable()->after('settlement_id');
+            $table->timestamp('cash_received_at')->nullable()->after('company_net_due');
             $table->string('cash_received_by', 36)->nullable()->after('cash_received_at');
 
             $table->foreign('cash_received_by', 'fk_collections_cash_received_by')

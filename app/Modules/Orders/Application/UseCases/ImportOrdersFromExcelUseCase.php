@@ -2,16 +2,17 @@
 
 namespace App\Modules\Orders\Application\UseCases;
 
+use App\Modules\Notifications\Domain\Events\OrderAssigned;
 use App\Modules\Orders\Application\DTOs\ImportOrderRowDTO;
 use App\Modules\Orders\Application\Services\ReferenceCodeGeneratorService;
 use App\Modules\Orders\Application\Validators\OrderRowValidator;
 use App\Modules\Orders\Domain\Enums\ImportStatusHintEnum;
 use App\Modules\Orders\Domain\Services\OrdersExcelSchema;
 use App\Modules\Orders\Infrastructure\Imports\OrdersImport;
-use App\Modules\Notifications\Domain\Events\OrderAssigned;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use App\Modules\Users\Infrastructure\Database\Models\User;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
@@ -30,7 +31,7 @@ class ImportOrdersFromExcelUseCase
     {
         $batchId ??= (string) Str::uuid();
 
-        $import = new OrdersImport();
+        $import = new OrdersImport;
         Excel::import($import, $filePath);
         $rows = $import->getRows();
 
@@ -52,9 +53,9 @@ class ImportOrdersFromExcelUseCase
             ->keyBy('name');
 
         $results = [
-            'imported'          => 0,
-            'skipped'           => 0,
-            'errors'            => [],
+            'imported' => 0,
+            'skipped' => 0,
+            'errors' => [],
             'created_companies' => [],
         ];
 
@@ -73,6 +74,7 @@ class ImportOrdersFromExcelUseCase
                         'dto' => (array) $dto,
                     ]);
                 }
+
                 continue;
             }
 
@@ -82,24 +84,25 @@ class ImportOrdersFromExcelUseCase
                 $results['errors'][] = $errMsg;
                 $results['skipped']++;
                 Log::channel('daily')->warning('OrderImport governorate resolution failed', [
-                    'row'         => $rowNumber,
+                    'row' => $rowNumber,
                     'governorate' => $dto->governorateName,
                 ]);
+
                 continue;
             }
 
             $shippingCompanyId = $this->resolveOrCreateCompany(
-                dto:          $dto,
+                dto: $dto,
                 companyCache: $companyCache,
-                results:      $results,
+                results: $results,
             );
 
             [$deliveryAgentId, $assignedAt, $agentUserId] = $this->resolveAgent(
-                dto:        $dto,
-                hint:       $hint,
+                dto: $dto,
+                hint: $hint,
                 agentCache: $agentCache,
-                rowNumber:  $rowNumber,
-                results:    $results,
+                rowNumber: $rowNumber,
+                results: $results,
             );
 
             if ($deliveryAgentId === false) {
@@ -109,28 +112,28 @@ class ImportOrdersFromExcelUseCase
             // Resolve company name for reference_code generation (before transaction).
             $companyNameForCode = $dto->companyName;
 
-            $orderId       = null;
+            $orderId = null;
             $referenceCode = null;
 
             try {
                 DB::transaction(function () use ($dto, $hint, $shippingCompanyId, $governorateId, $rowNumber, $deliveryAgentId, $assignedAt, $companyNameForCode, &$orderId, &$referenceCode) {
                     $orderId = (string) Str::uuid();
-                    $now     = now();
+                    $now = now();
 
                     // Use الكود from sheet as reference_no; fall back to row number.
-                    $referenceNo   = $dto->referenceNo !== ''
+                    $referenceNo = $dto->referenceNo !== ''
                         ? $dto->referenceNo
-                        : 'R' . $rowNumber;
+                        : 'R'.$rowNumber;
 
                     // Generate the display reference_code from company name + excel code + date.
                     $referenceCode = $this->referenceCodeGenerator->generate(
-                        companyName:    $companyNameForCode,
+                        companyName: $companyNameForCode,
                         excelOrderCode: $dto->referenceNo,
-                        date:           $now,
+                        date: $now,
                     );
 
                     $hasCollection = $hint?->hasCollection() ?? false;
-                    $isTerminal    = $hint?->isTerminal() ?? false;
+                    $isTerminal = $hint?->isTerminal() ?? false;
 
                     // If the sheet gave no explicit status (→ pending/1) but an agent
                     // is present, the order must be at least "assigned" (2).
@@ -141,18 +144,18 @@ class ImportOrdersFromExcelUseCase
 
                     // ── orders ─────────────────────────────────────────────
                     DB::table('orders')->insert([
-                        'order_id'             => $orderId,
-                        'reference_no'         => $referenceNo,
-                        'reference_code'       => $referenceCode,
-                        'shipping_company_id'  => $shippingCompanyId,
-                        'delivery_agent_id'    => $deliveryAgentId,
-                        'status'               => $resolvedStatus,
-                        'notes'                => $dto->itemDescription ?: null,
+                        'order_id' => $orderId,
+                        'reference_no' => $referenceNo,
+                        'reference_code' => $referenceCode,
+                        'shipping_company_id' => $shippingCompanyId,
+                        'delivery_agent_id' => $deliveryAgentId,
+                        'status' => $resolvedStatus,
+                        'notes' => $dto->itemDescription ?: null,
                         'display_company_name' => $dto->displayCompanyName ?: null,
-                        'assigned_at'          => $assignedAt,
-                        'delivered_at'         => $hasCollection ? $now : null,
-                        'created_at'           => $now,
-                        'updated_at'           => $now,
+                        'assigned_at' => $assignedAt,
+                        'delivered_at' => $hasCollection ? $now : null,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]);
 
                     // ── order_customer_info ────────────────────────────────
@@ -160,93 +163,94 @@ class ImportOrdersFromExcelUseCase
 
                     DB::table('order_customer_info')->insert([
                         'order_customer_info_id' => (string) Str::uuid(),
-                        'order_id'               => $orderId,
-                        'customer_name'          => $dto->customerName,
-                        'customer_phone'         => $customerPhone,
-                        'phone_alt'              => $phoneAlt,
-                        'created_at'             => $now,
-                        'updated_at'             => $now,
+                        'order_id' => $orderId,
+                        'customer_name' => $dto->customerName,
+                        'customer_phone' => $customerPhone,
+                        'phone_alt' => $phoneAlt,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]);
 
                     // ── order_addresses ────────────────────────────────────
                     DB::table('order_addresses')->insert([
                         'order_address_id' => (string) Str::uuid(),
-                        'order_id'         => $orderId,
-                        'governorate_id'   => $governorateId,
-                        'city_id'          => null,
-                        'address_line'     => $dto->addressLine,
-                        'created_at'       => $now,
-                        'updated_at'       => $now,
+                        'order_id' => $orderId,
+                        'governorate_id' => $governorateId,
+                        'city_id' => null,
+                        'address_line' => $dto->addressLine,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]);
 
                     // ── order_financials ───────────────────────────────────
                     [
-                        'original_amount'  => $originalAmount,
-                        'approved_amount'  => $approvedAmount,
+                        'original_amount' => $originalAmount,
+                        'approved_amount' => $approvedAmount,
                         'collected_amount' => $collectedAmount,
-                        'shipping_fee'     => $shippingFee,
+                        'shipping_fee' => $shippingFee,
                     ] = $this->buildFinancialFields($dto, $hint);
 
                     DB::table('order_financials')->insert([
                         'order_financial_id' => (string) Str::uuid(),
-                        'order_id'           => $orderId,
-                        'original_amount'    => $originalAmount,
-                        'approved_amount'    => $approvedAmount,
-                        'collected_amount'   => $collectedAmount,
-                        'shipping_fee'       => $shippingFee,
-                        'commission_amount'  => null, // computed at settlement time
-                        'net_due_company'    => null, // computed at settlement time
-                        'is_settled'         => false,
-                        'created_at'         => $now,
-                        'updated_at'         => $now,
+                        'order_id' => $orderId,
+                        'original_amount' => $originalAmount,
+                        'approved_amount' => $approvedAmount,
+                        'collected_amount' => $collectedAmount,
+                        'shipping_fee' => $shippingFee,
+                        'agent_commission_amount' => null, // computed at collection time
+                        'system_commission_amount' => null, // computed at collection time
+                        'net_due_company' => null, // computed at collection time
+                        'is_settled' => false,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]);
 
                     // ── order_items ────────────────────────────────────────
                     DB::table('order_items')->insert([
-                        'order_item_id'      => (string) Str::uuid(),
-                        'order_id'           => $orderId,
-                        'item_description'   => null,
-                        'total_quantity'     => $dto->quantity,
+                        'order_item_id' => (string) Str::uuid(),
+                        'order_id' => $orderId,
+                        'item_description' => null,
+                        'total_quantity' => $dto->quantity,
                         'delivered_quantity' => $this->resolveDeliveredQuantity($hint, $dto->quantity),
-                        'returned_quantity'  => null,
-                        'created_at'         => $now,
-                        'updated_at'         => $now,
+                        'returned_quantity' => null,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]);
 
                     // ── order_schedules ────────────────────────────────────
                     DB::table('order_schedules')->insert([
-                        'order_schedule_id'      => (string) Str::uuid(),
-                        'order_id'               => $orderId,
+                        'order_schedule_id' => (string) Str::uuid(),
+                        'order_id' => $orderId,
                         'expected_delivery_date' => null,
-                        'postponed_date'         => null,
-                        'schedule_notes'         => null,
-                        'created_at'             => $now,
-                        'updated_at'             => $now,
+                        'postponed_date' => null,
+                        'schedule_notes' => null,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]);
 
                     // ── order_approvals ────────────────────────────────────
                     // Terminal imported orders do not need pending approval.
                     DB::table('order_approvals')->insert([
                         'order_approval_id' => (string) Str::uuid(),
-                        'order_id'          => $orderId,
+                        'order_id' => $orderId,
                         'requires_approval' => ! $isTerminal,
-                        'approval_granted'  => $isTerminal ? 1 : null,
-                        'approved_by'       => null,
-                        'approved_at'       => $isTerminal ? $now : null,
-                        'created_at'        => $now,
-                        'updated_at'        => $now,
+                        'approval_granted' => $isTerminal ? 1 : null,
+                        'approved_by' => null,
+                        'approved_at' => $isTerminal ? $now : null,
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]);
 
                     // ── order_status_history ───────────────────────────────
                     DB::table('order_status_history')->insert([
                         'order_status_history_id' => (string) Str::uuid(),
-                        'order_id'                => $orderId,
-                        'from_status_id'          => null,
-                        'to_status_id'            => $resolvedStatus,
-                        'changed_by'              => null,
-                        'notes'                   => 'مستورد من ملف Excel',
-                        'created_at'              => $now,
-                        'updated_at'              => $now,
+                        'order_id' => $orderId,
+                        'from_status_id' => null,
+                        'to_status_id' => $resolvedStatus,
+                        'changed_by' => null,
+                        'notes' => 'مستورد من ملف Excel',
+                        'created_at' => $now,
+                        'updated_at' => $now,
                     ]);
                 });
 
@@ -255,8 +259,8 @@ class ImportOrdersFromExcelUseCase
                 if ($deliveryAgentId !== null && $agentUserId !== null && $orderId !== null && $referenceCode !== null) {
                     event(new OrderAssigned(
                         agentUserId: $agentUserId,
-                        orderCode:   $referenceCode,
-                        orderId:     $orderId,
+                        orderCode: $referenceCode,
+                        orderId: $orderId,
                     ));
                 }
 
@@ -265,8 +269,8 @@ class ImportOrdersFromExcelUseCase
                 $results['errors'][] = $errMsg;
                 $results['skipped']++;
                 Log::channel('daily')->error('OrderImport save failed', [
-                    'row'       => $rowNumber,
-                    'error'     => $e->getMessage(),
+                    'row' => $rowNumber,
+                    'error' => $e->getMessage(),
                     'exception' => $e,
                 ]);
             }
@@ -287,23 +291,23 @@ class ImportOrdersFromExcelUseCase
         $rawStatus = isset($row[OrdersExcelSchema::IMPORT_COL_STATUS])
             ? trim((string) $row[OrdersExcelSchema::IMPORT_COL_STATUS])
             : '';
-        $hint      = ImportStatusHintEnum::fromArabic($rawStatus);
-        $statusId  = $hint?->toStatusId() ?? 1;
+        $hint = ImportStatusHintEnum::fromArabic($rawStatus);
+        $statusId = $hint?->toStatusId() ?? 1;
 
         $dto = new ImportOrderRowDTO(
-            referenceNo:         trim((string) ($row[OrdersExcelSchema::IMPORT_COL_REFERENCE_NO] ?? '')),
-            customerName:        trim((string) ($row[OrdersExcelSchema::IMPORT_COL_CUSTOMER_NAME] ?? '')),
-            customerPhones:      $this->normalizePhones((string) ($row[OrdersExcelSchema::IMPORT_COL_PHONES] ?? '')),
-            addressLine:         trim((string) ($row[OrdersExcelSchema::IMPORT_COL_ADDRESS] ?? '')),
-            governorateName:     trim((string) ($row[OrdersExcelSchema::IMPORT_COL_GOVERNORATE] ?? '')),
-            itemDescription:     trim((string) ($row[OrdersExcelSchema::IMPORT_COL_DESCRIPTION] ?? '')),
-            quantity:            max(1, (int) ($row[OrdersExcelSchema::IMPORT_COL_QUANTITY] ?? 1)),
-            codAmount:           max(0.0, (float) ($row[OrdersExcelSchema::IMPORT_COL_TOTAL] ?? 0)),
-            displayCompanyName:  trim((string) ($row[OrdersExcelSchema::IMPORT_COL_DISPLAY_COMPANY] ?? '')),
-            companyName:         trim((string) ($row[OrdersExcelSchema::IMPORT_COL_SHIPPING_COMPANY] ?? '')),
-            agentName:           trim((string) ($row[OrdersExcelSchema::IMPORT_COL_AGENT] ?? '')),
-            statusId:            $statusId,
-            rowNumber:           $rowNumber,
+            referenceNo: trim((string) ($row[OrdersExcelSchema::IMPORT_COL_REFERENCE_NO] ?? '')),
+            customerName: trim((string) ($row[OrdersExcelSchema::IMPORT_COL_CUSTOMER_NAME] ?? '')),
+            customerPhones: $this->normalizePhones((string) ($row[OrdersExcelSchema::IMPORT_COL_PHONES] ?? '')),
+            addressLine: trim((string) ($row[OrdersExcelSchema::IMPORT_COL_ADDRESS] ?? '')),
+            governorateName: trim((string) ($row[OrdersExcelSchema::IMPORT_COL_GOVERNORATE] ?? '')),
+            itemDescription: trim((string) ($row[OrdersExcelSchema::IMPORT_COL_DESCRIPTION] ?? '')),
+            quantity: max(1, (int) ($row[OrdersExcelSchema::IMPORT_COL_QUANTITY] ?? 1)),
+            codAmount: max(0.0, (float) ($row[OrdersExcelSchema::IMPORT_COL_TOTAL] ?? 0)),
+            displayCompanyName: trim((string) ($row[OrdersExcelSchema::IMPORT_COL_DISPLAY_COMPANY] ?? '')),
+            companyName: trim((string) ($row[OrdersExcelSchema::IMPORT_COL_SHIPPING_COMPANY] ?? '')),
+            agentName: trim((string) ($row[OrdersExcelSchema::IMPORT_COL_AGENT] ?? '')),
+            statusId: $statusId,
+            rowNumber: $rowNumber,
         );
 
         return [$dto, $hint, $rawStatus];
@@ -312,8 +316,8 @@ class ImportOrdersFromExcelUseCase
     /**
      * Resolve delivery agent by user name (column 10 — اسم المندوب).
      *
-     * @return array{0: ?string, 1: ?\Illuminate\Support\Carbon, 2: ?string}|false
-     *         false = row should be skipped (error already logged)
+     * @return array{0: ?string, 1: ?Carbon, 2: ?string}|false
+     *                                                         false = row should be skipped (error already logged)
      */
     private function resolveAgent(
         ImportOrderRowDTO $dto,
@@ -333,7 +337,7 @@ class ImportOrdersFromExcelUseCase
             $results['errors'][] = $errMsg;
             $results['skipped']++;
             Log::channel('daily')->warning('OrderImport agent resolution failed', [
-                'row'        => $rowNumber,
+                'row' => $rowNumber,
                 'agent_name' => $dto->agentName,
             ]);
 
@@ -357,28 +361,28 @@ class ImportOrdersFromExcelUseCase
         DB::transaction(function () use ($dto, &$shippingCompanyId, &$companyCache, &$results) {
             $userId = (string) Str::uuid();
             // No phone column in new sheet — generate a placeholder.
-            $phone  = $this->resolveUniquePhone('', $userId);
-            $email  = $this->resolveUniqueEmail($dto->companyName, $userId);
+            $phone = $this->resolveUniquePhone('', $userId);
+            $email = $this->resolveUniqueEmail($dto->companyName, $userId);
 
             $user = User::query()->create([
-                'user_id'      => $userId,
-                'name'         => $dto->companyName,
-                'email'        => $email,
-                'phone'        => $phone,
-                'password'     => Hash::make(Str::random(32)),
+                'user_id' => $userId,
+                'name' => $dto->companyName,
+                'email' => $email,
+                'phone' => $phone,
+                'password' => Hash::make(Str::random(32)),
                 'account_type' => AccountTypeEnum::ShippingCompany->value,
-                'is_active'    => true,
+                'is_active' => true,
             ]);
 
             $user->assignRole('shipping_company');
 
             $company = ShippingCompany::query()->create([
-                'user_id'          => $user->user_id,
-                'company_name'     => $dto->companyName,
-                'commission_type'  => 2,
+                'user_id' => $user->user_id,
+                'company_name' => $dto->companyName,
+                'commission_type' => 2,
                 'commission_value' => 0,
-                'balance'          => 0,
-                'is_active'        => 1,
+                'balance' => 0,
+                'is_active' => 1,
             ]);
 
             $shippingCompanyId = $company->shipping_company_id;
@@ -386,7 +390,7 @@ class ImportOrdersFromExcelUseCase
 
             $results['created_companies'][] = [
                 'name' => $dto->companyName,
-                'id'   => $shippingCompanyId,
+                'id' => $shippingCompanyId,
             ];
         });
 
@@ -404,17 +408,17 @@ class ImportOrdersFromExcelUseCase
      */
     private function buildFinancialFields(ImportOrderRowDTO $dto, ?ImportStatusHintEnum $hint): array
     {
-        $originalAmount  = $dto->codAmount;
-        $approvedAmount  = null;
+        $originalAmount = $dto->codAmount;
+        $approvedAmount = null;
         $collectedAmount = null;
-        $shippingFee     = null;
+        $shippingFee = null;
 
         if (! $hint?->hasCollection()) {
             return [
-                'original_amount'  => $originalAmount,
-                'approved_amount'  => null,
+                'original_amount' => $originalAmount,
+                'approved_amount' => null,
                 'collected_amount' => null,
-                'shipping_fee'     => null,
+                'shipping_fee' => null,
             ];
         }
 
@@ -425,15 +429,15 @@ class ImportOrdersFromExcelUseCase
         }
 
         if ($hint === ImportStatusHintEnum::RefusedPaidShipping) {
-            $shippingFee    = $dto->codAmount;
+            $shippingFee = $dto->codAmount;
             $originalAmount = 0;
         }
 
         return [
-            'original_amount'  => $originalAmount,
-            'approved_amount'  => $approvedAmount,
+            'original_amount' => $originalAmount,
+            'approved_amount' => $approvedAmount,
             'collected_amount' => $collectedAmount,
-            'shipping_fee'     => $shippingFee,
+            'shipping_fee' => $shippingFee,
         ];
     }
 
@@ -442,9 +446,9 @@ class ImportOrdersFromExcelUseCase
         return match ($hint) {
             ImportStatusHintEnum::Delivered,
             ImportStatusHintEnum::DeliveredPriceChanged => $quantity,
-            ImportStatusHintEnum::RefusedPaidShipping     => 0,
-            ImportStatusHintEnum::PartialDelivery         => null,
-            default                                       => null,
+            ImportStatusHintEnum::RefusedPaidShipping => 0,
+            ImportStatusHintEnum::PartialDelivery => null,
+            default => null,
         };
     }
 
@@ -458,11 +462,11 @@ class ImportOrdersFromExcelUseCase
 
     private function resolveUniqueEmail(string $companyName, string $userId): string
     {
-        $slug  = Str::slug($companyName) ?: 'company';
+        $slug = Str::slug($companyName) ?: 'company';
         $email = "{$slug}.{$userId}@import.marsal.local";
 
         while (User::query()->where('email', $email)->exists()) {
-            $email = "{$slug}." . Str::random(8) . '@import.marsal.local';
+            $email = "{$slug}.".Str::random(8).'@import.marsal.local';
         }
 
         return $email;
@@ -473,7 +477,7 @@ class ImportOrdersFromExcelUseCase
         $phone = $preferred !== '' ? $preferred : $this->phoneFromUuid($userId);
 
         while (User::query()->where('phone', $phone)->exists()) {
-            $phone = '010' . random_int(10000000, 99999999);
+            $phone = '010'.random_int(10000000, 99999999);
         }
 
         return $phone;
@@ -483,7 +487,7 @@ class ImportOrdersFromExcelUseCase
     {
         $digits = preg_replace('/\D/', '', $uuid) ?: (string) random_int(10000000, 99999999);
 
-        return '010' . substr(str_pad($digits, 8, '0'), 0, 8);
+        return '010'.substr(str_pad($digits, 8, '0'), 0, 8);
     }
 
     private function normalizePhone(string $raw): string
@@ -497,7 +501,7 @@ class ImportOrdersFromExcelUseCase
 
         // Egyptian mobile: 10-digit starting with 1 → prepend 0
         if (strlen($digits) === 10 && str_starts_with($digits, '1')) {
-            $digits = '0' . $digits;
+            $digits = '0'.$digits;
         }
 
         return $digits;
@@ -506,7 +510,7 @@ class ImportOrdersFromExcelUseCase
     /** @return string[] */
     private function normalizePhones(string $raw): array
     {
-        $parts  = preg_split('/[\/\-,\s]+/', $raw);
+        $parts = preg_split('/[\/\-,\s]+/', $raw);
         $phones = [];
 
         foreach ($parts as $part) {

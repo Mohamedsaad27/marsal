@@ -912,8 +912,9 @@ $netDue = $collectedAmount - $commissionAmount;
 ### Settlement Rules
 - `settlement_type=1` (agent): `reference_entity_id` = `delivery_agents.agent_id`
 - `settlement_type=2` (company): `reference_entity_id` = `shipping_companies.company_id`
-- After settlement is `paid` (status=3): update linked `collections.settlement_id`
-- Update `delivery_agents.balance` or `shipping_companies.balance` after settlement
+- Settlements reserve linked collections through `settlement_items`, one row per collection side.
+- After settlement is `paid` (status=3): update balances by signed `settlements.net_amount`.
+- `order_financials.is_settled` becomes true only after both Agent and Company sides are paid.
 
 ---
 

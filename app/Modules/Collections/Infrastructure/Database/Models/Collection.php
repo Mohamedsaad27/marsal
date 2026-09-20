@@ -3,6 +3,8 @@
 namespace App\Modules\Collections\Infrastructure\Database\Models;
 
 use App\Modules\Collections\Domain\Enums\CollectionTypeEnum;
+use App\Modules\Collections\Domain\Enums\SettlementStatusEnum;
+use App\Modules\Collections\Domain\Enums\SettlementTypeEnum;
 use App\Modules\Core\Infrastructure\Traits\HasUuid;
 use App\Modules\Orders\Infrastructure\Database\Models\Order;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
@@ -10,6 +12,8 @@ use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Collection extends Model
@@ -32,9 +36,10 @@ class Collection extends Model
         'shipping_company_id',
         'collection_type',
         'collected_amount',
-        'commission_amount',
-        'net_due',
-        'settlement_id',
+        'agent_commission_amount',
+        'agent_net_due',
+        'system_commission_amount',
+        'company_net_due',
         'cash_received_at',
         'cash_received_by',
         'collected_at',
@@ -45,8 +50,10 @@ class Collection extends Model
         return [
             'collection_type' => CollectionTypeEnum::class,
             'collected_amount' => 'decimal:2',
-            'commission_amount' => 'decimal:2',
-            'net_due' => 'decimal:2',
+            'agent_commission_amount' => 'decimal:2',
+            'agent_net_due' => 'decimal:2',
+            'system_commission_amount' => 'decimal:2',
+            'company_net_due' => 'decimal:2',
             'cash_received_at' => 'datetime',
             'collected_at' => 'datetime',
             'created_at' => 'datetime',
@@ -75,8 +82,29 @@ class Collection extends Model
         return $this->belongsTo(User::class, 'cash_received_by', 'user_id');
     }
 
-    public function settlement(): BelongsTo
+    public function settlementItems(): HasMany
     {
-        return $this->belongsTo(Settlement::class, 'settlement_id', 'settlement_id');
+        return $this->hasMany(SettlementItem::class, 'collection_id', 'collection_id');
+    }
+
+    public function agentSettlementItem(): HasOne
+    {
+        return $this->hasOne(SettlementItem::class, 'collection_id', 'collection_id')
+            ->where('settlement_type', SettlementTypeEnum::Agent->value);
+    }
+
+    public function companySettlementItem(): HasOne
+    {
+        return $this->hasOne(SettlementItem::class, 'collection_id', 'collection_id')
+            ->where('settlement_type', SettlementTypeEnum::Company->value);
+    }
+
+    public function settlementStatusFor(SettlementTypeEnum $type): ?SettlementStatusEnum
+    {
+        $item = $type === SettlementTypeEnum::Agent
+            ? $this->agentSettlementItem
+            : $this->companySettlementItem;
+
+        return $item?->settlement?->settlement_status;
     }
 }

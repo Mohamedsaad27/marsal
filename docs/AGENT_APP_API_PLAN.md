@@ -407,8 +407,9 @@ GET /api/v1/agent/collections
       "customer_name": "خالد منصور",
       "collection_type": { "id": 1, "label": "مبلغ الاستلام (COD)" },
       "collected_amount": 460.00,
-      "is_settled": false,
-      "settlement_id": null,
+      "agent_commission_amount": 50.00,
+      "agent_net_due": 410.00,
+      "agent_settlement_status": null,
       "collected_at": "2026-06-20T09:15:00Z"
     }
   ],
@@ -424,15 +425,17 @@ GET /api/v1/agent/collections
 GET /api/v1/agent/collections/summary
 ```
 
-**Purpose:** Header stats on the collections screen — total held amount, count, breakdown by type.
+**Purpose:** Header stats on the collections screen — signed agent exposure, directional totals, count, breakdown by type.
 
 **Response:**
 ```json
 {
   "status": true,
   "data": {
-    "total_unsettled": 1250.00,
-    "unsettled_count": 3,
+    "total_agent_net_due": 1250.00,
+    "agent_to_system_amount": 1300.00,
+    "system_to_agent_amount": 50.00,
+    "pending_settlement_count": 3,
     "breakdown": {
       "cod": 1100.00,
       "shipping_fee": 100.00,
@@ -446,8 +449,9 @@ GET /api/v1/agent/collections/summary
 
 **Business rules:**
 - Scope to `collections.agent_id = auth()->id()`
-- `total_unsettled`: sum of `collected_amount` where `settlement_id IS NULL`
-- `agent_balance`: read from `delivery_agents.balance` — should match `total_unsettled`
+- `total_agent_net_due`: signed sum of `agent_net_due`
+- Direction fields separate positive agent-to-system and negative system-to-agent exposure
+- `agent_balance`: read from `delivery_agents.balance` — should match signed open agent exposure
 
 ---
 

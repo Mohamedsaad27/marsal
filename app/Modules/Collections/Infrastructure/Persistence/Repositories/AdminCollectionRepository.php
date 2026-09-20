@@ -5,6 +5,7 @@ namespace App\Modules\Collections\Infrastructure\Persistence\Repositories;
 use App\Modules\Collections\Application\DTOs\AdminCollectionFilterDTO;
 use App\Modules\Collections\Application\Exceptions\CollectionAlreadyReceivedException;
 use App\Modules\Collections\Application\Exceptions\CollectionNotFoundException;
+use App\Modules\Collections\Domain\Enums\SettlementStatusEnum;
 use App\Modules\Collections\Domain\Interfaces\AdminCollectionRepositoryInterface;
 use App\Modules\Collections\Infrastructure\Database\Models\Collection;
 use Carbon\Carbon;
@@ -18,6 +19,8 @@ class AdminCollectionRepository implements AdminCollectionRepositoryInterface
         'deliveryAgent.user',
         'shippingCompany.user',
         'cashReceivedBy',
+        'agentSettlementItem.settlement',
+        'companySettlementItem.settlement',
     ];
 
     public function stats(): array
@@ -26,19 +29,31 @@ class AdminCollectionRepository implements AdminCollectionRepositoryInterface
 
         $aggregates = (clone $base)
             ->selectRaw('COALESCE(SUM(collected_amount), 0) as total_collected')
-            ->selectRaw('COALESCE(SUM(commission_amount), 0) as total_commissions')
-            ->selectRaw('COALESCE(SUM(net_due), 0) as net_due_to_companies')
+            ->selectRaw('COALESCE(SUM(agent_commission_amount), 0) as total_agent_commission_amount')
+            ->selectRaw('COALESCE(SUM(agent_net_due), 0) as total_agent_net_due')
+            ->selectRaw('COALESCE(SUM(system_commission_amount), 0) as total_system_commission_amount')
+            ->selectRaw('COALESCE(SUM(company_net_due), 0) as total_company_net_due')
+            ->selectRaw('COALESCE(SUM(CASE WHEN agent_net_due > 0 THEN agent_net_due ELSE 0 END), 0) as agent_to_system_amount')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN agent_net_due < 0 THEN agent_net_due ELSE 0 END), 0)) as system_to_agent_amount')
+            ->selectRaw('COALESCE(SUM(CASE WHEN company_net_due > 0 THEN company_net_due ELSE 0 END), 0) as system_to_company_amount')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN company_net_due < 0 THEN company_net_due ELSE 0 END), 0)) as company_to_system_amount')
             ->first();
 
         $pendingCashCount = (clone $base)
             ->whereNull('cash_received_at')
-            ->whereNull('settlement_id')
+            ->where('agent_net_due', '>', 0)
             ->count();
 
         return [
             'total_collected' => number_format((float) ($aggregates->total_collected ?? 0), 2, '.', ''),
-            'total_commissions' => number_format((float) ($aggregates->total_commissions ?? 0), 2, '.', ''),
-            'net_due_to_companies' => number_format((float) ($aggregates->net_due_to_companies ?? 0), 2, '.', ''),
+            'total_agent_commission_amount' => $this->money($aggregates->total_agent_commission_amount),
+            'total_agent_net_due' => $this->money($aggregates->total_agent_net_due),
+            'total_system_commission_amount' => $this->money($aggregates->total_system_commission_amount),
+            'total_company_net_due' => $this->money($aggregates->total_company_net_due),
+            'agent_to_system_amount' => $this->money($aggregates->agent_to_system_amount),
+            'system_to_agent_amount' => $this->money($aggregates->system_to_agent_amount),
+            'system_to_company_amount' => $this->money($aggregates->system_to_company_amount),
+            'company_to_system_amount' => $this->money($aggregates->company_to_system_amount),
             'pending_cash_count' => $pendingCashCount,
         ];
     }
@@ -63,7 +78,7 @@ class AdminCollectionRepository implements AdminCollectionRepositoryInterface
             ->first();
 
         if ($collection === null) {
-            throw new CollectionNotFoundException();
+            throw new CollectionNotFoundException;
         }
 
         return $collection;
@@ -74,7 +89,7 @@ class AdminCollectionRepository implements AdminCollectionRepositoryInterface
         $collection = $this->findOrFail($collectionId);
 
         if ($collection->cash_received_at !== null) {
-            throw new CollectionAlreadyReceivedException();
+            throw new CollectionAlreadyReceivedException;
         }
 
         $collection->update([
@@ -107,15 +122,10 @@ class AdminCollectionRepository implements AdminCollectionRepositoryInterface
             $query->whereDate('collected_at', '<=', $filter->dateTo);
         }
 
-        match ($filter->status) {
-            'pending_cash' => $query->whereNull('cash_received_at')->whereNull('settlement_id'),
-            'unsettled' => $query->whereNotNull('cash_received_at')->whereNull('settlement_id'),
-            'settled' => $query->whereNotNull('settlement_id'),
-            default => null,
-        };
+        $this->applyStatusFilter($query, $filter->status);
 
         if ($filter->search !== null && $filter->search !== '') {
-            $search = '%' . $filter->search . '%';
+            $search = '%'.$filter->search.'%';
 
             $query->where(function (Builder $builder) use ($search) {
                 $builder
@@ -126,5 +136,43 @@ class AdminCollectionRepository implements AdminCollectionRepositoryInterface
                         ->orWhereHas('user', fn (Builder $userQuery) => $userQuery->where('name', 'like', $search)));
             });
         }
+    }
+
+    private function applyStatusFilter(Builder $query, ?string $status): void
+    {
+        if ($status === 'pending_cash') {
+            $query->whereNull('cash_received_at')->where('agent_net_due', '>', 0);
+
+            return;
+        }
+
+        if ($status === 'settled') {
+            $query
+                ->whereHas('agentSettlementItem.settlement', fn (Builder $settlement) => $settlement
+                    ->where('settlement_status', SettlementStatusEnum::Paid->value))
+                ->whereHas('companySettlementItem.settlement', fn (Builder $settlement) => $settlement
+                    ->where('settlement_status', SettlementStatusEnum::Paid->value));
+
+            return;
+        }
+
+        if ($status === 'unsettled') {
+            $query
+                ->where(fn (Builder $eligible) => $eligible
+                    ->where('agent_net_due', '<=', 0)
+                    ->orWhereNotNull('cash_received_at'))
+                ->where(function (Builder $unsettled): void {
+                    $unsettled
+                        ->whereDoesntHave('agentSettlementItem.settlement', fn (Builder $settlement) => $settlement
+                            ->where('settlement_status', SettlementStatusEnum::Paid->value))
+                        ->orWhereDoesntHave('companySettlementItem.settlement', fn (Builder $settlement) => $settlement
+                            ->where('settlement_status', SettlementStatusEnum::Paid->value));
+                });
+        }
+    }
+
+    private function money(mixed $value): string
+    {
+        return number_format((float) ($value ?? 0), 2, '.', '');
     }
 }

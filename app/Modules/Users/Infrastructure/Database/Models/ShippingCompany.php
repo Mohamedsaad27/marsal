@@ -46,4 +46,20 @@ class ShippingCompany extends Model
     {
         return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
+
+    public function balanceDirection(): string
+    {
+        $balance = round((float) $this->balance, 2);
+
+        if ($balance === 0.0) {
+            return 'settled';
+        }
+
+        return $balance > 0 ? 'system_owes_company' : 'company_owes_system';
+    }
+
+    public function balanceAmount(): float
+    {
+        return abs(round((float) $this->balance, 2));
+    }
 }

@@ -11,9 +11,6 @@ class GetCollectionsBalanceQuery
         private readonly DashboardCacheService $cache,
     ) {}
 
-    /**
-     * @return array{total_pending: float, currency: string, company_count: int}
-     */
     public function execute(): array
     {
         return $this->cache->remember('collections-balance', fn () => $this->compute());
@@ -23,14 +20,20 @@ class GetCollectionsBalanceQuery
     {
         $aggregate = DB::table('shipping_companies')
             ->whereNull('deleted_at')
-            ->where('balance', '>', 0)
-            ->selectRaw('COALESCE(SUM(balance), 0) as total_pending, COUNT(*) as company_count')
+            ->selectRaw('COALESCE(SUM(balance), 0) as signed_company_balance')
+            ->selectRaw('COALESCE(SUM(CASE WHEN balance > 0 THEN balance ELSE 0 END), 0) as system_payable_to_companies')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN balance < 0 THEN balance ELSE 0 END), 0)) as companies_payable_to_system')
+            ->selectRaw('SUM(CASE WHEN balance > 0 THEN 1 ELSE 0 END) as creditor_company_count')
+            ->selectRaw('SUM(CASE WHEN balance < 0 THEN 1 ELSE 0 END) as debtor_company_count')
             ->first();
 
         return [
-            'total_pending' => round((float) ($aggregate->total_pending ?? 0), 2),
+            'signed_company_balance' => round((float) ($aggregate->signed_company_balance ?? 0), 2),
+            'system_payable_to_companies' => round((float) ($aggregate->system_payable_to_companies ?? 0), 2),
+            'companies_payable_to_system' => round((float) ($aggregate->companies_payable_to_system ?? 0), 2),
             'currency' => __('dashboard::dashboard.currency'),
-            'company_count' => (int) ($aggregate->company_count ?? 0),
+            'creditor_company_count' => (int) ($aggregate->creditor_company_count ?? 0),
+            'debtor_company_count' => (int) ($aggregate->debtor_company_count ?? 0),
         ];
     }
 }

@@ -18,6 +18,7 @@ class ListStaffMembersRequest extends FormRequest
     {
         return array_merge($this->listUserFilterRules(), [
             'department_id' => ['nullable', 'uuid', 'exists:departments,department_id'],
+            'department' => ['nullable', 'string', 'max:100'],
         ]);
     }
 }

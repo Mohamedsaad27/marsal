@@ -2,19 +2,21 @@
 
 namespace App\Modules\Users\Application\UseCases;
 
+use App\Modules\Auth\Application\Exceptions\RoleNotFoundException;
+use App\Modules\Auth\Application\UseCases\SendWelcomeEmailUseCase;
+use App\Modules\Auth\Application\UseCases\SendWelcomeMessageOnWhatsAppUseCase;
+use App\Modules\Departments\Infrastructure\Database\Models\Department;
+use App\Modules\Locations\Infrastructure\Database\Models\Address;
 use App\Modules\Users\Application\DTOs\CreateUserDTO;
 use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
 use App\Modules\Users\Domain\Interfaces\UserRepositoryInterface;
-use App\Modules\Locations\Infrastructure\Database\Models\Address;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use App\Modules\Users\Infrastructure\Database\Models\StaffMember;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Spatie\Permission\Models\Role;
-use App\Modules\Auth\Application\Exceptions\RoleNotFoundException;
-use App\Modules\Auth\Application\UseCases\SendWelcomeEmailUseCase;
-use App\Modules\Auth\Application\UseCases\SendWelcomeMessageOnWhatsAppUseCase;
 
 class CreateUserUseCase
 {
@@ -27,7 +29,7 @@ class CreateUserUseCase
     public function execute(CreateUserDTO $dto): User
     {
         $this->validateRolesExist($dto->roles);
-        
+
         return DB::transaction(function () use ($dto) {
             $user = $this->userRepository->create([
                 'name' => $dto->name,
@@ -43,7 +45,7 @@ class CreateUserUseCase
             if ($dto->accountType->requiresStaffMemberProfile()) {
                 StaffMember::query()->create([
                     'user_id' => $user->user_id,
-                    'department_id' => $dto->profile['department_id'] ?? null,
+                    'department_id' => $this->resolveDepartmentId($dto->profile),
                     'job_title' => $dto->profile['job_title'] ?? null,
                     'notes' => $dto->profile['notes'] ?? null,
                 ]);
@@ -95,6 +97,38 @@ class CreateUserUseCase
         });
     }
 
+    /** @param  array<string, mixed>  $profile */
+    private function resolveDepartmentId(array $profile): ?string
+    {
+        if (! empty($profile['department_id'])) {
+            return $profile['department_id'];
+        }
+
+        if (empty($profile['department']) || ! is_string($profile['department'])) {
+            return null;
+        }
+
+        $department = $this->normalizeDepartment($profile['department']);
+
+        return Department::query()
+            ->whereRaw('LOWER(name_en) = ?', [$department])
+            ->value('department_id');
+    }
+
+    private function normalizeDepartment(string $department): string
+    {
+        $normalized = Str::of($department)
+            ->replace(['-', '_'], ' ')
+            ->squish()
+            ->lower()
+            ->toString();
+
+        return match ($normalized) {
+            'ops' => 'operations',
+            default => $normalized,
+        };
+    }
+
     /**
      * @param  array<int, string>  $roles
      */
@@ -102,7 +136,7 @@ class CreateUserUseCase
     {
         foreach ($roles as $roleName) {
             if (! Role::query()->where('name', $roleName)->where('guard_name', 'api')->exists()) {
-                throw new RoleNotFoundException();
+                throw new RoleNotFoundException;
             }
         }
     }

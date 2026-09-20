@@ -3,8 +3,8 @@
 namespace App\Modules\Dashboard\Application\Queries;
 
 use App\Modules\Dashboard\Application\Services\DashboardCacheService;
-use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Dashboard\Domain\Helpers\PercentageChange;
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\DB;
 
@@ -14,7 +14,6 @@ class GetDashboardSummaryQuery
         private readonly DashboardCacheService $cache,
     ) {}
 
-    
     public function execute(): array
     {
         return $this->cache->remember('summary', fn () => $this->compute());
@@ -62,23 +61,15 @@ class GetDashboardSummaryQuery
             ->whereBetween('updated_at', [$lastIsoWeekStart, $lastIsoWeekEnd])
             ->count();
 
-        $netBalanceCompanies = (float) (DB::table('shipping_companies')
+        $companyBalances = DB::table('shipping_companies')
             ->whereNull('deleted_at')
-            ->sum('balance') ?? 0);
+            ->selectRaw('COALESCE(SUM(balance), 0) as signed_balance')
+            ->selectRaw('COALESCE(SUM(CASE WHEN balance > 0 THEN balance ELSE 0 END), 0) as system_payable')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN balance < 0 THEN balance ELSE 0 END), 0)) as company_payable')
+            ->first();
 
-        $netDueThisMonth = (float) (DB::table('order_financials as of')
-            ->join('orders as o', 'o.order_id', '=', 'of.order_id')
-            ->whereNull('of.deleted_at')
-            ->whereNull('o.deleted_at')
-            ->whereBetween('o.updated_at', [$thisMonthStart, $thisMonthEnd])
-            ->sum('of.net_due_company') ?? 0);
-
-        $netDueLastMonth = (float) (DB::table('order_financials as of')
-            ->join('orders as o', 'o.order_id', '=', 'of.order_id')
-            ->whereNull('of.deleted_at')
-            ->whereNull('o.deleted_at')
-            ->whereBetween('o.updated_at', [$lastMonthStart, $lastMonthEnd])
-            ->sum('of.net_due_company') ?? 0);
+        $thisMonthExposure = $this->companyExposureForPeriod($thisMonthStart, $thisMonthEnd);
+        $lastMonthExposure = $this->companyExposureForPeriod($lastMonthStart, $lastMonthEnd);
 
         return [
             'total_orders' => $totalOrders,
@@ -87,8 +78,34 @@ class GetDashboardSummaryQuery
             'in_delivery_label' => __('dashboard::dashboard.in_delivery_label'),
             'delivered_this_week' => $deliveredThisWeek,
             'delivered_change_percent' => PercentageChange::calculate($deliveredThisWeek, $deliveredLastWeek),
-            'net_balance_companies' => round($netBalanceCompanies, 2),
-            'net_balance_change_percent' => PercentageChange::calculate($netDueThisMonth, $netDueLastMonth),
+            'signed_company_balance' => round((float) ($companyBalances->signed_balance ?? 0), 2),
+            'system_payable_to_companies' => round((float) ($companyBalances->system_payable ?? 0), 2),
+            'companies_payable_to_system' => round((float) ($companyBalances->company_payable ?? 0), 2),
+            'system_payable_to_companies_change_percent' => PercentageChange::calculate(
+                $thisMonthExposure['system_payable'],
+                $lastMonthExposure['system_payable'],
+            ),
+            'companies_payable_to_system_change_percent' => PercentageChange::calculate(
+                $thisMonthExposure['company_payable'],
+                $lastMonthExposure['company_payable'],
+            ),
+        ];
+    }
+
+    private function companyExposureForPeriod(Carbon $from, Carbon $to): array
+    {
+        $exposure = DB::table('order_financials as of')
+            ->join('orders as o', 'o.order_id', '=', 'of.order_id')
+            ->whereNull('of.deleted_at')
+            ->whereNull('o.deleted_at')
+            ->whereBetween('o.updated_at', [$from, $to])
+            ->selectRaw('COALESCE(SUM(CASE WHEN of.net_due_company > 0 THEN of.net_due_company ELSE 0 END), 0) as system_payable')
+            ->selectRaw('ABS(COALESCE(SUM(CASE WHEN of.net_due_company < 0 THEN of.net_due_company ELSE 0 END), 0)) as company_payable')
+            ->first();
+
+        return [
+            'system_payable' => (float) ($exposure->system_payable ?? 0),
+            'company_payable' => (float) ($exposure->company_payable ?? 0),
         ];
     }
 }

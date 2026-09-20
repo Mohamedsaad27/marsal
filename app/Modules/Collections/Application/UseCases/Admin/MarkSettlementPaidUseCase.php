@@ -31,7 +31,8 @@ class MarkSettlementPaidUseCase
         event(new SettlementPaid(
             settlementId: $settlement->settlement_id,
             entityLabel: $this->resolveEntityLabel($settlement),
-            netAmount: number_format((float) $settlement->net_amount, 2, '.', ''),
+            paymentDirection: $settlement->paymentDirection(),
+            payableAmount: number_format($settlement->payableAmount(), 2, '.', ''),
         ));
 
         return $settlement;

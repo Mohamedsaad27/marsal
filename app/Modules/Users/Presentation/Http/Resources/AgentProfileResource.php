@@ -4,7 +4,6 @@ namespace App\Modules\Users\Presentation\Http\Resources;
 
 use App\Modules\Users\Domain\Enums\CommissionTypeEnum;
 use App\Modules\Users\Domain\Enums\VehicleTypeEnum;
-use App\Modules\Users\Infrastructure\Database\Models\AgentZone;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use Illuminate\Http\Request;
@@ -47,7 +46,9 @@ class AgentProfileResource extends JsonResource
                 'commission_value' => $agent->commission_value !== null
                     ? (float) $agent->commission_value
                     : null,
-                'balance' => (float) $agent->getDeliveryAgentActualBalance(),
+                'balance' => (float) $agent->balance,
+                'balance_direction' => $agent->balanceDirection(),
+                'balance_amount' => $agent->balanceAmount(),
                 'is_active' => (bool) $user->is_active,
             ],
             'stats' => [
@@ -60,6 +61,4 @@ class AgentProfileResource extends JsonResource
             ),
         ];
     }
-
-    
 }

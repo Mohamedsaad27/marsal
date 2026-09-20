@@ -43,13 +43,27 @@ class OrdersReportResource extends JsonResource
             'financials' => [
                 'original_amount' => $this->financials?->original_amount,
                 'collected_amount' => $this->financials?->collected_amount,
-                'commission_amount' => $this->financials?->commission_amount,
-                'net_due_company' => $this->financials?->net_due_company,
+                'agent_commission_amount' => $this->financials?->agent_commission_amount,
+                'agent_net_due' => $this->agentNetDue(),
+                'system_commission_amount' => $this->financials?->system_commission_amount,
+                'company_net_due' => $this->financials?->net_due_company,
                 'is_settled' => (bool) ($this->financials?->is_settled ?? false),
             ],
             'assigned_at' => $this->assigned_at?->toISOString(),
             'delivered_at' => $this->delivered_at?->toISOString(),
             'created_at' => $this->created_at?->toISOString(),
         ];
+    }
+
+    private function agentNetDue(): ?float
+    {
+        if ($this->financials?->collected_amount === null || $this->financials?->agent_commission_amount === null) {
+            return null;
+        }
+
+        return round(
+            (float) $this->financials->collected_amount - (float) $this->financials->agent_commission_amount,
+            2,
+        );
     }
 }

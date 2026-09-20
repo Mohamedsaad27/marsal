@@ -9,7 +9,8 @@ readonly class SettlementCreated
     public function __construct(
         public string $settlementId,
         public string $entityLabel,
-        public string $netAmount,
+        public string $paymentDirection,
+        public string $payableAmount,
         public SettlementTypeEnum $settlementType,
         public ?string $agentUserId = null,
         public ?string $companyUserId = null,
