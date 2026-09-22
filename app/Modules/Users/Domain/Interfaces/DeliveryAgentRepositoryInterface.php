@@ -14,4 +14,6 @@ interface DeliveryAgentRepositoryInterface
     public function findByUserIdForProfile(string $userId): ?DeliveryAgent;
 
     public function countDeliveredOrders(string $deliveryAgentId): int;
+
+    public function sumCollectionNetDue(string $deliveryAgentId): float;
 }
