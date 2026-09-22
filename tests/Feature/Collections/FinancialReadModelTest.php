@@ -9,6 +9,8 @@ use App\Modules\Collections\Domain\Interfaces\SettlementRepositoryInterface;
 use App\Modules\Collections\Infrastructure\Database\Models\Collection;
 use App\Modules\Collections\Infrastructure\Database\Models\Settlement;
 use App\Modules\Dashboard\Application\Queries\GetCollectionsBalanceQuery;
+use App\Modules\Dashboard\Application\Queries\GetDashboardSummaryQuery;
+use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Orders\Domain\Interfaces\CompanyOrderRepositoryInterface;
 use App\Modules\Reports\Application\DTOs\ReportFilterDTO;
 use App\Modules\Reports\Domain\Interfaces\ReportsRepositoryInterface;
@@ -18,6 +20,8 @@ use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use App\Modules\Users\Infrastructure\Persistence\UserRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Tests\TestCase;
 
@@ -102,6 +106,57 @@ class FinancialReadModelTest extends TestCase
         $this->assertTrue($users->shippingCompanyHasNonZeroBalance($debtorCompany->shipping_company_id));
     }
 
+    public function test_dashboard_summary_exposes_management_kpis(): void
+    {
+        [, $agent, $company] = $this->createActors();
+        $agent->update(['balance' => 100]);
+        $company->update(['balance' => 80]);
+
+        $payableAgentUser = User::factory()->create([
+            'user_id' => (string) Str::uuid(),
+            'account_type' => AccountTypeEnum::DeliveryAgent->value,
+        ]);
+        DeliveryAgent::query()->forceCreate([
+            'delivery_agent_id' => (string) Str::uuid(),
+            'user_id' => $payableAgentUser->user_id,
+            'commission_value' => 0,
+            'balance' => -15,
+        ]);
+
+        $debtorCompanyUser = User::factory()->create([
+            'user_id' => (string) Str::uuid(),
+            'account_type' => AccountTypeEnum::ShippingCompany->value,
+        ]);
+        ShippingCompany::query()->forceCreate([
+            'shipping_company_id' => (string) Str::uuid(),
+            'user_id' => $debtorCompanyUser->user_id,
+            'company_name' => 'Debtor Logistics',
+            'commission_value' => 0,
+            'balance' => -30,
+        ]);
+
+        $this->createOrder(OrderStatusEnum::Pending);
+        $this->createOrder(OrderStatusEnum::OutForDelivery);
+        $this->createOrder(OrderStatusEnum::Delivered);
+
+        $this->createCollection($agent, $company, 120, 20, 40);
+        $this->createCollection($agent, $company, 50, 10, 15, cashReceived: true);
+
+        Cache::flush();
+
+        $summary = app(GetDashboardSummaryQuery::class)->execute();
+
+        $this->assertSame(3, $summary['total_orders']);
+        $this->assertSame(2, $summary['in_progress_orders']);
+        $this->assertSame(170.0, $summary['total_cod_collected']);
+        $this->assertSame(100.0, $summary['pending_cash_amount']);
+        $this->assertSame(1, $summary['pending_cash_count']);
+        $this->assertSame(80.0, $summary['system_payable_to_companies']);
+        $this->assertSame(130.0, $summary['system_in_amount']);
+        $this->assertSame(95.0, $summary['system_out_amount']);
+        $this->assertSame(35.0, $summary['net_system_movement']);
+    }
+
     /**
      * @return array{User, DeliveryAgent, ShippingCompany}
      */
@@ -142,6 +197,7 @@ class FinancialReadModelTest extends TestCase
         float $collectedAmount,
         float $agentCommission,
         float $systemCommission,
+        bool $cashReceived = false,
     ): Collection {
         return Collection::query()->forceCreate([
             'collection_id' => (string) Str::uuid(),
@@ -153,7 +209,20 @@ class FinancialReadModelTest extends TestCase
             'agent_net_due' => $collectedAmount - $agentCommission,
             'system_commission_amount' => $systemCommission,
             'company_net_due' => $collectedAmount - $systemCommission,
+            'cash_received_at' => $cashReceived ? now() : null,
             'collected_at' => now(),
+        ]);
+    }
+
+    private function createOrder(OrderStatusEnum $status): void
+    {
+        DB::table('orders')->insert([
+            'order_id' => (string) Str::uuid(),
+            'reference_no' => (string) Str::uuid(),
+            'reference_code' => 'REF-'.Str::upper(Str::random(10)),
+            'status' => $status->value,
+            'created_at' => now(),
+            'updated_at' => now(),
         ]);
     }
 
