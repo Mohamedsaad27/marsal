@@ -43,7 +43,8 @@ class AdminCollectionRepository implements AdminCollectionRepositoryInterface
             ->whereNull('cash_received_at')
             ->where('agent_net_due', '>', 0)
             ->count();
-
+        $systemNetProfit = (float) ($aggregates->total_agent_net_due ?? 0)
+            - (float) ($aggregates->total_agent_commission_amount ?? 0);
         return [
             'total_collected' => number_format((float) ($aggregates->total_collected ?? 0), 2, '.', ''),
             'total_agent_commission_amount' => $this->money($aggregates->total_agent_commission_amount),
@@ -55,6 +56,7 @@ class AdminCollectionRepository implements AdminCollectionRepositoryInterface
             'system_to_company_amount' => $this->money($aggregates->system_to_company_amount),
             'company_to_system_amount' => $this->money($aggregates->company_to_system_amount),
             'pending_cash_count' => $pendingCashCount,
+            'system_net_profit' => $this->money($systemNetProfit),
         ];
     }
 

@@ -20,6 +20,7 @@ class AdminCollectionStatsResource extends JsonResource
             'system_to_company_amount' => $this->resource['system_to_company_amount'],
             'company_to_system_amount' => $this->resource['company_to_system_amount'],
             'pending_cash_count' => $this->resource['pending_cash_count'],
+            'system_net_profit' => $this->resource['system_net_profit'],
         ];
     }
 }
