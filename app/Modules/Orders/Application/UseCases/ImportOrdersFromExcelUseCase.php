@@ -8,7 +8,9 @@ use App\Modules\Orders\Application\Services\ReferenceCodeGeneratorService;
 use App\Modules\Orders\Application\Validators\OrderRowValidator;
 use App\Modules\Orders\Domain\Enums\ImportStatusHintEnum;
 use App\Modules\Orders\Domain\Services\OrdersExcelSchema;
+use App\Modules\Orders\Infrastructure\Database\Models\Order;
 use App\Modules\Orders\Infrastructure\Imports\OrdersImport;
+use App\Modules\Returns\Application\Services\ReturnRecordSynchronizer;
 use App\Modules\Users\Domain\Enums\AccountTypeEnum;
 use App\Modules\Users\Infrastructure\Database\Models\ShippingCompany;
 use App\Modules\Users\Infrastructure\Database\Models\User;
@@ -25,6 +27,7 @@ class ImportOrdersFromExcelUseCase
     public function __construct(
         private OrderRowValidator $validator,
         private ReferenceCodeGeneratorService $referenceCodeGenerator,
+        private ReturnRecordSynchronizer $returnRecords,
     ) {}
 
     public function execute(string $filePath, ?string $batchId = null): array
@@ -252,6 +255,10 @@ class ImportOrdersFromExcelUseCase
                         'created_at' => $now,
                         'updated_at' => $now,
                     ]);
+
+                    $this->returnRecords->sync(
+                        Order::query()->findOrFail($orderId),
+                    );
                 });
 
                 $results['imported']++;

@@ -2,6 +2,8 @@
 
 namespace App\Modules\Returns\Infrastructure\Providers;
 
+use App\Modules\Orders\Infrastructure\Database\Models\Order;
+use App\Modules\Returns\Infrastructure\Observers\OrderObserver;
 use Illuminate\Support\ServiceProvider;
 
 class ReturnsServiceProvider extends ServiceProvider
@@ -14,8 +16,10 @@ class ReturnsServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        Order::observe(OrderObserver::class);
+
         $this->loadTranslationsFrom(
-            __DIR__ . '/../../Presentation/Resources/Lang',
+            __DIR__.'/../../Presentation/Resources/Lang',
             'returns'
         );
     }

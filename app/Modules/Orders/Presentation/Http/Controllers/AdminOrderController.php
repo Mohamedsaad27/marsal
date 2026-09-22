@@ -7,15 +7,17 @@ use App\Modules\Core\Infrastructure\Helpers\PaginationMeta;
 use App\Modules\Core\Infrastructure\Traits\ApiResponseTrait;
 use App\Modules\Orders\Application\DTOs\AdminOrderExportFilterDTO;
 use App\Modules\Orders\Application\DTOs\AdminOrderFilterDTO;
+use App\Modules\Orders\Application\DTOs\UpdateAdminOrderStatusDTO;
 use App\Modules\Orders\Application\UseCases\Admin\AssignOrderUseCase;
+use App\Modules\Orders\Application\UseCases\Admin\BulkAssignOrdersUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\BulkDeleteAdminOrdersUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\ExportOrdersUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\GetAdminOrderDetailUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\GetAdminOrderStatsUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\ListAdminOrdersUseCase;
 use App\Modules\Orders\Application\UseCases\Admin\UpdateAdminOrderStatusUseCase;
-use App\Modules\Orders\Application\DTOs\UpdateAdminOrderStatusDTO;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\AssignOrderRequest;
+use App\Modules\Orders\Presentation\Http\Requests\Admin\BulkAssignOrdersRequest;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\BulkDeleteAdminOrdersRequest;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\ExportOrdersRequest;
 use App\Modules\Orders\Presentation\Http\Requests\Admin\ListAdminOrdersRequest;
@@ -36,6 +38,7 @@ class AdminOrderController extends Controller
         private ListAdminOrdersUseCase $listOrders,
         private GetAdminOrderDetailUseCase $getDetail,
         private AssignOrderUseCase $assignOrder,
+        private BulkAssignOrdersUseCase $bulkAssignOrders,
         private UpdateAdminOrderStatusUseCase $updateStatus,
         private BulkDeleteAdminOrdersUseCase $bulkDeleteOrders,
         private ExportOrdersUseCase $exportOrders,
@@ -50,7 +53,7 @@ class AdminOrderController extends Controller
 
     public function index(ListAdminOrdersRequest $request): JsonResponse
     {
-        $filter    = AdminOrderFilterDTO::fromArray($request->validated());
+        $filter = AdminOrderFilterDTO::fromArray($request->validated());
         $paginator = $this->listOrders->execute($filter);
 
         return $this->success(
@@ -83,14 +86,31 @@ class AdminOrderController extends Controller
     public function assign(AssignOrderRequest $request, string $orderId): JsonResponse
     {
         $order = $this->assignOrder->execute(
-            orderId:     $orderId,
-            agentId:     $request->validated('agent_id'),
+            orderId: $orderId,
+            agentId: $request->validated('agent_id'),
             adminUserId: $request->user()->user_id,
         );
 
         return $this->success(
             new AdminOrderDetailResource($order),
             __('orders::messages.order_assigned'),
+        );
+    }
+
+    public function bulkAssign(BulkAssignOrdersRequest $request): JsonResponse
+    {
+        $orders = $this->bulkAssignOrders->execute(
+            orderIds: $request->validated('order_ids'),
+            agentId: $request->validated('agent_id'),
+            adminUserId: $request->user()->user_id,
+        );
+
+        return $this->success(
+            [
+                'assigned_count' => $orders->count(),
+                'items' => AdminOrderDetailResource::collection($orders),
+            ],
+            __('orders::messages.orders_bulk_assigned'),
         );
     }
 

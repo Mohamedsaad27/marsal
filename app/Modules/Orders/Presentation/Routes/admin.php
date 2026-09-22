@@ -29,6 +29,10 @@ Route::prefix('api/v1/admin')
             ->middleware('permission:orders.view')
             ->name('admin.orders.show');
 
+        Route::patch('orders/bulk-assign', [AdminOrderController::class, 'bulkAssign'])
+            ->middleware('permission:orders.assign')
+            ->name('admin.orders.bulk-assign');
+
         Route::patch('orders/{orderId}/assign', [AdminOrderController::class, 'assign'])
             ->middleware('permission:orders.assign')
             ->name('admin.orders.assign');

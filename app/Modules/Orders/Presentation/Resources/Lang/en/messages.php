@@ -12,27 +12,28 @@ return [
     'order_rescheduled' => 'Postponed date updated successfully',
 
     // Admin — Orders
-    'stats_success'          => 'Statistics loaded successfully',
-    'order_assigned'         => 'Agent assigned successfully',
-    'order_agent_required'   => 'An agent must be assigned to the order before applying this status',
-    'orders_deleted'         => 'Orders deleted successfully',
-    'order_not_found'        => 'Order not found',
+    'stats_success' => 'Statistics loaded successfully',
+    'order_assigned' => 'Agent assigned successfully',
+    'orders_bulk_assigned' => 'Orders assigned to the agent successfully',
+    'order_agent_required' => 'An agent must be assigned to the order before applying this status',
+    'orders_deleted' => 'Orders deleted successfully',
+    'order_not_found' => 'Order not found',
     'order_delete_not_pending' => 'Only orders in pending status can be deleted.',
-    'export_invalid_status'    => 'Invalid order status value.',
+    'export_invalid_status' => 'Invalid order status value.',
 
     // Company
-    'company_dashboard_success'  => 'Company dashboard loaded successfully',
+    'company_dashboard_success' => 'Company dashboard loaded successfully',
     'company_orders_list_success' => 'Shipments list loaded successfully',
     'company_order_detail_success' => 'Shipment details loaded successfully',
-    'company_wallet_success'      => 'Wallet loaded successfully',
-    'company_profile_success'     => 'Profile loaded successfully',
-    'company_order_not_found'     => 'Shipment not found',
-    'company_profile_not_found'   => 'Company profile not found',
+    'company_wallet_success' => 'Wallet loaded successfully',
+    'company_profile_success' => 'Profile loaded successfully',
+    'company_order_not_found' => 'Shipment not found',
+    'company_profile_not_found' => 'Company profile not found',
 
     // Admin — Approval Requests
-    'approvals_list_success'  => 'Approval requests list loaded successfully',
+    'approvals_list_success' => 'Approval requests list loaded successfully',
     'approval_detail_success' => 'Approval request details loaded successfully',
-    'approval_reviewed'       => 'Approval request reviewed successfully',
-    'approval_not_found'      => 'Approval request not found',
+    'approval_reviewed' => 'Approval request reviewed successfully',
+    'approval_not_found' => 'Approval request not found',
     'approval_already_reviewed' => 'This approval request has already been reviewed',
 ];

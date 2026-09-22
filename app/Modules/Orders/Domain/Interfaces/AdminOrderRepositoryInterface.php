@@ -6,6 +6,7 @@ use App\Modules\Orders\Application\DTOs\AdminOrderExportFilterDTO;
 use App\Modules\Orders\Application\DTOs\AdminOrderFilterDTO;
 use App\Modules\Orders\Infrastructure\Database\Models\Order;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\LazyCollection;
 
 interface AdminOrderRepositoryInterface
@@ -17,6 +18,9 @@ interface AdminOrderRepositoryInterface
     public function lazyForExport(AdminOrderExportFilterDTO $filter): LazyCollection;
 
     public function findWithRelations(string $orderId): ?Order;
+
+    /** @return Collection<int, Order> */
+    public function findManyWithRelations(array $orderIds): Collection;
 
     public function findById(string $orderId): ?Order;
 

@@ -11,6 +11,7 @@ use App\Modules\Orders\Infrastructure\Database\Models\OrderStatusHistory;
 use Carbon\Carbon;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\LazyCollection;
 use Illuminate\Support\Str;
@@ -63,16 +64,16 @@ class AdminOrderRepository implements AdminOrderRepositoryInterface
         $statuses = array_map(
             static function (OrderStatusEnum $status) use ($base) {
                 return [
-                    'id'       => $status->value,
+                    'id' => $status->value,
                     'label_ar' => $status->labelAr(),
-                    'count'    => (clone $base)->where('status', $status->value)->count(),
+                    'count' => (clone $base)->where('status', $status->value)->count(),
                 ];
             },
             OrderStatusEnum::cases(),
         );
 
         return [
-            'total'    => $total,
+            'total' => $total,
             'returned' => $returned,
             'statuses' => $statuses,
         ];
@@ -132,13 +133,13 @@ class AdminOrderRepository implements AdminOrderRepositoryInterface
         }
 
         if ($filter->search !== null && trim($filter->search) !== '') {
-            $term = '%' . trim($filter->search) . '%';
+            $term = '%'.trim($filter->search).'%';
             $query->where(function ($q) use ($term) {
                 $q->where('reference_code', 'like', $term)
-                  ->orWhere('reference_no', 'like', $term)
-                  ->orWhereHas('customerInfo', fn ($c) => $c
-                      ->where('customer_name', 'like', $term)
-                      ->orWhere('customer_phone', 'like', $term));
+                    ->orWhere('reference_no', 'like', $term)
+                    ->orWhereHas('customerInfo', fn ($c) => $c
+                        ->where('customer_name', 'like', $term)
+                        ->orWhere('customer_phone', 'like', $term));
             });
         }
     }
@@ -203,6 +204,15 @@ class AdminOrderRepository implements AdminOrderRepositoryInterface
             ->first();
     }
 
+    public function findManyWithRelations(array $orderIds): Collection
+    {
+        return Order::query()
+            ->with(self::DETAIL_RELATIONS)
+            ->whereIn('order_id', $orderIds)
+            ->lockForUpdate()
+            ->get();
+    }
+
     public function findById(string $orderId): ?Order
     {
         return Order::query()->find($orderId);
@@ -218,17 +228,17 @@ class AdminOrderRepository implements AdminOrderRepositoryInterface
 
         $order->update([
             'delivery_agent_id' => $agentId,
-            'assigned_at'       => Carbon::now(),
-            'status'            => OrderStatusEnum::Assigned->value,
+            'assigned_at' => Carbon::now(),
+            'status' => OrderStatusEnum::Assigned->value,
         ]);
 
         OrderStatusHistory::create([
             'order_status_history_id' => (string) Str::uuid(),
-            'order_id'                => $orderId,
-            'from_status_id'          => $fromStatus,
-            'to_status_id'            => OrderStatusEnum::Assigned->value,
-            'changed_by'              => $adminUserId,
-            'notes'                   => null,
+            'order_id' => $orderId,
+            'from_status_id' => $fromStatus,
+            'to_status_id' => OrderStatusEnum::Assigned->value,
+            'changed_by' => $adminUserId,
+            'notes' => null,
         ]);
 
         return $order->fresh(self::DETAIL_RELATIONS);

@@ -21,6 +21,39 @@ class OrderStatusChangeServiceTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_status_change_creates_return_record_without_relying_on_model_observer(): void
+    {
+        Event::fake();
+
+        $admin = User::factory()->create([
+            'user_id' => (string) Str::uuid(),
+            'account_type' => AccountTypeEnum::SuperAdmin->value,
+        ]);
+        $order = Order::query()->forceCreate([
+            'order_id' => (string) Str::uuid(),
+            'reference_no' => 'EXT-NO-ANSWER',
+            'reference_code' => 'TEST-NO-ANSWER',
+            'status' => OrderStatusEnum::OutForDelivery->value,
+        ]);
+
+        Order::withoutEvents(fn () => app(OrderStatusChangeService::class)->apply(
+            $order,
+            new OrderStatusChangePayload(
+                changedByUserId: $admin->user_id,
+                deliveryAgentId: '',
+                requestedStatus: OrderStatusEnum::NoAnswer,
+                notes: 'لا يوجد رد من العميل',
+                notifySuperAdminsOnAgentStatusChange: false,
+            ),
+        ));
+
+        $this->assertDatabaseHas('returns', [
+            'order_id' => $order->order_id,
+            'return_status' => 1,
+            'return_reason' => OrderStatusEnum::NoAnswer->labelAr(),
+        ]);
+    }
+
     public function test_reverting_collected_order_removes_signed_agent_and_company_balances(): void
     {
         Event::fake();

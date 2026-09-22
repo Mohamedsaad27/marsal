@@ -14,6 +14,7 @@ use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Orders\Domain\Interfaces\AdminOrderRepositoryInterface;
 use App\Modules\Orders\Infrastructure\Database\Models\Order;
 use App\Modules\Users\Infrastructure\Database\Models\DeliveryAgent;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 
 class AssignOrderUseCase
@@ -26,53 +27,82 @@ class AssignOrderUseCase
 
     public function execute(string $orderId, string $agentId, string $adminUserId): Order
     {
-        $order = $this->repository->findWithRelations($orderId);
+        return $this->executeMany([$orderId], $agentId, $adminUserId)->first();
+    }
 
-        if ($order === null) {
-            throw new OrderNotFoundException($orderId);
-        }
-
-        $currentStatus = $order->status instanceof OrderStatusEnum
-            ? $order->status
-            : OrderStatusEnum::tryFrom((int) $order->status);
-
-        if ($currentStatus?->blocksReassignment()) {
-            throw new OrderCannotBeAssignedException();
-        }
-
-        $previousAgentId = $order->delivery_agent_id;
-        $previousAgentName = $order->deliveryAgent?->user?->name;
-
+    /** @return Collection<int, Order> */
+    public function executeMany(array $orderIds, string $agentId, string $adminUserId): Collection
+    {
+        $orderIds = array_values(array_unique($orderIds));
         $agent = DeliveryAgent::query()
             ->with('user')
             ->where('delivery_agent_id', $agentId)
             ->firstOrFail();
 
-        $order = DB::transaction(
-            fn () => $this->repository->assignAgent($orderId, $agentId, $adminUserId)
-        );
+        [$assignedOrders, $contexts] = DB::transaction(function () use ($orderIds, $agentId, $adminUserId) {
+            $orders = $this->repository
+                ->findManyWithRelations($orderIds)
+                ->keyBy('order_id');
+            $contexts = [];
 
-        $this->recordAssignmentAudit(
-            adminUserId: $adminUserId,
-            order: $order,
-            previousAgentId: $previousAgentId,
-            previousAgentName: $previousAgentName,
-            previousStatus: $currentStatus,
-            newAgent: $agent,
-        );
+            foreach ($orderIds as $orderId) {
+                $order = $orders->get($orderId);
 
-        if ($previousAgentId !== null && $previousAgentId !== $agent->delivery_agent_id) {
-            event(new OrderReassigned(
-                orderId: $order->order_id,
-                orderCode: $order->reference_code ?? $order->reference_no ?? '',
-                previousAgentName: $previousAgentName ?? 'غير معروف',
-                newAgentName: $agent->user?->name ?? 'غير معروف',
-            ));
+                if ($order === null) {
+                    throw new OrderNotFoundException($orderId);
+                }
+
+                $currentStatus = $order->status instanceof OrderStatusEnum
+                    ? $order->status
+                    : OrderStatusEnum::tryFrom((int) $order->status);
+
+                if ($currentStatus?->blocksReassignment()) {
+                    throw new OrderCannotBeAssignedException;
+                }
+
+                $contexts[$orderId] = [
+                    'previous_agent_id' => $order->delivery_agent_id,
+                    'previous_agent_name' => $order->deliveryAgent?->user?->name,
+                    'previous_status' => $currentStatus,
+                ];
+            }
+
+            $assignedOrders = collect($orderIds)
+                ->map(fn (string $orderId) => $this->repository->assignAgent(
+                    $orderId,
+                    $agentId,
+                    $adminUserId,
+                ));
+
+            return [$assignedOrders, $contexts];
+        });
+
+        foreach ($assignedOrders as $order) {
+            $context = $contexts[$order->order_id];
+
+            $this->recordAssignmentAudit(
+                adminUserId: $adminUserId,
+                order: $order,
+                previousAgentId: $context['previous_agent_id'],
+                previousAgentName: $context['previous_agent_name'],
+                previousStatus: $context['previous_status'],
+                newAgent: $agent,
+            );
+
+            if ($context['previous_agent_id'] !== null
+                && $context['previous_agent_id'] !== $agent->delivery_agent_id) {
+                event(new OrderReassigned(
+                    orderId: $order->order_id,
+                    orderCode: $order->reference_code ?? $order->reference_no ?? '',
+                    previousAgentName: $context['previous_agent_name'] ?? 'غير معروف',
+                    newAgentName: $agent->user?->name ?? 'غير معروف',
+                ));
+            }
+
+            $this->dispatchNotification($order, $agent);
         }
 
-        $this->dispatchNotification($order, $agent);
-
-        return $order;
+        return $assignedOrders;
     }
 
     private function recordAssignmentAudit(
@@ -121,12 +151,12 @@ class AssignOrderUseCase
         }
 
         $this->sendNotification->execute(new SendNotificationDTO(
-            userId:           $agent->user->user_id,
+            userId: $agent->user->user_id,
             notificationType: NotificationTypeEnum::NewOrder,
-            titleAr:          'طلب توصيل جديد',
-            bodyAr:           "تم تعيين طلب #{$order->reference_code} لك",
-            data:             ['order_id' => $order->order_id],
-            sendViaFcm:       true,
+            titleAr: 'طلب توصيل جديد',
+            bodyAr: "تم تعيين طلب #{$order->reference_code} لك",
+            data: ['order_id' => $order->order_id],
+            sendViaFcm: true,
         ));
     }
 }

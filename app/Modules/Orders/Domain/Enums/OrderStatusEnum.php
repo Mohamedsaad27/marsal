@@ -32,6 +32,22 @@ enum OrderStatusEnum: int
         return [13];
     }
 
+    /**
+     * Orders in these statuses must not appear on the returns page.
+     * Every other stored status is considered return-page eligible.
+     *
+     * @return list<int>
+     */
+    public static function returnsPageExcludedIds(): array
+    {
+        return [
+            self::Pending->value,
+            self::Assigned->value,
+            self::OutForDelivery->value,
+            self::Delivered->value,
+        ];
+    }
+
     public function isTerminal(): bool
     {
         return in_array($this, [

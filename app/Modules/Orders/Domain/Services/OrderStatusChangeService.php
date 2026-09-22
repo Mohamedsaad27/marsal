@@ -12,6 +12,7 @@ use App\Modules\Orders\Domain\Enums\ApprovalStatusEnum;
 use App\Modules\Orders\Domain\Enums\ApprovalTypeEnum;
 use App\Modules\Orders\Domain\Enums\OrderStatusEnum;
 use App\Modules\Orders\Infrastructure\Database\Models\Order;
+use App\Modules\Returns\Application\Services\ReturnRecordSynchronizer;
 use App\Modules\Users\Infrastructure\Database\Models\User;
 use DateTimeInterface;
 use Illuminate\Support\Facades\DB;
@@ -22,6 +23,7 @@ class OrderStatusChangeService
     public function __construct(
         private OrderStatusTransitionService $transitions,
         private RecordCollectionService $collectionRecorder,
+        private ReturnRecordSynchronizer $returnRecords,
     ) {}
 
     public function apply(Order $order, OrderStatusChangePayload $payload): array
@@ -53,6 +55,7 @@ class OrderStatusChangeService
             }
 
             $this->persistOrderStatus($order, $storedStatus, $now);
+            $this->returnRecords->sync($order);
             $this->recordStatusHistory($order, $currentStatus, $storedStatus, $payload, $now);
         });
 
