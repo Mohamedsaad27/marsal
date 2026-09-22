@@ -65,11 +65,11 @@ class DeliveryAgentRepository implements DeliveryAgentRepositoryInterface
             ->count();
     }
 
-    public function sumCollectionNetDue(string $deliveryAgentId): float
+    public function sumCollectionCommissions(string $deliveryAgentId): float
     {
         return round((float) DB::table('collections')
             ->where('delivery_agent_id', $deliveryAgentId)
             ->whereNull('deleted_at')
-            ->sum('agent_net_due'), 2);
+            ->sum('agent_commission_amount'), 2);
     }
 }

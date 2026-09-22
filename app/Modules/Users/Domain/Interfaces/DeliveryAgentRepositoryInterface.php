@@ -15,5 +15,5 @@ interface DeliveryAgentRepositoryInterface
 
     public function countDeliveredOrders(string $deliveryAgentId): int;
 
-    public function sumCollectionNetDue(string $deliveryAgentId): float;
+    public function sumCollectionCommissions(string $deliveryAgentId): float;
 }

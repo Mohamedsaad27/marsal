@@ -17,7 +17,7 @@ class AgentProfileResourceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_agent_profile_balance_uses_collection_net_due_only(): void
+    public function test_agent_profile_balance_uses_collection_commissions_only(): void
     {
         $user = User::factory()->create([
             'user_id' => (string) Str::uuid(),
@@ -31,13 +31,13 @@ class AgentProfileResourceTest extends TestCase
             'balance' => 999,
         ]);
 
-        $this->createCollection($agent, collectedAmount: 120, agentCommission: 20);
-        $this->createCollection($agent, collectedAmount: 50, agentCommission: 80);
+        $this->createCollection($agent, collectedAmount: 680, agentCommission: 5);
+        $this->createCollection($agent, collectedAmount: 50, agentCommission: 5);
 
         $data = app(GetAgentProfileUseCase::class)->execute($user->user_id);
         $payload = (new AgentProfileResource($data))->toArray(request());
 
-        $this->assertSame(70.0, $payload['agent']['balance']);
+        $this->assertSame(10.0, $payload['agent']['balance']);
         $this->assertSame('999.00', $agent->fresh()->balance);
     }
 

@@ -22,7 +22,7 @@ class GetAgentProfileUseCase
         return [
             'user' => $agent->user,
             'agent' => $agent,
-            'profile_balance' => $this->agents->sumCollectionNetDue($agent->delivery_agent_id),
+            'profile_balance' => $this->agents->sumCollectionCommissions($agent->delivery_agent_id),
             'stats' => [
                 'total_delivered' => $this->agents->countDeliveredOrders($agent->delivery_agent_id),
                 'average_rating' => null,
