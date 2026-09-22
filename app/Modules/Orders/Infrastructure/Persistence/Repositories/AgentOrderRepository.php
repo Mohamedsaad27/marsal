@@ -75,13 +75,12 @@ class AgentOrderRepository implements AgentOrderRepositoryInterface
             ->get();
     }
 
-    public function getTodayCollectedAmount(string $deliveryAgentId): float
+    public function getCurrentSettlementBalance(string $deliveryAgentId): float
     {
-        return (float) DB::table('collections')
+        return round((float) DB::table('delivery_agents')
             ->where('delivery_agent_id', $deliveryAgentId)
             ->whereNull('deleted_at')
-            ->whereDate('collected_at', today())
-            ->sum('collected_amount');
+            ->value('balance'), 2);
     }
 
     public function countActiveOrders(string $deliveryAgentId): int

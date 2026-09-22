@@ -28,7 +28,7 @@ class GetAgentDashboardUseCase
             ],
             'today' => [
                 'orders_count' => $activeCount + $deliveredToday,
-                'collected_amount' => $this->orders->getTodayCollectedAmount($deliveryAgentId),
+                'collected_amount' => $this->orders->getCurrentSettlementBalance($deliveryAgentId),
                 'delivered_count' => $deliveredToday,
                 'pending_count' => $activeCount,
             ],

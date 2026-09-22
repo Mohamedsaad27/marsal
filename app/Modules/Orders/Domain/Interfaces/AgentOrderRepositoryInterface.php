@@ -20,7 +20,7 @@ interface AgentOrderRepositoryInterface
     /** @return Collection<int, Order> */
     public function getUpcomingForAgent(string $deliveryAgentId, int $limit = 5): Collection;
 
-    public function getTodayCollectedAmount(string $deliveryAgentId): float;
+    public function getCurrentSettlementBalance(string $deliveryAgentId): float;
 
     public function countActiveOrders(string $deliveryAgentId): int;
 
